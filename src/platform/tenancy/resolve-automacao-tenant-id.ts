@@ -23,6 +23,7 @@ export async function resolveAutomacaoTenantId(raw: string): Promise<string | nu
      FROM automacao.tenants
      WHERE id::text = $1
         OR lower(trim(slug)) = lower(trim($1))
+     ORDER BY id ASC
      LIMIT 1`,
     [trimmed]
   );

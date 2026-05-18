@@ -134,7 +134,7 @@ async function issuePortalMockToken(req: Request, res: Response): Promise<void> 
     `SELECT u.id::text AS app_user_id, m.tenant_id
      FROM portal.app_user u
      INNER JOIN portal.membership m ON m.app_user_id = u.id
-     WHERE u.email = $1 AND m.tenant_id = $2
+     WHERE lower(u.email) = lower($1) AND m.tenant_id = $2
      LIMIT 1`,
     [email, tenantId]
   );

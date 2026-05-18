@@ -7,6 +7,9 @@ export const DEMO_PUBLIC_TENANT_UUID = "00000000-0000-4000-8000-000000000001";
 export const SEED_PORTAL_EMAIL = "portal-seed@local.dev";
 export const SEED_AUTOMACAO_SLUG = "escritorio-demo";
 
+/** Lock global do seed (serializa INSERT em automacao.tenants entre workers Vitest). */
+const SEED_AUTOMACAO_ADVISORY_LOCK = 9_157_240_019;
+
 /** Senha definida no usuario seed para `POST /v1/portal/auth/login` (Sprint A). Sobrescreva com `SEED_PORTAL_PASSWORD`. */
 export const SEED_PORTAL_DEFAULT_PASSWORD =
   process.env.SEED_PORTAL_PASSWORD?.trim() || "PortalSeedDev!ChangeMe1";
@@ -44,28 +47,34 @@ export async function runSeedPortalHappyPath(
 }
 
 async function ensureAutomacaoTenant(client: pg.Client): Promise<string> {
-  const existing = await client.query<{ id: string }>(
-    `SELECT id::text AS id
-     FROM automacao.tenants
-     WHERE lower(trim(slug)) = lower(trim($1))
-     LIMIT 1`,
-    [SEED_AUTOMACAO_SLUG]
-  );
-  if (existing.rows[0]) {
-    return existing.rows[0].id;
-  }
+  await client.query(`SELECT pg_advisory_lock($1)`, [SEED_AUTOMACAO_ADVISORY_LOCK]);
+  try {
+    const existing = await client.query<{ id: string }>(
+      `SELECT id::text AS id
+       FROM automacao.tenants
+       WHERE lower(trim(slug)) = lower(trim($1))
+       ORDER BY id ASC
+       LIMIT 1`,
+      [SEED_AUTOMACAO_SLUG]
+    );
+    if (existing.rows[0]) {
+      return existing.rows[0].id;
+    }
 
-  const ins = await client.query<{ id: string }>(
-    `INSERT INTO automacao.tenants (slug, nome, ativo)
-     VALUES ($1, $2, true)
-     RETURNING id::text AS id`,
-    [SEED_AUTOMACAO_SLUG, "Escritorio Demo (seed dev)"]
-  );
-  const id = ins.rows[0]?.id;
-  if (!id) {
-    throw new Error("Falha ao inserir automacao.tenants no seed.");
+    const ins = await client.query<{ id: string }>(
+      `INSERT INTO automacao.tenants (slug, nome, ativo)
+       VALUES ($1, $2, true)
+       RETURNING id::text AS id`,
+      [SEED_AUTOMACAO_SLUG, "Escritorio Demo (seed dev)"]
+    );
+    const id = ins.rows[0]?.id;
+    if (!id) {
+      throw new Error("Falha ao inserir automacao.tenants no seed.");
+    }
+    return id;
+  } finally {
+    await client.query(`SELECT pg_advisory_unlock($1)`, [SEED_AUTOMACAO_ADVISORY_LOCK]);
   }
-  return id;
 }
 
 async function ensurePortalAppUser(client: pg.Client): Promise<string> {
