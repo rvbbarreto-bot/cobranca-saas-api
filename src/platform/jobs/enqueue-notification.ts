@@ -2,11 +2,12 @@ import { isJobsEnabled } from "./redis-connection";
 import { getQueues, JOB_OPTS } from "./queues";
 
 export type NotificationSendJobPayload = {
-  chargeId: string;
+  chargeId?: string;
   tenantId: string;
   eventType: string;
   daysOffset?: number;
   forceChannel?: "email" | "whatsapp" | "both";
+  metadata?: Record<string, string>;
 };
 
 export function reguaJobId(chargeId: string, daysOffset: number): string {

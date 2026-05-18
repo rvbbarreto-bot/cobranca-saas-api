@@ -19,9 +19,20 @@ import {
   patchNotificationTemplate,
   previewNotificationTemplate
 } from "../../application/notification-templates-use-cases";
+import {
+  getEscritorioDashboard,
+  resolveDashboardPeriod
+} from "../../application/escritorio-dashboard";
+import { streamCobrancasCsvRows } from "../../application/escritorio-cobrancas-export";
+import { postEscritorioNfseRetryHandler } from "../../../nfse/interfaces/http/nfse-portal-handlers";
 
 function isEscritorioAdmin(req: Request): boolean {
   return req.portalMembership?.role === "admin_escritorio";
+}
+
+function canReadEscritorioDashboard(req: Request): boolean {
+  const role = req.portalMembership?.role;
+  return role === "admin_escritorio" || role === "operador";
 }
 
 async function resolvePublicTenant(req: Request, res: Response): Promise<string | null> {
@@ -230,6 +241,59 @@ export function createEscritorioRouter(): Router {
       }
     })
   );
+
+  router.get(
+    "/dashboard",
+    asyncHandler(async (req, res) => {
+      if (!canReadEscritorioDashboard(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Sem permissao para dashboard." });
+        return;
+      }
+      const tenantId = await resolvePublicTenant(req, res);
+      if (!tenantId) return;
+      const period = resolveDashboardPeriod({
+        periodo: typeof req.query.periodo === "string" ? req.query.periodo : undefined,
+        dataInicio: typeof req.query.data_inicio === "string" ? req.query.data_inicio : undefined,
+        dataFim: typeof req.query.data_fim === "string" ? req.query.data_fim : undefined
+      });
+      const dashboard = await withTenantTransaction(tenantId, (client) =>
+        getEscritorioDashboard(client, tenantId, period)
+      );
+      res.json(dashboard);
+    })
+  );
+
+  router.get(
+    "/cobrancas/export",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const format = typeof req.query.format === "string" ? req.query.format.trim() : "";
+      if (format !== "csv") {
+        res.status(400).json({ error: "invalid_format", message: "format=csv obrigatorio." });
+        return;
+      }
+      const tenantId = await resolvePublicTenant(req, res);
+      if (!tenantId) return;
+      const filename = `cobrancas-${new Date().toISOString().slice(0, 10)}.csv`;
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      await withTenantTransaction(tenantId, async (client) => {
+        for await (const chunk of streamCobrancasCsvRows(client, tenantId, {
+          status: typeof req.query.status === "string" ? req.query.status : undefined,
+          dataInicio: typeof req.query.data_inicio === "string" ? req.query.data_inicio : undefined,
+          dataFim: typeof req.query.data_fim === "string" ? req.query.data_fim : undefined
+        })) {
+          res.write(chunk);
+        }
+      });
+      res.end();
+    })
+  );
+
+  router.post("/nfse/:chargeId/retry", asyncHandler(postEscritorioNfseRetryHandler));
 
   router.get(
     "/templates/:templateId/preview",

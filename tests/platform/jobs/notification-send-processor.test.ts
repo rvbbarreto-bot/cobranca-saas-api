@@ -225,7 +225,7 @@ describe("processNotificationSend", () => {
     expect(state.communicationEvents).toHaveLength(0);
   });
 
-  it("cobrança paga → retorno early, zero envios", async () => {
+  it("cobrança paga → retorno early para lembrete, zero envios", async () => {
     const state: MockState = {
       charge: { ...baseCharge(), canonical_status: "paga" },
       emailTemplate: {
@@ -245,7 +245,7 @@ describe("processNotificationSend", () => {
       {
         chargeId,
         tenantId,
-        eventType: "pagamento_confirmado"
+        eventType: "lembrete_pre_3d"
       },
       {
         withTenant: async (_tid, fn) => fn(createMockClient(state)),

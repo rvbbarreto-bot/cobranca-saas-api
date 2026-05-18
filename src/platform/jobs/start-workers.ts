@@ -4,6 +4,7 @@ import { createPaymentEmissionWorker } from "./workers/payment-emission.worker";
 import { createWebhookProcessWorker } from "./workers/webhook-process.worker";
 import { registerChargeSyncWorker } from "./workers/charge-status-sync.worker";
 import { registerNotificationSendWorker } from "./workers/notification-send.worker";
+import { registerNfseEmitWorker } from "./workers/nfse-emit.worker";
 
 const activeWorkers: Worker[] = [];
 
@@ -17,7 +18,8 @@ export function startAllWorkers(): void {
       createPaymentEmissionWorker(),
       createWebhookProcessWorker(),
       registerChargeSyncWorker(),
-      registerNotificationSendWorker()
+      registerNotificationSendWorker(),
+      registerNfseEmitWorker()
     );
 
     void registerRepeatableJobs().catch((err: unknown) => {

@@ -34,6 +34,15 @@ export function getWebhookInboxSecret(): string | undefined {
   return s || undefined;
 }
 
+export function getWebhookNfseSecret(): string | undefined {
+  const s = process.env.WEBHOOK_NFSE_SECRET?.trim();
+  return s || undefined;
+}
+
+export function isWebhookNfseSecretRequired(): boolean {
+  return isProductionNodeEnv();
+}
+
 export function shouldEmitHttpAccessJsonLog(): boolean {
   if (process.env.ENABLE_HTTP_ACCESS_LOG === "false" || process.env.ENABLE_HTTP_ACCESS_LOG === "0") {
     return false;

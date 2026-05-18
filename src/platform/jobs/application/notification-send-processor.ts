@@ -142,7 +142,7 @@ async function insertCommunicationEvent(
   client: PoolClient,
   input: {
     tenantId: string;
-    chargeId: string;
+    chargeId: string | null;
     channel: string;
     eventType: string;
     recipient: string;
@@ -176,23 +176,90 @@ export type NotificationSendProcessorDeps = {
   log?: (message: string) => void;
 };
 
+async function processMagicLinkNotification(
+  data: NotificationSendJobPayload,
+  deps: NotificationSendProcessorDeps
+): Promise<void> {
+  const withTenant = deps.withTenant ?? withTenantTransaction;
+  const resend = deps.resendAdapter ?? new ResendAdapter();
+  const meta = data.metadata ?? {};
+  const email = meta.email?.trim();
+  const token = meta.token?.trim();
+  const tenantSlug = meta.tenant_slug?.trim() ?? "";
+  if (!email || !token) {
+    throw new UnrecoverableError("magic_link_metadata_invalid");
+  }
+
+  await withTenant(data.tenantId, async (client) => {
+    const tpl = await loadTemplate(client, data.tenantId, "magic_link", "email");
+    if (!tpl) return;
+
+    const baseUrl = (process.env.PORTAL_CLIENT_URL ?? "http://localhost:5173").replace(/\/$/, "");
+    const vars: Record<string, string> = {
+      escritorio_nome: meta.escritorio_nome ?? "Escritório",
+      magic_link_url: `${baseUrl}/acesso?token=${encodeURIComponent(token)}&tenant=${encodeURIComponent(tenantSlug)}`
+    };
+    const html = renderTemplate(tpl.body_template, vars);
+    const subject = tpl.subject ? renderTemplate(tpl.subject, vars) : "Acesso ao portal";
+    try {
+      const result = await resend.sendEmail({ to: email, subject, html });
+      await insertCommunicationEvent(client, {
+        tenantId: data.tenantId,
+        chargeId: data.chargeId ?? null,
+        channel: "email",
+        eventType: "magic_link",
+        recipient: email,
+        status: "sent",
+        providerMessageId: result.messageId
+      });
+    } catch (error: unknown) {
+      if (error instanceof NotificationError) {
+        await insertCommunicationEvent(client, {
+          tenantId: data.tenantId,
+          chargeId: data.chargeId ?? null,
+          channel: "email",
+          eventType: "magic_link",
+          recipient: email,
+          status: "failed",
+          errorMessage: error instanceof Error ? error.message : String(error)
+        });
+      }
+      throw error;
+    }
+  });
+}
+
 export async function processNotificationSend(
   data: NotificationSendJobPayload,
   deps: NotificationSendProcessorDeps = {}
 ): Promise<void> {
+  if (data.eventType === "magic_link") {
+    await processMagicLinkNotification(data, deps);
+    return;
+  }
+
+  if (!data.chargeId?.trim()) {
+    throw new UnrecoverableError("charge_id_required");
+  }
+
   const withTenant = deps.withTenant ?? withTenantTransaction;
   const resend = deps.resendAdapter ?? new ResendAdapter();
   const zapi = deps.zapiAdapter ?? new ZapiAdapter();
   const log = deps.log ?? (() => undefined);
+  const chargeId = data.chargeId.trim();
 
   await withTenant(data.tenantId, async (client) => {
-    const ctx = await loadChargeContext(client, data.chargeId, data.tenantId);
+    const ctx = await loadChargeContext(client, chargeId, data.tenantId);
     if (!ctx) {
       throw new UnrecoverableError("charge_not_found");
     }
 
-    if (ctx.canonical_status === "paga" || ctx.canonical_status === "cancelada") {
-      log(`Notificação ignorada: cobrança ${data.chargeId} já em estado terminal`);
+    const allowsTerminal = data.eventType === "nfse_emitida" || data.eventType === "pagamento_confirmado";
+    if (
+      !allowsTerminal &&
+      (ctx.canonical_status === "paga" || ctx.canonical_status === "cancelada")
+    ) {
+      log(`Notificação ignorada: cobrança ${chargeId} já em estado terminal`);
       return;
     }
 
@@ -212,9 +279,19 @@ export async function processNotificationSend(
        WHERE charge_id = $1::uuid
        ORDER BY created_at DESC
        LIMIT 1`,
-      [data.chargeId]
+      [chargeId]
     );
     const pay = payR.rows[0];
+
+    const nfseR = await client.query<{ numero_nfse: string | null; pdf_url: string | null }>(
+      `SELECT numero_nfse, pdf_url
+       FROM nfse_emissions
+       WHERE charge_id = $1::uuid AND status = 'autorizado'
+       ORDER BY emitted_at DESC NULLS LAST
+       LIMIT 1`,
+      [chargeId]
+    );
+    const nfse = nfseR.rows[0];
 
     const vars: Record<string, string> = {
       nome: ctx.cliente_nome,
@@ -225,7 +302,9 @@ export async function processNotificationSend(
       pix_emv: pay?.pix_emv ?? "",
       escritorio_nome: ctx.razao_social ?? "Escritório",
       multa_percentual: "2",
-      data_pagamento: formatDate(ctx.paid_at)
+      data_pagamento: formatDate(ctx.paid_at),
+      numero_nfse: nfse?.numero_nfse ?? "",
+      pdf_url: nfse?.pdf_url ?? ""
     };
 
     const sendEmail = channel === "email" || channel === "both";
@@ -247,7 +326,7 @@ export async function processNotificationSend(
           });
           await insertCommunicationEvent(client, {
             tenantId: data.tenantId,
-            chargeId: data.chargeId,
+            chargeId,
             channel: "email",
             eventType: data.eventType,
             recipient,
@@ -258,7 +337,7 @@ export async function processNotificationSend(
           if (error instanceof NotificationError) {
             await insertCommunicationEvent(client, {
               tenantId: data.tenantId,
-              chargeId: data.chargeId,
+              chargeId,
               channel: "email",
               eventType: data.eventType,
               recipient,
@@ -283,7 +362,7 @@ export async function processNotificationSend(
           });
           await insertCommunicationEvent(client, {
             tenantId: data.tenantId,
-            chargeId: data.chargeId,
+            chargeId,
             channel: "whatsapp",
             eventType: data.eventType,
             recipient,
@@ -294,7 +373,7 @@ export async function processNotificationSend(
           if (error instanceof NotificationError) {
             await insertCommunicationEvent(client, {
               tenantId: data.tenantId,
-              chargeId: data.chargeId,
+              chargeId,
               channel: "whatsapp",
               eventType: data.eventType,
               recipient,

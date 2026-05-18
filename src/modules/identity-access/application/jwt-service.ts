@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt, { type SignOptions } from "jsonwebtoken";
 import type { UserRole } from "../../../shared/types/request-context";
 
 export type AccessTokenClaims = {
@@ -17,10 +17,26 @@ function getJwtSecret(): string {
   return secret;
 }
 
-export function signAccessToken(claims: AccessTokenClaims): string {
-  return jwt.sign(claims, getJwtSecret(), {
-    expiresIn: DEFAULT_EXPIRATION
-  });
+export function signAccessToken(
+  claims: AccessTokenClaims,
+  options?: { expiresIn?: string }
+): string {
+  const signOptions: SignOptions = {
+    expiresIn: (options?.expiresIn ?? DEFAULT_EXPIRATION) as SignOptions["expiresIn"]
+  };
+  return jwt.sign(claims, getJwtSecret(), signOptions);
+}
+
+/** JWT do portal do cliente final (magic link), validade 4h. */
+export function signClientePortalToken(clienteId: string, automacaoTenantId: string): string {
+  return signAccessToken(
+    {
+      sub: clienteId,
+      tid: automacaoTenantId,
+      roles: ["cliente_cnpj"]
+    },
+    { expiresIn: "4h" }
+  );
 }
 
 export function verifyAccessToken(token: string): AccessTokenClaims {

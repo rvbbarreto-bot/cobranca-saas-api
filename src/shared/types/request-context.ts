@@ -4,7 +4,8 @@ export type UserRole =
   | "finance"
   | "support"
   | "viewer"
-  | "service_account";
+  | "service_account"
+  | "cliente_cnpj";
 
 export type TenantContext = {
   tenantId: string;
