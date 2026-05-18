@@ -1,5 +1,5 @@
 import { isJobsEnabled } from "./redis-connection";
-import { JOB_OPTS, queues } from "./queues";
+import { getQueues, JOB_OPTS } from "./queues";
 
 export type NotificationSendJobPayload = {
   chargeId: string;
@@ -20,7 +20,7 @@ export async function enqueueNotificationJob(
   if (!isJobsEnabled()) {
     return;
   }
-  await queues.notificationSend.add("send", payload, {
+  await getQueues().notificationSend.add("send", payload, {
     ...JOB_OPTS.notification,
     jobId: options?.jobId,
     delay: options?.delay
@@ -33,7 +33,7 @@ export async function cancelReguaJobsForCharge(chargeId: string): Promise<void> 
   }
   const offsets = [-3, -1, 0, 3, 7];
   for (const offset of offsets) {
-    const job = await queues.notificationSend.getJob(reguaJobId(chargeId, offset));
+    const job = await getQueues().notificationSend.getJob(reguaJobId(chargeId, offset));
     if (job) {
       await job.remove();
     }

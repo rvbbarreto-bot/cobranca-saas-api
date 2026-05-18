@@ -11,13 +11,40 @@ export const QUEUE_CHARGE_SYNC = "charges-sync";
 export const QUEUE_NOTIFICATION_SEND = "notifications-send";
 export const QUEUE_NFSE_EMIT = "nfse-emit";
 
-export const queues = {
-  paymentEmission: new Queue(QUEUE_PAYMENT_EMISSION, { connection: redisConnection }),
-  webhookProcess: new Queue(QUEUE_WEBHOOK_PROCESS, { connection: redisConnection }),
-  chargeSync: new Queue(QUEUE_CHARGE_SYNC, { connection: redisConnection }),
-  notificationSend: new Queue(QUEUE_NOTIFICATION_SEND, { connection: redisConnection }),
-  nfseEmit: new Queue(QUEUE_NFSE_EMIT, { connection: redisConnection })
+export type JobQueues = {
+  paymentEmission: Queue;
+  webhookProcess: Queue;
+  chargeSync: Queue;
+  notificationSend: Queue;
+  nfseEmit: Queue;
 };
+
+let queuesCache: JobQueues | null = null;
+
+function createQueues(): JobQueues {
+  return {
+    paymentEmission: new Queue(QUEUE_PAYMENT_EMISSION, { connection: redisConnection }),
+    webhookProcess: new Queue(QUEUE_WEBHOOK_PROCESS, { connection: redisConnection }),
+    chargeSync: new Queue(QUEUE_CHARGE_SYNC, { connection: redisConnection }),
+    notificationSend: new Queue(QUEUE_NOTIFICATION_SEND, { connection: redisConnection }),
+    nfseEmit: new Queue(QUEUE_NFSE_EMIT, { connection: redisConnection })
+  };
+}
+
+/** Instancia filas BullMQ sob demanda (evita ECONNREFUSED em testes com jobs desligados). */
+export function getQueues(): JobQueues {
+  if (!queuesCache) {
+    queuesCache = createQueues();
+  }
+  return queuesCache;
+}
+
+/** @deprecated Prefer getQueues(); mantido para imports legados em workers. */
+export const queues: JobQueues = new Proxy({} as JobQueues, {
+  get(_target, prop: keyof JobQueues) {
+    return getQueues()[prop];
+  }
+});
 
 export const JOB_OPTS = {
   emission: {
@@ -47,21 +74,21 @@ export const NFSE_JOB_OPTS = JOB_OPTS.nfse;
 export const SYNC_JOB_OPTS = JOB_OPTS.sync;
 
 export function getPaymentEmissionQueue(): Queue {
-  return queues.paymentEmission;
+  return getQueues().paymentEmission;
 }
 
 export function getWebhookProcessQueue(): Queue {
-  return queues.webhookProcess;
+  return getQueues().webhookProcess;
 }
 
 export function getChargeSyncQueue(): Queue {
-  return queues.chargeSync;
+  return getQueues().chargeSync;
 }
 
 export function getNotificationSendQueue(): Queue {
-  return queues.notificationSend;
+  return getQueues().notificationSend;
 }
 
 export function getNfseEmitQueue(): Queue {
-  return queues.nfseEmit;
+  return getQueues().nfseEmit;
 }

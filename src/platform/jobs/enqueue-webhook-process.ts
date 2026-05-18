@@ -1,5 +1,5 @@
 import { isJobsEnabled } from "./redis-connection";
-import { JOB_OPTS, queues } from "./queues";
+import { getQueues, JOB_OPTS } from "./queues";
 
 export type WebhookProcessJobPayload = {
   tenantId: string;
@@ -18,7 +18,7 @@ export async function enqueueWebhookProcessJob(payload: WebhookProcessJobPayload
   if (!isJobsEnabled()) {
     return;
   }
-  await queues.webhookProcess.add(
+  await getQueues().webhookProcess.add(
     "process-pending",
     { tenantId: payload.tenantId, limit: payload.limit ?? 25 },
     webhookJobOpts

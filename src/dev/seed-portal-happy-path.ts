@@ -69,17 +69,11 @@ async function ensureAutomacaoTenant(client: pg.Client): Promise<string> {
 }
 
 async function ensurePortalAppUser(client: pg.Client): Promise<string> {
-  const existing = await client.query<{ id: string }>(
-    `SELECT id::text AS id FROM portal.app_user WHERE lower(email) = lower($1) LIMIT 1`,
-    [SEED_PORTAL_EMAIL]
-  );
-  if (existing.rows[0]) {
-    return existing.rows[0].id;
-  }
-
   const ins = await client.query<{ id: string }>(
     `INSERT INTO portal.app_user (email, full_name)
      VALUES ($1, $2)
+     ON CONFLICT (email) DO UPDATE
+       SET full_name = EXCLUDED.full_name
      RETURNING id::text AS id`,
     [SEED_PORTAL_EMAIL, "Usuario seed portal"]
   );
@@ -100,19 +94,10 @@ async function ensurePortalPasswordHash(client: pg.Client, appUserId: string): P
 }
 
 async function ensureMembership(client: pg.Client, appUserId: string, automacaoTenantId: string): Promise<void> {
-  const existing = await client.query<{ n: string }>(
-    `SELECT '1' AS n FROM portal.membership
-     WHERE app_user_id = $1::uuid AND tenant_id = $2 AND role = 'admin_escritorio'
-     LIMIT 1`,
-    [appUserId, automacaoTenantId]
-  );
-  if (existing.rows[0]) {
-    return;
-  }
-
   await client.query(
     `INSERT INTO portal.membership (app_user_id, tenant_id, role)
-     VALUES ($1::uuid, $2, 'admin_escritorio')`,
+     VALUES ($1::uuid, $2, 'admin_escritorio')
+     ON CONFLICT DO NOTHING`,
     [appUserId, automacaoTenantId]
   );
 }

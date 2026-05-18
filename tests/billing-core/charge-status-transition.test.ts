@@ -12,6 +12,11 @@ describe("evaluateChargeStatusTransition", () => {
     expect(evaluateChargeStatusTransition("emitida", "pendente_pagamento")).toBe("allow");
   });
 
+  it("rascunho aceita avancos reportados por webhook/gateway", () => {
+    expect(evaluateChargeStatusTransition("rascunho", "pendente_pagamento")).toBe("allow");
+    expect(evaluateChargeStatusTransition("rascunho", "paga")).toBe("allow");
+  });
+
   it("bloqueia paga para emitida", () => {
     expect(evaluateChargeStatusTransition("paga", "emitida")).toBe("deny");
   });

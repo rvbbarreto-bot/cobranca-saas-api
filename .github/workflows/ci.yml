@@ -24,9 +24,19 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
 
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/cobranca_ci
+      REDIS_URL: redis://localhost:6379
       JWT_SECRET: "0123456789abcdefghijklmnopqrstuvwxyzABCD"
       WEBHOOK_INBOX_SECRET: "whsec_ci_example_min_32_chars____________"
       # check:readiness usa --strict: nao usar ENABLE_MOCK_AUTH=true aqui.

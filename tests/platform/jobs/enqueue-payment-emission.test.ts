@@ -9,6 +9,9 @@ vi.mock("../../../src/platform/jobs/redis-connection", () => ({
 }));
 
 vi.mock("../../../src/platform/jobs/queues", () => ({
+  getQueues: () => ({
+    paymentEmission: { add: addMock }
+  }),
   queues: {
     paymentEmission: { add: addMock }
   },

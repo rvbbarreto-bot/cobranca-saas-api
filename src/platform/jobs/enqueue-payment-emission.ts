@@ -1,5 +1,5 @@
 import { isJobsEnabled } from "./redis-connection";
-import { JOB_OPTS, queues } from "./queues";
+import { getQueues, JOB_OPTS } from "./queues";
 
 export type PaymentEmissionJobPayload = {
   chargeId: string;
@@ -14,7 +14,7 @@ export async function enqueuePaymentEmissionJob(charge: {
   if (!isJobsEnabled()) {
     return;
   }
-  await queues.paymentEmission.add(
+  await getQueues().paymentEmission.add(
     "emit-charge",
     { chargeId: charge.id, tenantId: charge.tenantId },
     JOB_OPTS.emission

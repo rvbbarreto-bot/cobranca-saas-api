@@ -1,7 +1,17 @@
 import type { ConnectionOptions } from "bullmq";
 
+const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
+
 export const redisConnection: ConnectionOptions = {
-  url: process.env.REDIS_URL ?? "redis://localhost:6379"
+  url: redisUrl,
+  ...(process.env.NODE_ENV === "test"
+    ? {
+        maxRetriesPerRequest: 1,
+        retryStrategy: () => null,
+        enableOfflineQueue: false,
+        lazyConnect: true
+      }
+    : {})
 };
 
 /** Alias para workers e codigo legado. */

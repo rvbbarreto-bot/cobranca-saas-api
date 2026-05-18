@@ -142,7 +142,9 @@ export async function processPendingWebhooksForTenant(
       }
 
       await markWebhookInboxProcessed(client, row.id);
-      updated += 1;
+      if (outcome.applied) {
+        updated += 1;
+      }
     }
 
     return {

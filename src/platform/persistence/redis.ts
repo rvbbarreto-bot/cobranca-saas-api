@@ -22,6 +22,9 @@ export async function connectRedis(): Promise<RedisClient | null> {
     connectPromise = (async () => {
       const client = createClient({ url });
       client.on("error", (err) => {
+        if (process.env.NODE_ENV === "test") {
+          return;
+        }
         // eslint-disable-next-line no-console
         console.error("[redis]", err.message);
       });

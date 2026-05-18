@@ -5,7 +5,7 @@ import {
   reguaJobId
 } from "../enqueue-notification";
 import { isJobsEnabled } from "../redis-connection";
-import { JOB_OPTS, queues } from "../queues";
+import { getQueues, JOB_OPTS } from "../queues";
 
 export type WebhookSideEffectInput = {
   tenantId: string;
@@ -29,7 +29,7 @@ export async function applyWebhookSideEffects(input: WebhookSideEffectInput): Pr
       tenantId: input.tenantId,
       eventType: "pagamento_confirmado"
     });
-    await queues.nfseEmit.add(
+    await getQueues().nfseEmit.add(
       "emit",
       { chargeId: input.chargeId, tenantId: input.tenantId },
       JOB_OPTS.nfse

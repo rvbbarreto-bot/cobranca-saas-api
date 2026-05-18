@@ -5,7 +5,15 @@ import type { CanonicalChargeStatus } from "../domain/charge";
  * Estados terminais: `paga`, `cancelada` — apenas noop (mesmo status) via webhook.
  */
 const ALLOWED: Record<CanonicalChargeStatus, ReadonlySet<CanonicalChargeStatus>> = {
-  rascunho: new Set(["emitida", "cancelada"]),
+  /** Webhooks/gateway podem avançar direto do rascunho (cobrança criada antes da emissão local). */
+  rascunho: new Set([
+    "emitida",
+    "enviada",
+    "pendente_pagamento",
+    "paga",
+    "vencida",
+    "cancelada"
+  ]),
   emitida: new Set(["enviada", "pendente_pagamento", "paga", "vencida", "cancelada", "erro_emissao"]),
   enviada: new Set(["pendente_pagamento", "paga", "vencida", "cancelada"]),
   pendente_pagamento: new Set(["paga", "vencida", "cancelada"]),
