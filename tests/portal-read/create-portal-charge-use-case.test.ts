@@ -42,7 +42,7 @@ describe("createPortalChargeUseCase", () => {
     enqueueMock.mockClear();
   });
 
-  it("criacao bem-sucedida enfileira job na fila charges-emission", async () => {
+  it("criacao bem-sucedida enfileira job na fila charges:emission", async () => {
     const client = {
       query: vi.fn().mockResolvedValue({ rowCount: 1 })
     } as unknown as PoolClient;

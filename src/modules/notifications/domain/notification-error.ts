@@ -1,9 +1,11 @@
 export class NotificationError extends Error {
-  readonly statusCode: number | undefined;
-
-  constructor(message: string, statusCode?: number) {
+  constructor(
+    message: string,
+    public readonly channel: "email" | "whatsapp",
+    public readonly provider: string,
+    public readonly statusCode?: number
+  ) {
     super(message);
     this.name = "NotificationError";
-    this.statusCode = statusCode;
   }
 }

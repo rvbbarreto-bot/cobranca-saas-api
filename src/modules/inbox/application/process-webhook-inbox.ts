@@ -1,15 +1,19 @@
 import { withTenantTransaction } from "../../../platform/persistence/with-tenant-transaction";
 import { writeAuditLog } from "../../../platform/audit/audit.service";
-import { applyWebhookSideEffects } from "../../../platform/jobs/application/webhook-side-effects";
+import {
+  applyWebhookSideEffectPlan,
+  type WebhookSideEffectPlan
+} from "../../../platform/jobs/application/webhook-side-effects";
 import { insertChargeEvent } from "../../billing-core/infrastructure/charge-events-repository";
 import {
+  isWebhookInboxProcessed,
   listPendingWebhookInbox,
   markWebhookInboxDead,
   markWebhookInboxProcessed
 } from "../infrastructure/webhook-inbox-repository";
 import { updateChargeCanonicalStatus } from "../../billing-core/infrastructure/charge-repository";
+import { applyAsaasWebhookEvent } from "./process-asaas-webhook-event";
 import { parseWebhookChargeInstruction } from "./parse-webhook-charge-instruction";
-import type { CanonicalChargeStatus } from "../../billing-core/domain/charge";
 
 export type ProcessWebhookInboxResult = {
   scanned: number;
@@ -18,19 +22,12 @@ export type ProcessWebhookInboxResult = {
   dead_parse: number;
   dead_not_found: number;
   dead_illegal_transition: number;
+  skipped_already_processed: number;
 };
 
 function summarizeIssues(issues: string[]): string {
   const t = issues.join("; ");
   return t.length > 2000 ? `${t.slice(0, 2000)}…` : t;
-}
-
-function extractAsaasEvent(payload: unknown): string | undefined {
-  if (payload && typeof payload === "object" && "event" in payload) {
-    const ev = (payload as { event: unknown }).event;
-    return typeof ev === "string" ? ev : undefined;
-  }
-  return undefined;
 }
 
 /**
@@ -40,11 +37,7 @@ export async function processPendingWebhooksForTenant(
   tenantUuid: string,
   limit: number
 ): Promise<ProcessWebhookInboxResult> {
-  const sideEffects: Array<{
-    chargeId: string;
-    newStatus: CanonicalChargeStatus;
-    asaasEvent?: string;
-  }> = [];
+  const sideEffects: WebhookSideEffectPlan[] = [];
 
   const result = await withTenantTransaction(tenantUuid, async (client) => {
     const rows = await listPendingWebhookInbox(client, limit);
@@ -53,13 +46,48 @@ export async function processPendingWebhooksForTenant(
     let deadParse = 0;
     let deadNotFound = 0;
     let deadIllegal = 0;
+    let skippedAlready = 0;
 
     for (const row of rows) {
+      if (row.processedAt || (await isWebhookInboxProcessed(client, row.id))) {
+        skippedAlready += 1;
+        continue;
+      }
+
       const parsed = parseWebhookChargeInstruction(row.payload);
       if (!parsed.ok) {
         await markWebhookInboxDead(client, row.id, summarizeIssues(parsed.issues));
         dead += 1;
         deadParse += 1;
+        continue;
+      }
+
+      if (parsed.format === "asaas" && parsed.asaasContext) {
+        const asaasResult = await applyAsaasWebhookEvent(client, tenantUuid, parsed.asaasContext);
+
+        if (asaasResult.outcome === "not_found") {
+          await markWebhookInboxDead(client, row.id, "NO_MATCHING_CHARGE");
+          deadNotFound += 1;
+          dead += 1;
+          continue;
+        }
+
+        if (asaasResult.outcome === "illegal_transition") {
+          await markWebhookInboxDead(
+            client,
+            row.id,
+            `ILLEGAL_TRANSITION:${asaasResult.from}->${asaasResult.to}`
+          );
+          deadIllegal += 1;
+          dead += 1;
+          continue;
+        }
+
+        await markWebhookInboxProcessed(client, row.id);
+        if (asaasResult.outcome === "applied") {
+          updated += 1;
+          sideEffects.push(asaasResult.sideEffect);
+        }
         continue;
       }
 
@@ -102,7 +130,7 @@ export async function processPendingWebhooksForTenant(
         await insertChargeEvent(client, {
           tenantId: tenantUuid,
           chargeId: beforeRow.id,
-          eventType: parsed.format === "asaas" ? "webhook_asaas" : "webhook_canonical",
+          eventType: "webhook_canonical",
           oldStatus: beforeRow.canonical_status as typeof outcome.charge.canonicalStatus,
           newStatus: outcome.charge.canonicalStatus,
           payload: {
@@ -135,9 +163,10 @@ export async function processPendingWebhooksForTenant(
         }
 
         sideEffects.push({
+          kind: "generic",
           chargeId: beforeRow.id,
-          newStatus: outcome.charge.canonicalStatus,
-          asaasEvent: parsed.format === "asaas" ? extractAsaasEvent(row.payload) : undefined
+          tenantId: tenantUuid,
+          newStatus: outcome.charge.canonicalStatus
         });
       }
 
@@ -153,17 +182,13 @@ export async function processPendingWebhooksForTenant(
       dead,
       dead_parse: deadParse,
       dead_not_found: deadNotFound,
-      dead_illegal_transition: deadIllegal
+      dead_illegal_transition: deadIllegal,
+      skipped_already_processed: skippedAlready
     };
   });
 
-  for (const fx of sideEffects) {
-    await applyWebhookSideEffects({
-      tenantId: tenantUuid,
-      chargeId: fx.chargeId,
-      newStatus: fx.newStatus,
-      asaasEvent: fx.asaasEvent
-    });
+  for (const plan of sideEffects) {
+    await applyWebhookSideEffectPlan(plan);
   }
 
   return result;

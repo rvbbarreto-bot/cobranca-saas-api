@@ -2,14 +2,13 @@ import { Queue } from "bullmq";
 import { redisConnection } from "./redis-connection";
 
 /**
- * Nomes das filas BullMQ (v5 nao aceita ':' — use hifen).
- * Producer (queues.paymentEmission) e consumer (payment-emission.worker) DEVEM usar a mesma constante.
+ * Nomes das filas BullMQ. Producer e consumer DEVEM importar estas constantes.
  */
-export const QUEUE_PAYMENT_EMISSION = "charges-emission";
-export const QUEUE_WEBHOOK_PROCESS = "inbox-process";
-export const QUEUE_CHARGE_SYNC = "charges-sync";
-export const QUEUE_NOTIFICATION_SEND = "notifications-send";
-export const QUEUE_NFSE_EMIT = "nfse-emit";
+export const QUEUE_PAYMENT_EMISSION = "charges:emission";
+export const QUEUE_WEBHOOK_PROCESS = "inbox:process";
+export const QUEUE_CHARGE_SYNC = "charges:sync";
+export const QUEUE_NOTIFICATION_SEND = "notifications:send";
+export const QUEUE_NFSE_EMIT = "nfse:emit";
 
 export type JobQueues = {
   paymentEmission: Queue;

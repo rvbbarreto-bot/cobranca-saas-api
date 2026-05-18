@@ -88,9 +88,11 @@ inboxRouter.post(
       scheduleWebhookProcessJob({ tenantId });
     }
 
+    const silentDuplicate = !result.inserted && result.alreadyProcessed;
     res.status(result.inserted ? 202 : 200).json({
       accepted: true,
       deduplicated: !result.inserted,
+      already_processed: silentDuplicate,
       id: result.row?.id
     });
   })

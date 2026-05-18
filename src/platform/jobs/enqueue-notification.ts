@@ -15,16 +15,30 @@ export function reguaJobId(chargeId: string, daysOffset: number): string {
 
 export async function enqueueNotificationJob(
   payload: NotificationSendJobPayload,
-  options?: { jobId?: string; delay?: number }
+  options?: { jobName?: string; jobId?: string; delay?: number }
 ): Promise<void> {
   if (!isJobsEnabled()) {
     return;
   }
-  await getQueues().notificationSend.add("send", payload, {
+  const jobName = options?.jobName ?? "send";
+  await getQueues().notificationSend.add(jobName, payload, {
     ...JOB_OPTS.notification,
     jobId: options?.jobId,
     delay: options?.delay
   });
+}
+
+export async function enqueuePaymentConfirmedNotification(
+  payload: NotificationSendJobPayload
+): Promise<void> {
+  await enqueueNotificationJob(payload, { jobName: "payment-confirmed" });
+}
+
+export async function enqueueReguaNotificationJob(
+  payload: NotificationSendJobPayload,
+  options?: { jobId?: string; delay?: number }
+): Promise<void> {
+  await enqueueNotificationJob(payload, { jobName: "regua", ...options });
 }
 
 export async function cancelReguaJobsForCharge(chargeId: string): Promise<void> {

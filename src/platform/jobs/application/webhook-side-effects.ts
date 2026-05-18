@@ -1,12 +1,27 @@
 import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
 import {
   cancelReguaJobsForCharge,
-  enqueueNotificationJob,
+  enqueuePaymentConfirmedNotification,
+  enqueueReguaNotificationJob,
   reguaJobId
 } from "../enqueue-notification";
 import { isJobsEnabled } from "../redis-connection";
 import { getQueues, JOB_OPTS } from "../queues";
 
+export type WebhookSideEffectPlan =
+  | { kind: "payment_confirmed"; chargeId: string; tenantId: string }
+  | { kind: "payment_overdue"; chargeId: string; tenantId: string }
+  | { kind: "payment_cancelled"; chargeId: string; tenantId: string }
+  | {
+      kind: "generic";
+      chargeId: string;
+      tenantId: string;
+      newStatus: CanonicalChargeStatus;
+      asaasEvent?: string;
+    }
+  | { kind: "none" };
+
+/** @deprecated use WebhookSideEffectPlan */
 export type WebhookSideEffectInput = {
   tenantId: string;
   chargeId: string;
@@ -15,6 +30,57 @@ export type WebhookSideEffectInput = {
 };
 
 /** Efeitos assincronos apos transicao de status via webhook (fora da transacao pg). */
+export async function applyWebhookSideEffectPlan(plan: WebhookSideEffectPlan): Promise<void> {
+  if (!isJobsEnabled() || plan.kind === "none") {
+    return;
+  }
+
+  if (plan.kind === "payment_confirmed") {
+    await cancelReguaJobsForCharge(plan.chargeId);
+    await enqueuePaymentConfirmedNotification({
+      chargeId: plan.chargeId,
+      tenantId: plan.tenantId,
+      eventType: "pagamento_confirmado"
+    });
+    await getQueues().nfseEmit.add(
+      "emit",
+      { chargeId: plan.chargeId, tenantId: plan.tenantId },
+      JOB_OPTS.nfse
+    );
+    return;
+  }
+
+  if (plan.kind === "payment_overdue") {
+    for (const daysOffset of [3, 7]) {
+      await enqueueReguaNotificationJob(
+        {
+          chargeId: plan.chargeId,
+          tenantId: plan.tenantId,
+          eventType: daysOffset === 3 ? "pos_vencimento_3d" : "pos_vencimento_7d",
+          daysOffset
+        },
+        { jobId: reguaJobId(plan.chargeId, daysOffset), delay: 0 }
+      );
+    }
+    return;
+  }
+
+  if (plan.kind === "payment_cancelled") {
+    await cancelReguaJobsForCharge(plan.chargeId);
+    return;
+  }
+
+  if (plan.kind === "generic") {
+    await applyWebhookSideEffects({
+      tenantId: plan.tenantId,
+      chargeId: plan.chargeId,
+      newStatus: plan.newStatus,
+      asaasEvent: plan.asaasEvent
+    });
+  }
+}
+
+/** Compatibilidade com fluxo canonico legado. */
 export async function applyWebhookSideEffects(input: WebhookSideEffectInput): Promise<void> {
   if (!isJobsEnabled()) {
     return;
@@ -23,36 +89,28 @@ export async function applyWebhookSideEffects(input: WebhookSideEffectInput): Pr
   const event = input.asaasEvent?.trim().toUpperCase();
 
   if (input.newStatus === "paga") {
-    await cancelReguaJobsForCharge(input.chargeId);
-    await enqueueNotificationJob({
+    await applyWebhookSideEffectPlan({
+      kind: "payment_confirmed",
       chargeId: input.chargeId,
-      tenantId: input.tenantId,
-      eventType: "pagamento_confirmado"
+      tenantId: input.tenantId
     });
-    await getQueues().nfseEmit.add(
-      "emit",
-      { chargeId: input.chargeId, tenantId: input.tenantId },
-      JOB_OPTS.nfse
-    );
     return;
   }
 
   if (input.newStatus === "vencida" || event === "PAYMENT_OVERDUE") {
-    for (const daysOffset of [3, 7]) {
-      await enqueueNotificationJob(
-        {
-          chargeId: input.chargeId,
-          tenantId: input.tenantId,
-          eventType: daysOffset === 3 ? "pos_vencimento_3d" : "pos_vencimento_7d",
-          daysOffset
-        },
-        { jobId: reguaJobId(input.chargeId, daysOffset), delay: 0 }
-      );
-    }
+    await applyWebhookSideEffectPlan({
+      kind: "payment_overdue",
+      chargeId: input.chargeId,
+      tenantId: input.tenantId
+    });
     return;
   }
 
   if (input.newStatus === "cancelada") {
-    await cancelReguaJobsForCharge(input.chargeId);
+    await applyWebhookSideEffectPlan({
+      kind: "payment_cancelled",
+      chargeId: input.chargeId,
+      tenantId: input.tenantId
+    });
   }
 }

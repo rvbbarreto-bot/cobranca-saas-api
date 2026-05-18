@@ -1,16 +1,22 @@
-export type SendEmailInput = {
+export interface SendEmailInput {
   to: string;
   subject: string;
   html: string;
-  attachments?: Array<{ filename: string; content: string }>;
-};
+  attachments?: { filename: string; content: Buffer }[];
+}
 
-export type SendWhatsAppInput = {
+export interface SendWhatsAppInput {
+  /** Apenas dígitos, sem +55 */
   phone: string;
+  /** Máximo 1024 caracteres (truncado no adapter) */
   message: string;
-};
+}
 
-export type NotificationAdapter = {
-  sendEmail(input: SendEmailInput): Promise<{ messageId: string }>;
-  sendWhatsApp(input: SendWhatsAppInput): Promise<{ messageId: string }>;
-};
+export interface NotificationResult {
+  messageId: string;
+}
+
+export interface NotificationAdapter {
+  sendEmail(input: SendEmailInput): Promise<NotificationResult>;
+  sendWhatsApp(input: SendWhatsAppInput): Promise<NotificationResult>;
+}

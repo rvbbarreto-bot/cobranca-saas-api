@@ -2,8 +2,8 @@ import type { Worker } from "bullmq";
 import { registerRepeatableJobs } from "./register-repeatable-jobs";
 import { createPaymentEmissionWorker } from "./workers/payment-emission.worker";
 import { createWebhookProcessWorker } from "./workers/webhook-process.worker";
-import { createChargeStatusSyncWorker } from "./workers/charge-status-sync.worker";
-import { createNotificationSendWorker } from "./workers/notification-send.worker";
+import { registerChargeSyncWorker } from "./workers/charge-status-sync.worker";
+import { registerNotificationSendWorker } from "./workers/notification-send.worker";
 
 const activeWorkers: Worker[] = [];
 
@@ -16,8 +16,8 @@ export function startAllWorkers(): void {
     activeWorkers.push(
       createPaymentEmissionWorker(),
       createWebhookProcessWorker(),
-      createChargeStatusSyncWorker(),
-      createNotificationSendWorker()
+      registerChargeSyncWorker(),
+      registerNotificationSendWorker()
     );
 
     void registerRepeatableJobs().catch((err: unknown) => {

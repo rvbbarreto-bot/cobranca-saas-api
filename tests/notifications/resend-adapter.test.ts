@@ -6,37 +6,63 @@ describe("ResendAdapter", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
     process.env.RESEND_API_KEY = "re_test";
+    process.env.RESEND_FROM_EMAIL = "cobrancas@teste.com.br";
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("envia email com sucesso", async () => {
+  it("sendEmail → POST correto e retorna messageId", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: async () => ({ id: "msg-1" })
+      json: async () => ({ id: "msg-resend-1" })
     } as Response);
 
     const adapter = new ResendAdapter();
     const result = await adapter.sendEmail({
-      to: "a@b.com",
-      subject: "Teste",
-      html: "<p>oi</p>"
+      to: "cliente@teste.com",
+      subject: "Assunto",
+      html: "<p>Ola</p>"
     });
-    expect(result.messageId).toBe("msg-1");
+
+    expect(result.messageId).toBe("msg-resend-1");
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.resend.com/emails",
+      expect.objectContaining({
+        method: "POST",
+        headers: expect.objectContaining({
+          Authorization: "Bearer re_test",
+          "Content-Type": "application/json"
+        })
+      })
+    );
+
+    const init = vi.mocked(fetch).mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(String(init.body));
+    expect(body).toEqual({
+      from: "cobrancas@teste.com.br",
+      to: ["cliente@teste.com"],
+      subject: "Assunto",
+      html: "<p>Ola</p>"
+    });
   });
 
-  it("falha com NotificationError quando HTTP erro", async () => {
+  it("erro HTTP 422 → NotificationError com channel email e provider resend", async () => {
     vi.mocked(fetch).mockResolvedValue({
       ok: false,
-      status: 401,
-      json: async () => ({ message: "unauthorized" })
+      status: 422,
+      json: async () => ({ message: "validation_error" })
     } as Response);
 
     const adapter = new ResendAdapter();
     await expect(
       adapter.sendEmail({ to: "a@b.com", subject: "x", html: "y" })
-    ).rejects.toBeInstanceOf(NotificationError);
+    ).rejects.toMatchObject({
+      name: "NotificationError",
+      channel: "email",
+      provider: "resend",
+      statusCode: 422
+    } satisfies Partial<NotificationError>);
   });
 });

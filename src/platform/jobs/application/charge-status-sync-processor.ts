@@ -1,11 +1,5 @@
-import { mapAsaasPaymentFieldStatus } from "../../../modules/payment-gateway/domain/asaas-status-map";
-import { AsaasAdapter } from "../../../modules/payment-gateway/infrastructure/asaas/asaas-adapter";
-import { insertChargeEvent } from "../../../modules/billing-core/infrastructure/charge-events-repository";
-import { evaluateChargeStatusTransition } from "../../../modules/billing-core/application/charge-status-transition";
-import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
-import { decryptAes256Gcm } from "../../crypto/symmetric-encryption";
 import { getPool } from "../../persistence/pool";
-import { withTenantTransaction } from "../../persistence/with-tenant-transaction";
+import { processChargeSyncReconciliation } from "./charge-sync-reconciliation";
 
 export type ChargeSyncSummary = {
   scanned: number;
@@ -13,96 +7,14 @@ export type ChargeSyncSummary = {
   errors: number;
 };
 
-type StaleChargeRow = {
-  charge_id: string;
-  tenant_id: string;
-  gateway_transaction_id: string;
-  canonical_status: string;
-  gateway_api_key_encrypted: string;
-  encryption_iv: string;
-};
-
-async function listStaleCharges(pool: ReturnType<typeof getPool>): Promise<StaleChargeRow[]> {
-  const r = await pool.query<StaleChargeRow>(
-    `SELECT c.id::text AS charge_id,
-            c.tenant_id::text AS tenant_id,
-            pt.gateway_transaction_id,
-            c.canonical_status,
-            ec.gateway_api_key_encrypted,
-            ec.encryption_iv
-     FROM charges c
-     INNER JOIN payment_transactions pt ON pt.charge_id = c.id
-     INNER JOIN escritorio_config ec ON ec.tenant_id = c.tenant_id::text
-     INNER JOIN tenants t ON t.id = c.tenant_id
-     WHERE c.canonical_status IN ('emitida', 'enviada', 'pendente_pagamento')
-       AND t.status IN ('active', 'trial')
-       AND c.updated_at < now() - interval '24 hours'
-       AND pt.gateway_transaction_id IS NOT NULL
-     LIMIT 50`
-  );
-  return r.rows;
-}
-
-async function syncOne(row: StaleChargeRow): Promise<boolean> {
-  return withTenantTransaction(row.tenant_id, async (client) => {
-    const apiKey = decryptAes256Gcm(row.gateway_api_key_encrypted, row.encryption_iv);
-    const adapter = new AsaasAdapter({ apiKey });
-    const remote = await adapter.getCharge(row.gateway_transaction_id);
-    const mapped = mapAsaasPaymentFieldStatus(remote.status);
-    if (!mapped) {
-      return false;
-    }
-
-    const from = row.canonical_status as CanonicalChargeStatus;
-    const decision = evaluateChargeStatusTransition(from, mapped);
-    if (decision !== "allow") {
-      return false;
-    }
-
-    await client.query(
-      `UPDATE charges
-       SET canonical_status = $2,
-           paid_at = CASE WHEN $2 = 'paga' THEN now() ELSE paid_at END,
-           cancelled_at = CASE WHEN $2 = 'cancelada' THEN now() ELSE cancelled_at END,
-           updated_at = now()
-       WHERE id = $1::uuid`,
-      [row.charge_id, mapped]
-    );
-
-    await insertChargeEvent(client, {
-      tenantId: row.tenant_id,
-      chargeId: row.charge_id,
-      eventType: "sync_gateway",
-      oldStatus: from,
-      newStatus: mapped,
-      payload: { gateway_status: remote.status }
-    });
-
-    return true;
-  });
-}
-
+/** Failsafe: reconcilia cobranças sem webhook há 24h consultando o gateway. */
 export async function processChargeStatusSync(): Promise<ChargeSyncSummary> {
-  const pool = getPool();
-  const rows = await listStaleCharges(pool);
-  let updated = 0;
-  let errors = 0;
-
-  for (const row of rows) {
-    try {
-      const ok = await syncOne(row);
-      if (ok) updated += 1;
-    } catch {
-      errors += 1;
-    }
-  }
-
-  // eslint-disable-next-line no-console
-  console.log(
-    `[charge-status-sync] scanned=${rows.length} updated=${updated} errors=${errors}`
-  );
-
-  return { scanned: rows.length, updated, errors };
+  const result = await processChargeSyncReconciliation();
+  return {
+    scanned: result.processed,
+    updated: result.updated,
+    errors: result.errors
+  };
 }
 
 /** Regua diaria: enfileira notificacoes conforme charging_rules. */

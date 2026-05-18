@@ -30,7 +30,7 @@ describe("enqueuePaymentEmissionJob", () => {
     addMock.mockClear();
   });
 
-  it("adiciona job emit-charge na fila charges-emission", async () => {
+  it("adiciona job emit-charge na fila charges:emission", async () => {
     const { enqueuePaymentEmissionJob } = await import(
       "../../../src/platform/jobs/enqueue-payment-emission"
     );

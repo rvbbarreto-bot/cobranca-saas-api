@@ -1,27 +1,122 @@
+import { UnrecoverableError } from "bullmq";
 import type { PoolClient } from "pg";
 import type { NotificationAdapter } from "../../../modules/notifications/domain/notification.interface";
+import { NotificationError } from "../../../modules/notifications/domain/notification-error";
 import { renderTemplate } from "../../../modules/notifications/application/render-template";
-import { createDefaultNotificationAdapter } from "../../../modules/notifications/infrastructure/composite-notification-adapter";
+import { ResendAdapter } from "../../../modules/notifications/infrastructure/resend/resend-adapter";
+import { ZapiAdapter } from "../../../modules/notifications/infrastructure/zapi/zapi-adapter";
 import { withTenantTransaction } from "../../persistence/with-tenant-transaction";
 import type { NotificationSendJobPayload } from "../enqueue-notification";
 
-function formatBrl(amount: string): string {
-  const n = Number(amount);
-  if (Number.isNaN(n)) return amount;
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
+export type NotificationChannel = "email" | "whatsapp" | "both";
 
-function formatDateBr(isoDate: string): string {
-  const [y, m, d] = isoDate.slice(0, 10).split("-");
-  if (!y || !m || !d) return isoDate;
-  return `${d}/${m}/${y}`;
-}
+type ChargeContextRow = {
+  charge_id: string;
+  tenant_id: string;
+  canonical_status: string;
+  amount: string;
+  due_date: Date | string;
+  paid_at: Date | string | null;
+  cliente_nome: string;
+  cliente_email: string | null;
+  cliente_telefone: string | null;
+  opt_in_email: boolean;
+  opt_in_whatsapp: boolean;
+  razao_social: string | null;
+};
 
 type TemplateRow = {
   channel: "email" | "whatsapp";
   subject: string | null;
   body_template: string;
 };
+
+export function formatCurrency(amount: string): string {
+  const n = Number(amount);
+  if (Number.isNaN(n)) return amount;
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+export function formatDate(value: Date | string | null | undefined): string {
+  if (value == null) return "";
+  const iso =
+    value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return iso;
+  return `${d}/${m}/${y}`;
+}
+
+/** Telefone apenas com dígitos (sem +55). */
+export function limparTelefone(telefone: string): string {
+  return telefone.replace(/\D/g, "");
+}
+
+export function eventTypeToDaysOffset(eventType: string): number | undefined {
+  const map: Record<string, number> = {
+    lembrete_pre_3d: -3,
+    lembrete_pre_1d: -1,
+    vencimento_hoje: 0,
+    pos_vencimento_3d: 3,
+    pos_vencimento_7d: 7
+  };
+  return map[eventType];
+}
+
+export async function resolveNotificationChannel(
+  client: PoolClient,
+  tenantId: string,
+  input: { forceChannel?: NotificationChannel; daysOffset?: number; eventType: string }
+): Promise<NotificationChannel> {
+  if (input.forceChannel) {
+    return input.forceChannel;
+  }
+
+  const daysOffset =
+    input.daysOffset ?? eventTypeToDaysOffset(input.eventType);
+  if (daysOffset === undefined) {
+    return "both";
+  }
+
+  const ruleR = await client.query<{ channel: NotificationChannel }>(
+    `SELECT channel
+     FROM charging_rules
+     WHERE tenant_id = $1 AND days_offset = $2 AND is_active = true
+     LIMIT 1`,
+    [tenantId, daysOffset]
+  );
+  return ruleR.rows[0]?.channel ?? "both";
+}
+
+async function loadChargeContext(
+  client: PoolClient,
+  chargeId: string,
+  tenantId: string
+): Promise<ChargeContextRow | null> {
+  const r = await client.query<ChargeContextRow>(
+    `SELECT
+       c.id::text AS charge_id,
+       c.tenant_id::text AS tenant_id,
+       c.canonical_status,
+       c.amount::text AS amount,
+       c.due_date,
+       c.paid_at,
+       cli.nome AS cliente_nome,
+       cli.email AS cliente_email,
+       cli.telefone AS cliente_telefone,
+       cli.opt_in_email,
+       cli.opt_in_whatsapp,
+       ec.razao_social
+     FROM charges c
+     INNER JOIN portal.cliente cli
+       ON cli.id = (NULLIF(c.metadata->>'portal_cliente_id', ''))::uuid
+       AND cli.tenant_id = c.tenant_id::text
+     INNER JOIN escritorio_config ec ON ec.tenant_id = c.tenant_id::text
+     WHERE c.id = $1::uuid AND c.tenant_id = $2::uuid
+     LIMIT 1`,
+    [chargeId, tenantId]
+  );
+  return r.rows[0] ?? null;
+}
 
 async function loadTemplate(
   client: PoolClient,
@@ -32,7 +127,9 @@ async function loadTemplate(
   const r = await client.query<TemplateRow>(
     `SELECT channel, subject, body_template
      FROM notification_templates
-     WHERE event_type = $2 AND channel = $3 AND is_active = true
+     WHERE event_type = $2
+       AND channel = $3
+       AND is_active = true
        AND (tenant_id = $1 OR tenant_id IS NULL)
      ORDER BY tenant_id NULLS LAST
      LIMIT 1`,
@@ -74,7 +171,9 @@ async function insertCommunicationEvent(
 
 export type NotificationSendProcessorDeps = {
   withTenant?: typeof withTenantTransaction;
-  adapter?: NotificationAdapter;
+  resendAdapter?: Pick<NotificationAdapter, "sendEmail">;
+  zapiAdapter?: Pick<NotificationAdapter, "sendWhatsApp">;
+  log?: (message: string) => void;
 };
 
 export async function processNotificationSend(
@@ -82,61 +181,26 @@ export async function processNotificationSend(
   deps: NotificationSendProcessorDeps = {}
 ): Promise<void> {
   const withTenant = deps.withTenant ?? withTenantTransaction;
-  const adapter = deps.adapter ?? createDefaultNotificationAdapter();
+  const resend = deps.resendAdapter ?? new ResendAdapter();
+  const zapi = deps.zapiAdapter ?? new ZapiAdapter();
+  const log = deps.log ?? (() => undefined);
 
   await withTenant(data.tenantId, async (client) => {
-    const chargeR = await client.query<{
-      canonical_status: string;
-      amount: string;
-      due_date: Date | string;
-      reference: string;
-    }>(
-      `SELECT canonical_status, amount::text, due_date, reference
-       FROM charges WHERE id = $1::uuid AND tenant_id = $2::uuid LIMIT 1`,
-      [data.chargeId, data.tenantId]
-    );
-    const charge = chargeR.rows[0];
-    if (!charge) {
-      return;
+    const ctx = await loadChargeContext(client, data.chargeId, data.tenantId);
+    if (!ctx) {
+      throw new UnrecoverableError("charge_not_found");
     }
-    if (charge.canonical_status === "paga" || charge.canonical_status === "cancelada") {
+
+    if (ctx.canonical_status === "paga" || ctx.canonical_status === "cancelada") {
+      log(`Notificação ignorada: cobrança ${data.chargeId} já em estado terminal`);
       return;
     }
 
-    const portalClienteId = (
-      await client.query<{ portal_cliente_id: string | null }>(
-        `SELECT metadata->>'portal_cliente_id' AS portal_cliente_id FROM charges WHERE id = $1::uuid`,
-        [data.chargeId]
-      )
-    ).rows[0]?.portal_cliente_id;
-
-    let nome = "Cliente";
-    let email: string | null = null;
-    let telefone: string | null = null;
-    let optInEmail = true;
-    let optInWhatsapp = false;
-
-    if (portalClienteId) {
-      const cl = await client.query<{
-        nome: string;
-        email: string | null;
-        telefone: string | null;
-        opt_in_email: boolean;
-        opt_in_whatsapp: boolean;
-      }>(
-        `SELECT nome, email, telefone, opt_in_email, opt_in_whatsapp
-         FROM portal.cliente WHERE id = $1::uuid LIMIT 1`,
-        [portalClienteId]
-      );
-      const row = cl.rows[0];
-      if (row) {
-        nome = row.nome;
-        email = row.email;
-        telefone = row.telefone;
-        optInEmail = row.opt_in_email;
-        optInWhatsapp = row.opt_in_whatsapp;
-      }
-    }
+    const channel = await resolveNotificationChannel(client, data.tenantId, {
+      forceChannel: data.forceChannel,
+      daysOffset: data.daysOffset,
+      eventType: data.eventType
+    });
 
     const payR = await client.query<{
       boleto_url: string | null;
@@ -146,45 +210,39 @@ export async function processNotificationSend(
       `SELECT boleto_url, pix_link, pix_emv
        FROM payment_transactions
        WHERE charge_id = $1::uuid
-       ORDER BY created_at DESC LIMIT 1`,
+       ORDER BY created_at DESC
+       LIMIT 1`,
       [data.chargeId]
     );
     const pay = payR.rows[0];
 
-    const escritorioR = await client.query<{ razao_social: string | null }>(
-      `SELECT razao_social FROM escritorio_config WHERE tenant_id = $1 LIMIT 1`,
-      [data.tenantId]
-    );
-
-    const dueStr =
-      charge.due_date instanceof Date
-        ? charge.due_date.toISOString().slice(0, 10)
-        : String(charge.due_date).slice(0, 10);
-
     const vars: Record<string, string> = {
-      nome,
-      valor: formatBrl(charge.amount),
-      data_vencimento: formatDateBr(dueStr),
+      nome: ctx.cliente_nome,
+      valor: formatCurrency(ctx.amount),
+      data_vencimento: formatDate(ctx.due_date),
       link_boleto: pay?.boleto_url ?? "",
       link_pix: pay?.pix_link ?? "",
       pix_emv: pay?.pix_emv ?? "",
-      escritorio_nome: escritorioR.rows[0]?.razao_social ?? "Escritorio",
+      escritorio_nome: ctx.razao_social ?? "Escritório",
       multa_percentual: "2",
-      data_pagamento: formatDateBr(new Date().toISOString().slice(0, 10))
+      data_pagamento: formatDate(ctx.paid_at)
     };
 
-    const force = data.forceChannel;
-    const sendEmail = force === "email" || force === "both" || !force;
-    const sendWhatsapp = force === "whatsapp" || force === "both" || !force;
+    const sendEmail = channel === "email" || channel === "both";
+    const sendWhatsapp = channel === "whatsapp" || channel === "both";
 
-    if (sendEmail && optInEmail && email?.trim()) {
+    if (sendEmail && ctx.opt_in_email && ctx.cliente_email?.trim()) {
       const tpl = await loadTemplate(client, data.tenantId, data.eventType, "email");
       if (tpl) {
         const html = renderTemplate(tpl.body_template, vars);
+        const subject = tpl.subject
+          ? renderTemplate(tpl.subject, vars)
+          : data.eventType;
+        const recipient = ctx.cliente_email.trim();
         try {
-          const result = await adapter.sendEmail({
-            to: email.trim(),
-            subject: tpl.subject ? renderTemplate(tpl.subject, vars) : data.eventType,
+          const result = await resend.sendEmail({
+            to: recipient,
+            subject,
             html
           });
           await insertCommunicationEvent(client, {
@@ -192,52 +250,58 @@ export async function processNotificationSend(
             chargeId: data.chargeId,
             channel: "email",
             eventType: data.eventType,
-            recipient: email.trim(),
+            recipient,
             status: "sent",
             providerMessageId: result.messageId
           });
         } catch (error: unknown) {
-          const msg = error instanceof Error ? error.message : String(error);
-          await insertCommunicationEvent(client, {
-            tenantId: data.tenantId,
-            chargeId: data.chargeId,
-            channel: "email",
-            eventType: data.eventType,
-            recipient: email.trim(),
-            status: "failed",
-            errorMessage: msg
-          });
+          if (error instanceof NotificationError) {
+            await insertCommunicationEvent(client, {
+              tenantId: data.tenantId,
+              chargeId: data.chargeId,
+              channel: "email",
+              eventType: data.eventType,
+              recipient,
+              status: "failed",
+              errorMessage: error.message
+            });
+          }
           throw error;
         }
       }
     }
 
-    if (sendWhatsapp && optInWhatsapp && telefone?.trim()) {
+    if (sendWhatsapp && ctx.opt_in_whatsapp && ctx.cliente_telefone?.trim()) {
       const tpl = await loadTemplate(client, data.tenantId, data.eventType, "whatsapp");
       if (tpl) {
         const message = renderTemplate(tpl.body_template, vars);
+        const recipient = ctx.cliente_telefone.trim();
         try {
-          const result = await adapter.sendWhatsApp({ phone: telefone.trim(), message });
+          const result = await zapi.sendWhatsApp({
+            phone: limparTelefone(recipient),
+            message
+          });
           await insertCommunicationEvent(client, {
             tenantId: data.tenantId,
             chargeId: data.chargeId,
             channel: "whatsapp",
             eventType: data.eventType,
-            recipient: telefone.trim(),
+            recipient,
             status: "sent",
             providerMessageId: result.messageId
           });
         } catch (error: unknown) {
-          const msg = error instanceof Error ? error.message : String(error);
-          await insertCommunicationEvent(client, {
-            tenantId: data.tenantId,
-            chargeId: data.chargeId,
-            channel: "whatsapp",
-            eventType: data.eventType,
-            recipient: telefone.trim(),
-            status: "failed",
-            errorMessage: msg
-          });
+          if (error instanceof NotificationError) {
+            await insertCommunicationEvent(client, {
+              tenantId: data.tenantId,
+              chargeId: data.chargeId,
+              channel: "whatsapp",
+              eventType: data.eventType,
+              recipient,
+              status: "failed",
+              errorMessage: error.message
+            });
+          }
           throw error;
         }
       }
