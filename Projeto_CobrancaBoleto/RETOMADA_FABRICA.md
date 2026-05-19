@@ -13,7 +13,8 @@
 | Sprint 1 — gateway + emissão | `main` | Concluído |
 | Sprint 2 — notificações + régua + CRUD escritório | `main` (`b2dfd1e`) | Concluído |
 | Sprint 3 — portal cliente + relatórios | `main` (PR #2/#3) | Concluído |
-| **Sprint 4 — SaaS billing (fase 1)** | **`cursor/sprint4-saas-billing`** | **PR #4 — pronto para merge** (testes + UI + docs) |
+| **Sprint 4 — SaaS billing** | **`main`** (`409c69c`) | **Integrado em `main`** (PR #4; base original era `feat/sprint1` — corrigido) |
+| **Sprint 4.7 — Asaas Subscriptions** | **`feat/asaas-subscriptions`** | **PR #5** → base **`main`** |
 
 **Testes na branch Sprint 4 (local):** `172` testes Vitest passando (`npm test`).
 
@@ -104,8 +105,8 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 
 - [x] **4.5** `GET /v1/saas/metrics` (MRR, tenants por status, inadimplência) — role **owner**
 - [x] **4.6** `docs/N8N_WEBHOOKS.md` + outbound `charge.paid` via `N8N_PLATFORM_WEBHOOK_URL`
-- [ ] Cobrança recorrente Asaas Subscriptions (`gateway_subscription_id`) — fase posterior
-- [ ] Evento outbound `subscription.past_due` (quando billing recorrente estiver ativo)
+- [x] Cobrança recorrente Asaas Subscriptions (`POST .../assinatura/activate`, migration 024)
+- [x] Webhooks inbox → atualização `assinaturas` + outbound `subscription.past_due`
 
 ---
 

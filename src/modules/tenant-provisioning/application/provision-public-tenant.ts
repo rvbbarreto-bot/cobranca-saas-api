@@ -7,6 +7,7 @@ export type ProvisionPublicTenantInput = {
   status: "active" | "suspended" | "trial";
   automacaoTenantId?: string | null;
   planoSlug?: string;
+  billingEmail?: string;
 };
 
 export type ProvisionPublicTenantResult = {
@@ -45,6 +46,12 @@ export function parseProvisionPublicTenantBody(body: unknown):
       : typeof o.planoSlug === "string"
         ? o.planoSlug.trim().toLowerCase()
         : "";
+  const billingEmail =
+    typeof o.billing_email === "string"
+      ? o.billing_email.trim()
+      : typeof o.billingEmail === "string"
+        ? o.billingEmail.trim()
+        : "";
 
   if (!slug || !isValidTenantSlug(slug)) {
     return {
@@ -68,7 +75,8 @@ export function parseProvisionPublicTenantBody(body: unknown):
       name,
       status,
       automacaoTenantId: automacaoTenantId || undefined,
-      planoSlug: planoSlug || undefined
+      planoSlug: planoSlug || undefined,
+      billingEmail: billingEmail || undefined
     }
   };
 }
@@ -81,8 +89,10 @@ export async function provisionPublicTenant(
   try {
     await client.query("BEGIN");
     const ins = await client.query<{ id: string; slug: string; name: string }>(
-      `INSERT INTO tenants (slug, name, status) VALUES ($1, $2, $3) RETURNING id::text AS id, slug, name`,
-      [input.slug, input.name, input.status]
+      `INSERT INTO tenants (slug, name, status, billing_email)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id::text AS id, slug, name`,
+      [input.slug, input.name, input.status, input.billingEmail ?? null]
     );
     const row = ins.rows[0];
     if (!row) {

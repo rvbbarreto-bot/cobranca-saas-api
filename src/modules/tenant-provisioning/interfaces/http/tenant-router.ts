@@ -40,8 +40,9 @@ tenantRouter.post(
         billing_linked: result.billingLinked
       });
     } catch (error: unknown) {
-      if (error instanceof SaasBillingError && error.code === "PLAN_NOT_FOUND") {
-        res.status(400).json({ error: error.code, message: error.message });
+      if (error instanceof SaasBillingError) {
+        const status = error.code === "PLAN_NOT_FOUND" ? 400 : 422;
+        res.status(status).json({ error: error.code, message: error.message });
         return;
       }
       if (error instanceof DatabaseError && error.code === "23505") {
