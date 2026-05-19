@@ -26,7 +26,8 @@ export default defineConfig({
       "tests/cross-tenant.integration.test.ts",
       "tests/webhook-charge-status.integration.test.ts",
       "tests/functional/api-battery.integration.test.ts",
-      "tests/portal-read/portal-cobranca-emission-flow.integration.test.ts"
+      "tests/portal-read/portal-cobranca-emission-flow.integration.test.ts",
+      "tests/portal-read/sprint3-e2e-flow.integration.test.ts"
     ],
     testTimeout: 30_000,
     hookTimeout: 30_000,

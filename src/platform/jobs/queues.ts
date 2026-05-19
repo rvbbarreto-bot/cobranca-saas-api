@@ -4,10 +4,11 @@ import { redisConnection } from "./redis-connection";
 /**
  * Nomes das filas BullMQ. Producer e consumer DEVEM importar estas constantes.
  */
-export const QUEUE_PAYMENT_EMISSION = "charges:emission";
-export const QUEUE_WEBHOOK_PROCESS = "inbox:process";
-export const QUEUE_CHARGE_SYNC = "charges:sync";
-export const QUEUE_NOTIFICATION_SEND = "notifications:send";
+/** BullMQ nao permite ':' no nome da fila (Redis key). */
+export const QUEUE_PAYMENT_EMISSION = "charges-emission";
+export const QUEUE_WEBHOOK_PROCESS = "inbox-process";
+export const QUEUE_CHARGE_SYNC = "charges-sync";
+export const QUEUE_NOTIFICATION_SEND = "notifications-send";
 
 export type JobQueues = {
   paymentEmission: Queue;

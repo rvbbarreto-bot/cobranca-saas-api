@@ -59,8 +59,11 @@ COMMENT ON TABLE portal.membership IS 'Vínculo usuário ↔ tenant (escritório
 
 -- ---------------------------------------------------------------------------
 -- View estável para telas (contrato da API / Lovable) — não altera o fluxo n8n
+-- DROP antes de CREATE evita erro "cannot drop columns from view" em reexecução.
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE VIEW portal.vw_notas_fiscais_resumo AS
+DROP VIEW IF EXISTS portal.vw_notas_fiscais_resumo;
+
+CREATE VIEW portal.vw_notas_fiscais_resumo AS
 SELECT
   nf.referencia_externa,
   nf.chat_id,
