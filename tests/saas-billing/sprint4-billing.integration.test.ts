@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import pg from "pg";
 import { createApp } from "../../src/app";
+import { signAccessToken } from "../../src/modules/identity-access/application/jwt-service";
 import { closePool, getPool } from "../../src/platform/persistence/pool";
 import {
   DEMO_PUBLIC_TENANT_UUID,
@@ -36,6 +37,33 @@ describe.skipIf(!hasDb)("Sprint 4 — SaaS billing (integracao)", () => {
 
   afterAll(async () => {
     await closePool();
+  });
+
+  it("GET /v1/saas/metrics retorna MRR para owner", async () => {
+    const res = await request(app)
+      .get("/v1/saas/metrics")
+      .set("Authorization", `Bearer ${coreToken}`)
+      .set("x-tenant-id", "demo")
+      .expect(200);
+
+    expect(res.body?.metrics).toBeTruthy();
+    expect(typeof res.body.metrics.mrr).toBe("number");
+    expect(res.body.metrics.currency).toBe("BRL");
+    expect(res.body.metrics.tenants_by_status).toBeTruthy();
+  });
+
+  it("GET /v1/saas/metrics com role admin retorna 403", async () => {
+    const adminToken = signAccessToken({
+      sub: "admin-only",
+      tid: "demo",
+      roles: ["admin"]
+    });
+
+    await request(app)
+      .get("/v1/saas/metrics")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .set("x-tenant-id", "demo")
+      .expect(403);
   });
 
   it("GET /v1/saas/plans retorna catalogo com 3 planos", async () => {

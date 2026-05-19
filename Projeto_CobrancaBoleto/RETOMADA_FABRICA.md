@@ -100,11 +100,12 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 | 6 | `npm run quality:gate` | Validar no CI antes do merge |
 | 7 | Review PO | Demo: provision → limites → `402`/`403` |
 
-### 4.3 Backlog Sprint 4 (PR seguinte, não bloqueia fase 1)
+### 4.3 Sprint 4 fase 2 (em desenvolvimento na branch do PR)
 
-- **4.5** `GET /v1/saas/metrics` (MRR, inadimplência) — só owner plataforma
-- **4.6** Webhooks outbound + `docs/N8N_WEBHOOKS.md` (`charge.paid`, `subscription.past_due`)
-- Cobrança recorrente de assinatura via Asaas Subscriptions (spec v2 §6.2 — fase posterior)
+- [x] **4.5** `GET /v1/saas/metrics` (MRR, tenants por status, inadimplência) — role **owner**
+- [x] **4.6** `docs/N8N_WEBHOOKS.md` + outbound `charge.paid` via `N8N_PLATFORM_WEBHOOK_URL`
+- [ ] Cobrança recorrente Asaas Subscriptions (`gateway_subscription_id`) — fase posterior
+- [ ] Evento outbound `subscription.past_due` (quando billing recorrente estiver ativo)
 
 ---
 

@@ -44,6 +44,7 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | POST | `/v1/tenants/provision/mock` | **Mock** sem persistencia; JWT owner/admin; desligavel |
 | POST | `/v1/tenants/provision` | **Persistido** — JWT core owner/admin; body JSON; veja secao 3; **409** se `slug` duplicado; opcional `plano_slug` / `planoSlug` (default `basico`); cria `assinaturas` em **trial** 14 dias |
 | GET | `/v1/saas/plans` | Bearer core; roles **owner** / **admin**; catálogo global `{ data: planos[] }` |
+| GET | `/v1/saas/metrics` | Bearer core; role **owner** apenas; `{ metrics: { mrr, currency, tenants_by_status, inadimplencia, generated_at } }` |
 | GET | `/v1/portal/escritorio/assinatura` | Bearer portal + billing link; roles admin_escritorio / owner; `{ assinatura: { status, read_only, plano, uso, … } }` ou **404** sem assinatura |
 
 **Metering (Sprint 4):** em `POST /v1/portal/cobrancas` e `POST /v1/portal/clientes`, o servidor pode responder:

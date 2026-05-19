@@ -58,7 +58,8 @@ export default defineConfig({
         "src/platform/jobs/application/**/*.ts",
         "src/modules/tenant-provisioning/application/provision-public-tenant.ts",
         "src/modules/saas-billing/application/**/*.ts",
-        "src/modules/saas-billing/domain/**/*.ts"
+        "src/modules/saas-billing/domain/**/*.ts",
+        "src/platform/integrations/n8n-outbound.ts"
       ],
       exclude: ["**/*.d.ts", "**/index.ts"],
       thresholds: {
