@@ -18,6 +18,6 @@ COPY --from=builder /app/dist ./dist
 COPY db/migrations ./db/migrations
 ENV NODE_ENV=production
 EXPOSE 3333
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s \
-  CMD wget -qO- http://localhost:3333/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s \
+  CMD wget -qO- http://localhost:3333/health/ready || exit 1
 CMD ["node", "dist/server.js"]
