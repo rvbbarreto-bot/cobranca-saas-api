@@ -52,15 +52,17 @@ Disparado após webhook Asaas confirmar pagamento e a API enfileirar notificaç�
 
 ### `subscription.past_due`
 
-**Planeado** para quando a assinatura do escritório passar a `past_due` (integração de billing recorrente / cron). Documentado para contrato n8n; implementação completa virá com Asaas Subscriptions.
+Disparado quando webhook Asaas de cobrança da **assinatura SaaS** mapeia status `past_due` (ex.: `PAYMENT_OVERDUE` com `payment.subscription`).
 
-**Payload sugerido (futuro):**
+**Origem:** `applyAsaasPlatformSubscriptionWebhook`.
+
+**Payload:**
 
 ```json
 {
-  "subscription_id": "uuid",
+  "subscription_id": "uuid-assinatura",
   "plano_slug": "profissional",
-  "status": "past_due"
+  "gateway_subscription_id": "sub_xxx"
 }
 ```
 

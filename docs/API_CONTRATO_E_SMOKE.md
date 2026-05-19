@@ -46,6 +46,7 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/saas/plans` | Bearer core; roles **owner** / **admin**; catálogo global `{ data: planos[] }` |
 | GET | `/v1/saas/metrics` | Bearer core; role **owner** apenas; `{ metrics: { mrr, currency, tenants_by_status, inadimplencia, generated_at } }` |
 | GET | `/v1/portal/escritorio/assinatura` | Bearer portal + billing link; roles admin_escritorio / owner; `{ assinatura: { status, read_only, plano, uso, … } }` ou **404** sem assinatura |
+| POST | `/v1/portal/escritorio/assinatura/activate` | admin_escritorio; cria assinatura recorrente no Asaas (`gateway_subscription_id`); **503** se `ASAAS_PLATFORM_API_KEY` ausente; **409** se já ativada |
 
 **Metering (Sprint 4):** em `POST /v1/portal/cobrancas` e `POST /v1/portal/clientes`, o servidor pode responder:
 

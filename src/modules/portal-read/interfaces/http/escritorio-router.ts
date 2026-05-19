@@ -25,7 +25,9 @@ import {
   resolveDashboardPeriod
 } from "../../application/escritorio-dashboard";
 import { streamCobrancasCsvRows } from "../../application/escritorio-cobrancas-export";
+import { activatePlatformSubscription } from "../../../saas-billing/application/activate-platform-subscription";
 import { getTenantSubscriptionUseCase } from "../../../saas-billing/application/get-tenant-subscription";
+import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
 
 function isEscritorioAdmin(req: Request): boolean {
   return req.portalMembership?.role === "admin_escritorio";
@@ -285,6 +287,38 @@ export function createEscritorioRouter(): Router {
         return;
       }
       res.json({ assinatura });
+    })
+  );
+
+  /** POST /v1/portal/escritorio/assinatura/activate — cria assinatura recorrente no Asaas (plataforma). */
+  router.post(
+    "/assinatura/activate",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const tenantId = await resolvePublicTenant(req, res);
+      if (!tenantId) return;
+
+      try {
+        const result = await withTenantTransaction(tenantId, (client) =>
+          activatePlatformSubscription(client, tenantId)
+        );
+        res.status(200).json({ activation: result });
+      } catch (error: unknown) {
+        if (error instanceof SaasBillingError) {
+          const status =
+            error.code === "PLATFORM_BILLING_NOT_CONFIGURED"
+              ? 503
+              : error.code === "SUBSCRIPTION_ALREADY_ACTIVATED"
+                ? 409
+                : 422;
+          res.status(status).json({ error: error.code, message: error.message });
+          return;
+        }
+        throw error;
+      }
     })
   );
 

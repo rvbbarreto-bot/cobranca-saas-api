@@ -104,8 +104,8 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 
 - [x] **4.5** `GET /v1/saas/metrics` (MRR, tenants por status, inadimplência) — role **owner**
 - [x] **4.6** `docs/N8N_WEBHOOKS.md` + outbound `charge.paid` via `N8N_PLATFORM_WEBHOOK_URL`
-- [ ] Cobrança recorrente Asaas Subscriptions (`gateway_subscription_id`) — fase posterior
-- [ ] Evento outbound `subscription.past_due` (quando billing recorrente estiver ativo)
+- [x] Cobrança recorrente Asaas Subscriptions (`POST .../assinatura/activate`, migration 024)
+- [x] Webhooks inbox → atualização `assinaturas` + outbound `subscription.past_due`
 
 ---
 
