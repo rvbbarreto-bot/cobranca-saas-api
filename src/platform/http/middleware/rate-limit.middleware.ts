@@ -52,6 +52,15 @@ export const webhookRateLimit = makeLazyLimiter(() => ({
   }
 }));
 
+/** GET /v1/portal/escritorio/cobrancas/export — 5 req/min por tenant. */
+export const escritorioCsvExportRateLimit = makeLazyLimiter(() => ({
+  max: 5,
+  keyGenerator: (req: Request) => {
+    const tenant = req.tenantContext?.tenantId ?? req.header("x-tenant-id")?.trim();
+    return `csv-export:${tenant || req.ip || "unknown"}`;
+  }
+}));
+
 /** Conecta Redis e prepara store compartilhado (chamar antes de aceitar trafego). */
 export async function initRateLimitRedis(): Promise<void> {
   if (process.env.NODE_ENV === "test" || !process.env.REDIS_URL?.trim()) {

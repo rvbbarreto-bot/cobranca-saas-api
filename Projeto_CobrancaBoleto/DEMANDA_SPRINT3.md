@@ -2,9 +2,11 @@
 ## SaaS de Cobranças · Emitido por: PO + Tech Manager + Engenheiro de Prompt IA
 ### Data: Maio 2026 · Pré-requisito: PR Sprint 2 mergeado e CI verde
 
+> **Status: CONCLUÍDO** (merge em `main`, PR #2/#3). Retomada: [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md).
+
 ---
 
-> **⛔ GATE DE ENTRADA**
+> **⛔ GATE DE ENTRADA** *(histórico — sprint encerrado)*
 > Este pacote só pode ser iniciado após o PR do Sprint 2 estar mergeado em `main`
 > e `npm test` retornar ≥ 130 testes passando em ambiente limpo (sem cache local).
 > Confirme antes de abrir qualquer arquivo novo.

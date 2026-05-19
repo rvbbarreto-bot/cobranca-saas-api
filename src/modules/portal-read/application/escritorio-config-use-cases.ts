@@ -19,7 +19,6 @@ export const patchEscritorioConfigSchema = z.object({
   aliquota_iss: z.number().min(0).max(10).optional(),
   gateway_provider: z.enum(["asaas", "pagarme"]).optional(),
   gateway_api_key: z.string().min(10).optional(),
-  focus_nfe_token: z.string().min(10).optional(),
   whatsapp_provider: z.enum(["zapi", "twilio"]).optional(),
   whatsapp_token: z.string().min(1).optional()
 });
@@ -38,7 +37,6 @@ export function mapEscritorioConfigPublic(row: EscritorioConfigRow | null) {
     aliquota_iss: row.aliquota_iss,
     gateway_provider: row.gateway_provider,
     gateway_api_key: maskSecret(row.gateway_api_key_encrypted),
-    focus_nfe_token: maskSecret(row.focus_nfe_token_encrypted),
     whatsapp_provider: row.whatsapp_provider,
     whatsapp_token: maskSecret(row.whatsapp_token_encrypted)
   };
@@ -84,13 +82,6 @@ export async function patchEscritorioConfigUseCase(
     fields.gateway_api_key_encrypted = enc.ciphertext;
     iv = enc.iv;
     fields.encryption_iv = iv;
-  }
-  if (data.focus_nfe_token) {
-    const enc = encryptAes256Gcm(data.focus_nfe_token);
-    fields.focus_nfe_token_encrypted = enc.ciphertext;
-    if (!fields.encryption_iv) {
-      fields.encryption_iv = enc.iv;
-    }
   }
   if (data.whatsapp_token) {
     const enc = encryptAes256Gcm(data.whatsapp_token);

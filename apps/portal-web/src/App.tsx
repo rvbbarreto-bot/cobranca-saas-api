@@ -18,6 +18,10 @@ import { AjudaProvisionamentoCorePage } from "./pages/AjudaProvisionamentoCorePa
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { ClienteEditPage } from "./pages/ClienteEditPage";
 import { BoletoDetalhePage } from "./pages/BoletoDetalhePage";
+import { ClienteAcessoPage } from "./pages/ClienteAcessoPage";
+import { ClienteCobrancasPage } from "./pages/ClienteCobrancasPage";
+import { ClienteCobrancaDetalhePage } from "./pages/ClienteCobrancaDetalhePage";
+import { ClienteProtectedRoute } from "./components/ClienteProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -35,6 +39,11 @@ export function App(): JSX.Element {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/acesso" element={<ClienteAcessoPage />} />
+            <Route element={<ClienteProtectedRoute />}>
+              <Route path="/cliente/cobrancas" element={<ClienteCobrancasPage />} />
+              <Route path="/cliente/cobrancas/:chargeId" element={<ClienteCobrancaDetalhePage />} />
+            </Route>
             <Route element={<ProtectedRoute />}>
               <Route element={<AppShell />}>
                 <Route path="/dashboard" element={<DashboardPage />} />

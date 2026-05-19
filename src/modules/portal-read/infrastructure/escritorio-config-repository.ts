@@ -11,7 +11,6 @@ export type EscritorioConfigRow = {
   gateway_provider: string | null;
   gateway_api_key_encrypted: string | null;
   encryption_iv: string | null;
-  focus_nfe_token_encrypted: string | null;
   whatsapp_provider: string | null;
   whatsapp_token_encrypted: string | null;
 };
@@ -23,7 +22,7 @@ export async function getEscritorioConfig(
   const r = await client.query<EscritorioConfigRow>(
     `SELECT tenant_id, cnpj_emissor, razao_social, inscricao_municipal, regime_tributario,
             codigo_municipio, aliquota_iss::text, gateway_provider,
-            gateway_api_key_encrypted, encryption_iv, focus_nfe_token_encrypted,
+            gateway_api_key_encrypted, encryption_iv,
             whatsapp_provider, whatsapp_token_encrypted
      FROM escritorio_config WHERE tenant_id = $1 LIMIT 1`,
     [tenantId]
@@ -56,7 +55,7 @@ export async function upsertEscritorioConfigFields(
      ON CONFLICT (tenant_id) DO UPDATE SET ${updates.join(", ")}
      RETURNING tenant_id, cnpj_emissor, razao_social, inscricao_municipal, regime_tributario,
                codigo_municipio, aliquota_iss::text, gateway_provider,
-               gateway_api_key_encrypted, encryption_iv, focus_nfe_token_encrypted,
+               gateway_api_key_encrypted, encryption_iv,
                whatsapp_provider, whatsapp_token_encrypted`,
     vals
   );

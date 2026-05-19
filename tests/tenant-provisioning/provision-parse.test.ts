@@ -15,4 +15,16 @@ describe("parseProvisionPublicTenantBody", () => {
     expect(parseProvisionPublicTenantBody({ slug: "A", name: "x" }).ok).toBe(false);
     expect(parseProvisionPublicTenantBody({ slug: "-bad", name: "x" }).ok).toBe(false);
   });
+
+  it("aceita plano_slug opcional", () => {
+    const r = parseProvisionPublicTenantBody({
+      slug: "escritorio-x",
+      name: "X",
+      plano_slug: "Profissional"
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.planoSlug).toBe("profissional");
+    }
+  });
 });

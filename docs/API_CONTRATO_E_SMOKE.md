@@ -42,7 +42,18 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | POST | `/v1/inbox/webhooks` | `x-tenant-id` core; em **producao** exige `WEBHOOK_INBOX_SECRET` configurado; se secret definido, header `X-Webhook-Secret` |
 | POST | `/v1/inbox/webhooks/process-pending` | Bearer |
 | POST | `/v1/tenants/provision/mock` | **Mock** sem persistencia; JWT owner/admin; desligavel |
-| POST | `/v1/tenants/provision` | **Persistido** — JWT core owner/admin; body JSON; veja secao 3; **409** se `slug` duplicado |
+| POST | `/v1/tenants/provision` | **Persistido** — JWT core owner/admin; body JSON; veja secao 3; **409** se `slug` duplicado; opcional `plano_slug` / `planoSlug` (default `basico`); cria `assinaturas` em **trial** 14 dias |
+| GET | `/v1/saas/plans` | Bearer core; roles **owner** / **admin**; catálogo global `{ data: planos[] }` |
+| GET | `/v1/saas/metrics` | Bearer core; role **owner** apenas; `{ metrics: { mrr, currency, tenants_by_status, inadimplencia, generated_at } }` |
+| GET | `/v1/portal/escritorio/assinatura` | Bearer portal + billing link; roles admin_escritorio / owner; `{ assinatura: { status, read_only, plano, uso, … } }` ou **404** sem assinatura |
+
+**Metering (Sprint 4):** em `POST /v1/portal/cobrancas` e `POST /v1/portal/clientes`, o servidor pode responder:
+
+| HTTP | `error` (corpo) | Quando |
+|------|-----------------|--------|
+| **403** | `SUBSCRIPTION_READ_ONLY` | Assinatura expirada / modo somente leitura |
+| **402** | `LIMIT_CLIENTES` | Limite de clientes do plano atingido |
+| **402** | `LIMIT_COBRANCAS_MES` | Limite mensal de cobranças atingido |
 
 ### 2.1 Paginação `GET` portal (P1 — cursor + `limit`)
 

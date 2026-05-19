@@ -4,18 +4,17 @@ import { redisConnection } from "./redis-connection";
 /**
  * Nomes das filas BullMQ. Producer e consumer DEVEM importar estas constantes.
  */
-export const QUEUE_PAYMENT_EMISSION = "charges:emission";
-export const QUEUE_WEBHOOK_PROCESS = "inbox:process";
-export const QUEUE_CHARGE_SYNC = "charges:sync";
-export const QUEUE_NOTIFICATION_SEND = "notifications:send";
-export const QUEUE_NFSE_EMIT = "nfse:emit";
+/** BullMQ nao permite ':' no nome da fila (Redis key). */
+export const QUEUE_PAYMENT_EMISSION = "charges-emission";
+export const QUEUE_WEBHOOK_PROCESS = "inbox-process";
+export const QUEUE_CHARGE_SYNC = "charges-sync";
+export const QUEUE_NOTIFICATION_SEND = "notifications-send";
 
 export type JobQueues = {
   paymentEmission: Queue;
   webhookProcess: Queue;
   chargeSync: Queue;
   notificationSend: Queue;
-  nfseEmit: Queue;
 };
 
 let queuesCache: JobQueues | null = null;
@@ -25,8 +24,7 @@ function createQueues(): JobQueues {
     paymentEmission: new Queue(QUEUE_PAYMENT_EMISSION, { connection: redisConnection }),
     webhookProcess: new Queue(QUEUE_WEBHOOK_PROCESS, { connection: redisConnection }),
     chargeSync: new Queue(QUEUE_CHARGE_SYNC, { connection: redisConnection }),
-    notificationSend: new Queue(QUEUE_NOTIFICATION_SEND, { connection: redisConnection }),
-    nfseEmit: new Queue(QUEUE_NFSE_EMIT, { connection: redisConnection })
+    notificationSend: new Queue(QUEUE_NOTIFICATION_SEND, { connection: redisConnection })
   };
 }
 
@@ -56,10 +54,6 @@ export const JOB_OPTS = {
     attempts: 3,
     backoff: { type: "exponential" as const, delay: 120_000 }
   },
-  nfse: {
-    attempts: 5,
-    backoff: { type: "exponential" as const, delay: 60_000 }
-  },
   sync: { attempts: 1 }
 } as const;
 
@@ -67,8 +61,6 @@ export const JOB_OPTS = {
 export const EMISSION_JOB_OPTS = JOB_OPTS.emission;
 /** @deprecated use JOB_OPTS.notification */
 export const NOTIFICATION_JOB_OPTS = JOB_OPTS.notification;
-/** @deprecated use JOB_OPTS.nfse */
-export const NFSE_JOB_OPTS = JOB_OPTS.nfse;
 /** @deprecated use JOB_OPTS.sync */
 export const SYNC_JOB_OPTS = JOB_OPTS.sync;
 
@@ -86,8 +78,4 @@ export function getChargeSyncQueue(): Queue {
 
 export function getNotificationSendQueue(): Queue {
   return getQueues().notificationSend;
-}
-
-export function getNfseEmitQueue(): Queue {
-  return getQueues().nfseEmit;
 }

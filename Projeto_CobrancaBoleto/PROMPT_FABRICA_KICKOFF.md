@@ -1,6 +1,10 @@
 # 🏭 PROMPT DE KICKOFF — FÁBRICA DE SOFTWARE
 ## SaaS de Cobranças Recorrentes · Versão 2.0 · Maio 2026
 
+> **⚠️ Retomada Maio 2026:** o estado do repositório avançou além da Fase 0/1 descritas abaixo.
+> **Comece por** [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md) (snapshot, branch ativa, pendências Sprint 4).
+> Este arquivo permanece como referência de **regras**, **convenções** e **detalhe histórico** das Sprints 0–1.
+
 > **Como usar este documento**
 > Este prompt foi engenheirado para uso duplo:
 > - **Agente de IA (Claude Code, Cursor, Copilot Workspace):** cole a seção `SYSTEM PROMPT` diretamente na janela de contexto do agente antes de iniciar qualquer tarefa.
@@ -23,7 +27,8 @@ Você é um engenheiro full stack sênior especializado em Node.js/TypeScript,
 PostgreSQL, Redis, BullMQ e integrações com gateways de pagamento brasileiros.
 
 Você está trabalhando no repositório `cobranca-saas-api` — um SaaS de cobranças
-recorrentes multi-tenant (Boleto, PIX, NFS-e, WhatsApp) para o mercado brasileiro.
+recorrentes multi-tenant (Boleto, PIX, WhatsApp/e-mail) para o mercado brasileiro.
+(NFS-e é projeto separado e futuro — não implementar neste repositório.)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REGRAS ABSOLUTAS — NUNCA VIOLE ESTAS REGRAS
@@ -59,8 +64,8 @@ REGRAS ABSOLUTAS — NUNCA VIOLE ESTAS REGRAS
 9. COBERTURA MÍNIMA: application/ e domain/ devem ter ≥ 85% de cobertura.
    PRs que reduzam cobertura abaixo desse limite são rejeitados.
 
-10. FASE 0 É BLOQUEANTE: Não inicie código de negócio (gateway, NFS-e,
-    notificações) antes que todos os 8 critérios da Fase 0 estejam verdes.
+10. FASE 0 É BLOQUEANTE: Não inicie código de negócio (gateway, notificações,
+    portal) antes que todos os 8 critérios da Fase 0 estejam verdes.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ESTADO ATUAL DO REPOSITÓRIO (AS-IS)
@@ -73,20 +78,22 @@ IMPLEMENTADO E FUNCIONAL:
   ✅ platform/health   → /health e /health/ready (liveness + readiness)
 
 PARCIAL — PRECISA COMPLETAR:
-  ⚠  portal-read       → /v1/portal (clientes OK; cobranças parcial; NFS-e só listagem)
+  ⚠  portal-read       → /v1/portal (clientes OK; cobranças parcial)
   ⚠  tenant-provisioning → /v1/tenants (45% cobertura — ponto cego crítico)
 
 AUSENTE — PRECISA CRIAR:
   ❌ payment-gateway   (Asaas adapter — Boleto e PIX)
-  ❌ nfse              (Focus NFe adapter — NFS-e automática)
   ❌ notifications     (Resend e-mail + Z-API WhatsApp)
   ❌ reporting         (relatórios + export CSV)
   ❌ saas-billing      (planos + assinaturas)
 
+FORA DE ESCOPO DESTE PROJETO:
+  🚫 nfse / nota fiscal — será implementado em projeto separado (futuro)
+
 PROBLEMAS CRÍTICOS HERDADOS:
   🔴 .env com credenciais reais foi commitado — rotacionar TODOS os secrets
-  🔴 schema `automacao` (notas_fiscais) está no monolito externo — produto
-     não é autônomo; desacoplar é o primeiro trabalho da Fase 0
+  🔴 schema `automacao` do monolito externo — produto não é autônomo;
+     desacoplar (remover dependência) é o primeiro trabalho da Fase 0
   🔴 Sem Dockerfile / docker-compose
   🔴 Sem rate limiting em nenhuma rota
   🔴 provision-public-tenant.ts com 45% de cobertura
@@ -143,7 +150,10 @@ CONVENÇÕES DE CÓDIGO OBRIGATÓRIAS
 
 ## 1. O QUE ESTAMOS CONSTRUINDO
 
-Um SaaS B2B multi-tenant que resolve cobranças recorrentes para escritórios contábeis, consultorias e prestadores de serviço. O cliente do SaaS (escritório) cadastra seus clientes finais, emite boletos e PIX, e a plataforma cuida de toda a comunicação (régua de cobrança via WhatsApp/e-mail), confirmação de pagamento (via webhook do gateway) e emissão automática de NFS-e após o pagamento.
+Um SaaS B2B multi-tenant que resolve cobranças recorrentes para escritórios contábeis, consultorias e prestadores de serviço. O cliente do SaaS (escritório) cadastra seus clientes finais, emite boletos e PIX, e a plataforma cuida de toda a comunicação (régua de cobrança via WhatsApp/e-mail) e confirmação de pagamento (via webhook do gateway).
+
+> **Escopo deste projeto:** Boleto, PIX, régua de cobrança, portal do cliente e relatórios.
+> Emissão de NFS-e (nota fiscal) é um projeto separado — **não implementar aqui**.
 
 **Produto final:** API Node.js/Express + React (2 portais) + n8n (orquestração) + PostgreSQL + Redis/BullMQ.
 
@@ -181,51 +191,56 @@ echo "!.env.example" >> .gitignore
 
 ### TAREFA 0.2 — Desacoplar schema `automacao`
 
-O produto atual depende do schema `automacao` do monolito externo `Projeto_EmissaoNF`. Isso impede que a API rode de forma autônoma.
+O produto atual depende do schema `automacao` do monolito externo. Isso impede que a API rode de forma autônoma. O objetivo é remover essa dependência.
 
-**Criar no schema próprio (migration `013_desacoplamento_nfse.sql`):**
+> **Nota de escopo:** NFS-e / nota fiscal é um projeto separado e futuro.
+> A tabela `nfse_emissions` **não deve ser criada** neste repositório.
+> A tabela `escritorio_config` é criada apenas com campos de gateway de pagamento
+> e comunicação (WhatsApp/e-mail) — sem campos fiscais.
+
+**Criar no schema próprio (migration `013_desacoplamento_monolito.sql`):**
 
 ```sql
--- Schema próprio para dados fiscais
-CREATE TABLE IF NOT EXISTS nfse_emissions (
-  id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id           TEXT NOT NULL,
-  charge_id           UUID NOT NULL REFERENCES charges(id),
-  provider            TEXT NOT NULL DEFAULT 'focus_nfe',
-  external_ref        TEXT,
-  numero_nfse         TEXT,
-  codigo_verificacao  TEXT,
-  pdf_url             TEXT,
-  xml_url             TEXT,
-  status              TEXT NOT NULL DEFAULT 'pendente'
-                      CHECK (status IN ('pendente','emitindo','autorizado','erro','cancelado')),
-  emitted_at          TIMESTAMPTZ,
-  error_message       TEXT,
-  created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-  CONSTRAINT uq_nfse_charge UNIQUE (charge_id)
-);
-CREATE INDEX idx_nfse_tenant ON nfse_emissions(tenant_id, status);
-
 CREATE TABLE IF NOT EXISTS escritorio_config (
-  id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id                   TEXT NOT NULL UNIQUE,
-  cnpj_emissor                TEXT,
-  razao_social                TEXT,
-  inscricao_municipal         TEXT,
-  regime_tributario           TEXT CHECK (regime_tributario IN ('simples','presumido','real')),
-  codigo_municipio            TEXT,
-  aliquota_iss                NUMERIC(5,2),
-  gateway_provider            TEXT DEFAULT 'asaas'
-                              CHECK (gateway_provider IN ('asaas','pagarme')),
-  gateway_api_key_encrypted   TEXT,
-  focus_nfe_token_encrypted   TEXT,
-  whatsapp_provider           TEXT DEFAULT 'zapi',
-  whatsapp_token_encrypted    TEXT,
-  encryption_iv               TEXT,
-  created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
+  id                               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id                        TEXT NOT NULL UNIQUE,
+  razao_social                     TEXT,
+  multa_percentual                 NUMERIC(5,2) DEFAULT 2.00,
+  juros_percentual                 NUMERIC(5,2) DEFAULT 0.033,
+
+  -- Gateway de pagamento — suporta múltiplos providers
+  -- Sub-adquirentes (simples, só API key): asaas | pagarme | cora
+  -- Bancos diretos (OAuth2 / credenciais compostas): inter | c6bank
+  gateway_provider                 TEXT DEFAULT 'asaas'
+                                   CHECK (gateway_provider IN
+                                     ('asaas','pagarme','cora','inter','c6bank')),
+
+  -- Credenciais encriptadas como JSONB (estrutura varia por provider):
+  --   asaas/pagarme/cora: { "api_key": "..." }
+  --   inter:              { "client_id": "...", "client_secret": "...", "cnpj": "..." }
+  --   c6bank:             { "api_key": "...", "cnpj": "..." }
+  gateway_credentials_encrypted    TEXT,
+  gateway_credentials_iv           TEXT,
+
+  -- Comunicação WhatsApp
+  whatsapp_provider                TEXT DEFAULT 'zapi',
+  whatsapp_token_encrypted         TEXT,
+  whatsapp_token_iv                TEXT,
+  whatsapp_instance_id             TEXT,
+  zapi_client_token_encrypted      TEXT,
+  zapi_client_token_iv             TEXT,
+
+  created_at                       TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at                       TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ```
+
+> **Decisão de arquitetura — credenciais como JSONB encriptado:**
+> Cada provider de pagamento tem um esquema de credenciais diferente. Em vez de
+> adicionar colunas individuais para cada provider (que geraria dezenas de NULLs),
+> usamos um único JSONB encriptado com AES-256-GCM. O campo é opaco no banco
+> e só descriptografado no worker/processador no momento do uso.
+> Nunca expor o JSONB decriptografado em logs ou respostas de API.
 
 **Critério de aceite:** `GET /health/ready` retorna 200 sem o schema `automacao` disponível.
 
@@ -565,6 +580,84 @@ export interface PaymentGatewayAdapter {
 }
 ```
 
+**PaymentGatewayFactory — padrão obrigatório:**
+
+O factory é o único ponto de criação de adapters. Nenhum módulo instancia um adapter diretamente.
+
+```typescript
+// src/platform/payment-gateway/payment-gateway.factory.ts
+import { db } from '@/platform/db';
+import { decrypt } from '@/platform/crypto/encrypt';
+import { PaymentGatewayAdapter } from './payment-gateway.adapter';
+import { AsaasAdapter }  from './adapters/asaas.adapter';
+import { PagarmeAdapter } from './adapters/pagarme.adapter';
+import { CoraAdapter }   from './adapters/cora.adapter';
+import { InterAdapter }  from './adapters/inter.adapter';
+import { C6BankAdapter } from './adapters/c6bank.adapter';
+
+type GatewayProvider = 'asaas' | 'pagarme' | 'cora' | 'inter' | 'c6bank';
+
+export async function getGatewayForTenant(tenantId: string): Promise<PaymentGatewayAdapter> {
+  const row = await db.query<{
+    gateway_provider: GatewayProvider;
+    gateway_credentials_encrypted: string;
+    gateway_credentials_iv: string;
+  }>(
+    `SELECT gateway_provider, gateway_credentials_encrypted, gateway_credentials_iv
+     FROM escritorio_config
+     WHERE tenant_id = $1`,
+    [tenantId]
+  );
+
+  if (!row.rows[0]) {
+    throw new Error(`escritorio_config não encontrado para tenant ${tenantId}`);
+  }
+
+  const { gateway_provider, gateway_credentials_encrypted, gateway_credentials_iv } = row.rows[0];
+
+  if (!gateway_credentials_encrypted || !gateway_credentials_iv) {
+    throw new Error(`Credenciais de gateway não configuradas para tenant ${tenantId}`);
+  }
+
+  // Decrypt: decrypt(encrypted, iv) → plaintext JSON string
+  const credentialsJson = decrypt(gateway_credentials_encrypted, gateway_credentials_iv);
+  const credentials = JSON.parse(credentialsJson);
+
+  switch (gateway_provider) {
+    case 'asaas':
+      return new AsaasAdapter({ apiKey: credentials.api_key });
+    case 'pagarme':
+      return new PagarmeAdapter({ apiKey: credentials.api_key });
+    case 'cora':
+      return new CoraAdapter({ apiKey: credentials.api_key });
+    case 'inter':
+      return new InterAdapter({
+        clientId: credentials.client_id,
+        clientSecret: credentials.client_secret,
+        cnpj: credentials.cnpj,
+      });
+    case 'c6bank':
+      return new C6BankAdapter({
+        apiKey: credentials.api_key,
+        cnpj: credentials.cnpj,
+      });
+    default:
+      throw new Error(`Provider desconhecido: ${gateway_provider satisfies never}`);
+  }
+}
+```
+
+> **Regra:** Todos os workers que emitem cobranças chamam `getGatewayForTenant(tenantId)`
+> e recebem o adapter já configurado. O worker não conhece o provider nem as credenciais.
+> Nunca faça `new AsaasAdapter(...)` fora do factory.
+
+**Estrutura de credenciais por provider (JSONB pré-encriptação):**
+```
+asaas / pagarme / cora  →  { "api_key": "..." }
+inter                   →  { "client_id": "...", "client_secret": "...", "cnpj": "12345678000199" }
+c6bank                  →  { "api_key": "...", "cnpj": "12345678000199" }
+```
+
 **AsaasAdapter — mapeamento de status:**
 ```typescript
 const ASAAS_TO_CANONICAL: Record<string, string> = {
@@ -594,7 +687,7 @@ CREATE TABLE payment_transactions (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id             TEXT NOT NULL,
   charge_id             UUID NOT NULL REFERENCES charges(id),
-  gateway               TEXT NOT NULL CHECK (gateway IN ('asaas','pagarme')),
+  gateway               TEXT NOT NULL CHECK (gateway IN ('asaas','pagarme','cora','inter','c6bank')),
   gateway_transaction_id TEXT UNIQUE,
   type                  TEXT NOT NULL CHECK (type IN ('boleto','pix')),
   status                TEXT NOT NULL DEFAULT 'pending',
@@ -688,8 +781,8 @@ Job webhook-process:
   ↓ Aplica transição na máquina de estados
   ↓ Atualiza charges.canonical_status + charges.paid_at (se paga)
   ↓ Registra charge_events
-  ↓ Se paga → enfileira nfse-emit (Fase 3) e notification-send
-  ↓ Se vencida → enfileira régua pós-vencimento (Fase 2)
+  ↓ Se paga → enfileira notification-send
+  ↓ Se vencida → enfileira régua pós-vencimento
   ↓ Marca webhook_inbox.processed_at = now()
 ```
 
@@ -792,10 +885,6 @@ RESEND_API_KEY=TROCAR_resend_api_key
 ZAPI_INSTANCE=TROCAR_zapi_instance_id
 ZAPI_TOKEN=TROCAR_zapi_token
 
-# ── FASE 3 (NFS-e) ─────────────────────────────────────────
-FOCUS_NFE_TOKEN=TROCAR_focus_nfe_token
-FOCUS_NFE_URL=https://homologacao.focusnfe.com.br/v2
-
 # ── APENAS DEV/STAGING CONTROLADO ─────────────────────────
 ENABLE_MOCK_AUTH=false        # NUNCA true em produção
 ALLOW_INSECURE_DATABASE_URL=1 # NUNCA 1 em produção
@@ -817,7 +906,6 @@ ALLOW_INSECURE_DATABASE_URL=1 # NUNCA 1 em produção
 |---------|-----|
 | Especificação completa (docx) | `Especificacao_Requisitos_SaaS_Cobrancas_v2.docx` |
 | Asaas API v3 | https://docs.asaas.com |
-| Focus NFe | https://focusnfe.com.br/doc |
 | PIX BACEN | https://bacen.github.io/pix-api |
 | Resend | https://resend.com/docs |
 | BullMQ | https://docs.bullmq.io |
@@ -844,7 +932,7 @@ DIA 6+   │ ✅ Fase 0 verde → iniciar Sprint 1 (payment-gateway)
 
 > **Nota final do Engenheiro de Requisitos**
 >
-> Este prompt foi construído para eliminar ambiguidade. Cada decisão aqui — de stack, de schema, de fluxo, de naming — foi tomada deliberadamente com base na análise do código existente, na visão de produto e nas restrições operacionais do negócio brasileiro (FEBRABAN, BACEN, LGPD, NFS-e municipal).
+> Este prompt foi construído para eliminar ambiguidade. Cada decisão aqui — de stack, de schema, de fluxo, de naming — foi tomada deliberadamente com base na análise do código existente, na visão de produto e nas restrições operacionais do negócio brasileiro (FEBRABAN, BACEN, LGPD).
 >
 > A fábrica tem autonomia para implementar **como** quer resolver cada tarefa dentro das restrições declaradas. Não tem autonomia para mudar **o que** está sendo construído nem as **regras absolutas** da Seção 2 sem aprovação formal.
 >

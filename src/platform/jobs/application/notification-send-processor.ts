@@ -254,7 +254,7 @@ export async function processNotificationSend(
       throw new UnrecoverableError("charge_not_found");
     }
 
-    const allowsTerminal = data.eventType === "nfse_emitida" || data.eventType === "pagamento_confirmado";
+    const allowsTerminal = data.eventType === "pagamento_confirmado";
     if (
       !allowsTerminal &&
       (ctx.canonical_status === "paga" || ctx.canonical_status === "cancelada")
@@ -283,16 +283,6 @@ export async function processNotificationSend(
     );
     const pay = payR.rows[0];
 
-    const nfseR = await client.query<{ numero_nfse: string | null; pdf_url: string | null }>(
-      `SELECT numero_nfse, pdf_url
-       FROM nfse_emissions
-       WHERE charge_id = $1::uuid AND status = 'autorizado'
-       ORDER BY emitted_at DESC NULLS LAST
-       LIMIT 1`,
-      [chargeId]
-    );
-    const nfse = nfseR.rows[0];
-
     const vars: Record<string, string> = {
       nome: ctx.cliente_nome,
       valor: formatCurrency(ctx.amount),
@@ -303,8 +293,8 @@ export async function processNotificationSend(
       escritorio_nome: ctx.razao_social ?? "Escritório",
       multa_percentual: "2",
       data_pagamento: formatDate(ctx.paid_at),
-      numero_nfse: nfse?.numero_nfse ?? "",
-      pdf_url: nfse?.pdf_url ?? ""
+      numero_nfse: "",
+      pdf_url: ""
     };
 
     const sendEmail = channel === "email" || channel === "both";

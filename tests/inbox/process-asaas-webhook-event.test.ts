@@ -21,14 +21,10 @@ vi.mock("../../src/platform/jobs/queues", () => ({
     notificationSend: {
       add: addMock,
       getJob: getJobMock
-    },
-    nfseEmit: {
-      add: addMock
     }
   }),
   JOB_OPTS: {
-    notification: { attempts: 3 },
-    nfse: { attempts: 5 }
+    notification: { attempts: 3 }
   }
 }));
 
@@ -172,7 +168,7 @@ describe("applyWebhookSideEffectPlan", () => {
     getJobMock.mockResolvedValue({ remove: removeMock });
   });
 
-  it("payment_confirmed enfileira nfse-emit, payment-confirmed e cancela régua", async () => {
+  it("payment_confirmed enfileira payment-confirmed e cancela régua", async () => {
     const { applyWebhookSideEffectPlan } = await import(
       "../../src/platform/jobs/application/webhook-side-effects"
     );
@@ -188,12 +184,8 @@ describe("applyWebhookSideEffectPlan", () => {
       expect.objectContaining({ eventType: "pagamento_confirmado" }),
       expect.any(Object)
     );
-    expect(addMock).toHaveBeenCalledWith(
-      "emit",
-      expect.objectContaining({ chargeId }),
-      expect.any(Object)
-    );
     expect(getJobMock).toHaveBeenCalled();
+    expect(addMock).not.toHaveBeenCalledWith("emit", expect.anything(), expect.anything());
   });
 
   it("payment_overdue enfileira regua D+3 e D+7 com jobId", async () => {

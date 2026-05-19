@@ -5,8 +5,8 @@ import {
   enqueueReguaNotificationJob,
   reguaJobId
 } from "../enqueue-notification";
+import { emitN8nPlatformEvent } from "../../integrations/n8n-outbound";
 import { isJobsEnabled } from "../redis-connection";
-import { getQueues, JOB_OPTS } from "../queues";
 
 export type WebhookSideEffectPlan =
   | { kind: "payment_confirmed"; chargeId: string; tenantId: string }
@@ -42,11 +42,12 @@ export async function applyWebhookSideEffectPlan(plan: WebhookSideEffectPlan): P
       tenantId: plan.tenantId,
       eventType: "pagamento_confirmado"
     });
-    await getQueues().nfseEmit.add(
-      "emit",
-      { chargeId: plan.chargeId, tenantId: plan.tenantId },
-      JOB_OPTS.nfse
-    );
+    emitN8nPlatformEvent({
+      event: "charge.paid",
+      occurred_at: new Date().toISOString(),
+      tenant_id: plan.tenantId,
+      payload: { charge_id: plan.chargeId }
+    });
     return;
   }
 

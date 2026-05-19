@@ -1,25 +1,40 @@
-# Deploy Sprint 3 — Pré-requisitos
+# Deploy Sprint 3 — Checklist
 
-## Antes de subir
+## Antes de subir para staging/produção
 
-- [ ] Rodar `npm run migrate` (migrations 021 e 022)
-- [ ] Verificar `FOCUS_NFE_TOKEN` configurado em staging (homologação Focus NFe)
-- [ ] Verificar `WEBHOOK_NFSE_SECRET` configurado e igual ao painel Focus NFe
+- [ ] `npm run migrate` → migrations até **023** aplicadas (Sprint 4: `planos`, `assinaturas`, `tenant_usage_monthly`)
 - [ ] Verificar `PORTAL_CLIENT_URL` aponta para o frontend correto
-- [ ] Redis limpo de filas antigas com hífen (se ainda não foi feito)
-
-## Redis — flush de filas legadas (se necessário)
+- [ ] Redis limpo de filas legadas com hífen (se ainda não feito):
 
 ```bash
-redis-cli DEL "bull:notifications-send:*"
-redis-cli DEL "bull:charges-emission:*"
+# Filas atuais (sem ':'): charges-emission, inbox-process, charges-sync, notifications-send
+# Limpar chaves legadas com ':' se existirem de deploy anterior:
+redis-cli KEYS "bull:charges:emission*" | xargs -r redis-cli DEL
+redis-cli KEYS "bull:notifications:send*" | xargs -r redis-cli DEL
 ```
 
 ## Verificação pós-deploy
 
 - [ ] `GET /health/ready` → 200
-- [ ] `npm run migrate` roda sem erros
-- [ ] `POST /v1/inbox/webhooks` com secret incorreto → 401
-- [ ] `GET /v1/portal/escritorio/dashboard` → 200 (não 500)
+- [ ] `POST /v1/portal/cliente/auth/request-access` → 200 (sem revelar e-mail)
+- [ ] `GET /v1/portal/escritorio/dashboard` → 200 com objeto JSON
+- [ ] `GET /v1/portal/escritorio/cobrancas/export?format=csv` → stream CSV
 - [ ] `bash Projeto_CobrancaBoleto/validacao_fase_0.sh` → 0 falhas
 - [ ] `bash Projeto_CobrancaBoleto/validacao_sprint3.sh` → 0 falhas
+- [ ] `bash Projeto_CobrancaBoleto/validacao_sprint4.sh` → 5/5
+- [ ] `GET /v1/saas/plans` (JWT owner) → 3 planos
+- [ ] `GET /v1/portal/escritorio/assinatura` → JSON com `plano` e `uso`
+- [ ] Confirmar: nenhuma rota `/nfse` existe (`grep -r "nfse" src/modules`)
+
+## Teste E2E Sprint 3 (integração, com Postgres)
+
+Com `DATABASE_URL` configurado e migrations aplicadas:
+
+```bash
+export DATABASE_URL="postgresql://..."
+export JWT_SECRET="..."
+export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+npx vitest run tests/portal-read/sprint3-e2e-flow.integration.test.ts
+```
+
+Cobre os 11 passos: PIX → emissão → webhook `PAYMENT_CONFIRMED` → magic link → portal cliente → dashboard → export CSV.

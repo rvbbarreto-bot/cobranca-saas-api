@@ -3,7 +3,9 @@ import type { AuthContext, TenantContext } from "../../../shared/types/request-c
 
 export type PortalClienteContext = {
   clienteId: string;
+  tenantId: string;
   automacaoTenantId: string;
+  role: "cliente_cnpj";
 };
 
 declare global {

@@ -21,13 +21,15 @@ export default defineConfig({
       "tests/tenant-provisioning/**/*.test.ts",
       "tests/payment-gateway/**/*.test.ts",
       "tests/notifications/**/*.test.ts",
-      "tests/nfse/**/*.test.ts",
+      "tests/saas-billing/**/*.test.ts",
       "tests/platform/jobs/**/*.test.ts",
       "tests/health/**/*.test.ts",
       "tests/cross-tenant.integration.test.ts",
       "tests/webhook-charge-status.integration.test.ts",
       "tests/functional/api-battery.integration.test.ts",
-      "tests/portal-read/portal-cobranca-emission-flow.integration.test.ts"
+      "tests/portal-read/portal-cobranca-emission-flow.integration.test.ts",
+      "tests/portal-read/sprint3-e2e-flow.integration.test.ts",
+      "tests/saas-billing/sprint4-billing.integration.test.ts"
     ],
     testTimeout: 30_000,
     hookTimeout: 30_000,
@@ -49,14 +51,15 @@ export default defineConfig({
         "src/modules/inbox/application/parse-webhook-charge-payload.ts",
         "src/modules/notifications/application/**/*.ts",
         "src/modules/payment-gateway/domain/**/*.ts",
-        "src/modules/nfse/domain/**/*.ts",
-        "src/modules/nfse/application/**/*.ts",
         "src/modules/portal-read/application/cliente-magic-link.ts",
         "src/modules/portal-read/application/cliente-portal-cobrancas.ts",
         "src/modules/portal-read/application/escritorio-dashboard.ts",
         "src/modules/portal-read/application/escritorio-cobrancas-export.ts",
         "src/platform/jobs/application/**/*.ts",
-        "src/modules/tenant-provisioning/application/provision-public-tenant.ts"
+        "src/modules/tenant-provisioning/application/provision-public-tenant.ts",
+        "src/modules/saas-billing/application/**/*.ts",
+        "src/modules/saas-billing/domain/**/*.ts",
+        "src/platform/integrations/n8n-outbound.ts"
       ],
       exclude: ["**/*.d.ts", "**/index.ts"],
       thresholds: {

@@ -38,6 +38,7 @@ Ver `apps/portal-web/.env.example`.
 | Rota | Descrição |
 |------|-----------|
 | `/login` | E-mail, `tenant_id`, senha → `POST /v1/portal/auth/login`. |
+| `/escritorio` | Perfil do tenant, **plano/assinatura** (`GET /v1/portal/escritorio/assinatura`), ligação billing. |
 | `/` e `*` | Redireciona para `/dashboard` se autenticado, senão `/login`. |
 | `/dashboard` | Atalhos (área autenticada). |
 | `/notas-fiscais` | `GET /v1/portal/notas-fiscais`. |

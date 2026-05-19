@@ -5,11 +5,22 @@ export type DashboardPeriod = {
   fim: string;
 };
 
+export type CobrancasPorStatus = {
+  rascunho: number;
+  emitida: number;
+  enviada: number;
+  pendente_pagamento: number;
+  paga: number;
+  vencida: number;
+  cancelada: number;
+  erro_emissao: number;
+};
+
 export type EscritorioDashboard = {
   periodo: DashboardPeriod;
   cobrancas: {
     total: number;
-    por_status: Record<string, number>;
+    por_status: CobrancasPorStatus;
     valor_total_emitido: number;
     valor_total_recebido: number;
     valor_total_vencido: number;
@@ -20,16 +31,23 @@ export type EscritorioDashboard = {
     total_falhas: number;
     por_canal: { email: number; whatsapp: number };
   };
-  nfse: {
-    total_autorizadas: number;
-    total_erro: number;
-  };
   top_clientes_inadimplentes: Array<{
     nome: string;
     documento_mascarado: string;
     valor_vencido: number;
     qtd_cobr_vencidas: number;
   }>;
+};
+
+const ZERO_POR_STATUS: CobrancasPorStatus = {
+  rascunho: 0,
+  emitida: 0,
+  enviada: 0,
+  pendente_pagamento: 0,
+  paga: 0,
+  vencida: 0,
+  cancelada: 0,
+  erro_emissao: 0
 };
 
 function maskDocumento(doc: string): string {
@@ -49,11 +67,31 @@ export function resolveDashboardPeriod(input: {
   if (!inicio) {
     const days =
       input.periodo === "7d" ? 7 : input.periodo === "90d" ? 90 : input.periodo === "custom" ? 30 : 30;
-    const d = new Date(fim);
+    const d = new Date(`${fim}T00:00:00.000Z`);
     d.setUTCDate(d.getUTCDate() - days + 1);
     inicio = d.toISOString().slice(0, 10);
   }
   return { inicio, fim };
+}
+
+export function emptyEscritorioDashboard(period: DashboardPeriod): EscritorioDashboard {
+  return {
+    periodo: period,
+    cobrancas: {
+      total: 0,
+      por_status: { ...ZERO_POR_STATUS },
+      valor_total_emitido: 0,
+      valor_total_recebido: 0,
+      valor_total_vencido: 0,
+      taxa_conversao: 0
+    },
+    notificacoes: {
+      total_enviadas: 0,
+      total_falhas: 0,
+      por_canal: { email: 0, whatsapp: 0 }
+    },
+    top_clientes_inadimplentes: []
+  };
 }
 
 export async function getEscritorioDashboard(
@@ -93,9 +131,7 @@ export async function getEscritorioDashboard(
        COUNT(*) FILTER (WHERE canonical_status = 'vencida')::text AS vencida,
        COUNT(*) FILTER (WHERE canonical_status = 'cancelada')::text AS cancelada,
        COUNT(*) FILTER (WHERE canonical_status = 'erro_emissao')::text AS erro_emissao,
-       COALESCE(SUM(amount) FILTER (
-         WHERE canonical_status NOT IN ('cancelada', 'rascunho')
-       ), 0)::text AS valor_emitido,
+       COALESCE(SUM(amount) FILTER (WHERE canonical_status <> 'cancelada'), 0)::text AS valor_emitido,
        COALESCE(SUM(amount) FILTER (WHERE canonical_status = 'paga'), 0)::text AS valor_recebido,
        COALESCE(SUM(amount) FILTER (WHERE canonical_status = 'vencida'), 0)::text AS valor_vencido
      FROM cobrancas_periodo`,
@@ -109,52 +145,39 @@ export async function getEscritorioDashboard(
   const denominador = total - cancelada - rascunho;
   const taxa = denominador > 0 ? (paga / denominador) * 100 : 0;
 
-  const notif = await client.query<{ channel: string; cnt: string }>(
+  const notifCanal = await client.query<{ channel: string; cnt: string }>(
     `SELECT channel, COUNT(*)::text AS cnt
      FROM communication_events
      WHERE tenant_id = $1
        AND created_at::date BETWEEN $2::date AND $3::date
-       AND status IN ('sent', 'failed')
+       AND status = 'sent'
+       AND channel IN ('email', 'whatsapp')
      GROUP BY channel`,
     [tenantId, period.inicio, period.fim]
   );
   let email = 0;
   let whatsapp = 0;
-  let falhas = 0;
-  let enviadas = 0;
-  for (const row of notif.rows) {
+  for (const row of notifCanal.rows) {
     const n = Number(row.cnt);
-    if (row.channel === "email") email += n;
-    if (row.channel === "whatsapp") whatsapp += n;
+    if (row.channel === "email") email = n;
+    if (row.channel === "whatsapp") whatsapp = n;
   }
+
   const notifStatus = await client.query<{ status: string; cnt: string }>(
     `SELECT status, COUNT(*)::text AS cnt
      FROM communication_events
      WHERE tenant_id = $1
        AND created_at::date BETWEEN $2::date AND $3::date
+       AND status IN ('sent', 'failed')
      GROUP BY status`,
     [tenantId, period.inicio, period.fim]
   );
+  let enviadas = 0;
+  let falhas = 0;
   for (const row of notifStatus.rows) {
     const n = Number(row.cnt);
-    if (row.status === "sent") enviadas += n;
-    if (row.status === "failed") falhas += n;
-  }
-
-  const nfse = await client.query<{ status: string; cnt: string }>(
-    `SELECT status, COUNT(*)::text AS cnt
-     FROM nfse_emissions
-     WHERE tenant_id = $1
-       AND created_at::date BETWEEN $2::date AND $3::date
-     GROUP BY status`,
-    [tenantId, period.inicio, period.fim]
-  );
-  let totalAutorizadas = 0;
-  let totalErro = 0;
-  for (const row of nfse.rows) {
-    const n = Number(row.cnt);
-    if (row.status === "autorizado") totalAutorizadas += n;
-    if (row.status === "erro") totalErro += n;
+    if (row.status === "sent") enviadas = n;
+    if (row.status === "failed") falhas = n;
   }
 
   const top = await client.query<{
@@ -174,7 +197,7 @@ export async function getEscritorioDashboard(
      WHERE c.tenant_id = $1::uuid
        AND c.canonical_status = 'vencida'
        AND c.created_at::date BETWEEN $2::date AND $3::date
-     GROUP BY cli.nome, cli.documento
+     GROUP BY cli.id, cli.nome, cli.documento
      ORDER BY SUM(c.amount) DESC
      LIMIT 5`,
     [tenantId, period.inicio, period.fim]
@@ -203,10 +226,6 @@ export async function getEscritorioDashboard(
       total_enviadas: enviadas,
       total_falhas: falhas,
       por_canal: { email, whatsapp }
-    },
-    nfse: {
-      total_autorizadas: totalAutorizadas,
-      total_erro: totalErro
     },
     top_clientes_inadimplentes: top.rows.map((row) => ({
       nome: row.nome,

@@ -46,10 +46,8 @@ import { recordPortalLoginAuditInTransaction } from "../../application/record-po
 import { authRateLimit } from "../../../../platform/http/middleware/rate-limit.middleware";
 import { createEscritorioRouter } from "./escritorio-router";
 import { createClientePortalRouter } from "./cliente-portal-router";
-import {
-  getPortalNfseHandler,
-  getPortalNfsePdfHandler
-} from "../../../nfse/interfaces/http/nfse-portal-handlers";
+import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
+import { assertTenantCanMutate } from "../../../saas-billing/application/assert-tenant-can-mutate";
 
 /**
  * Login portal com senha (Sprint A). Disponivel em producao — nao passa por mockAuthRoutesGate.
@@ -398,7 +396,7 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
   try {
     const audit = auditContextFromRequest(req);
     const result = await withTenantTransaction(publicTenantId, (client) =>
-      createPortalChargeUseCase(client, automacaoTenantId, req.body, audit)
+      createPortalChargeUseCase(client, automacaoTenantId, publicTenantId, req.body, audit)
     );
     res.status(result.inserted ? 201 : 200).json({
       charge: result.charge,
@@ -415,6 +413,16 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
         error: "portal_cliente_not_found",
         message: "Cliente inexistente ou nao pertence a este escritorio."
       });
+      return;
+    }
+    if (error instanceof SaasBillingError) {
+      const status =
+        error.code === "SUBSCRIPTION_READ_ONLY"
+          ? 403
+          : error.code === "LIMIT_COBRANCAS_MES" || error.code === "LIMIT_CLIENTES"
+            ? 402
+            : 400;
+      res.status(status).json({ error: error.code, message: error.message });
       return;
     }
     if (error instanceof DatabaseError) {
@@ -647,10 +655,32 @@ async function createCliente(req: Request, res: Response): Promise<void> {
     return;
   }
 
+  const publicTenantId = await getPublicTenantIdForAutomacao(tenantId);
+  if (!publicTenantId) {
+    res.status(409).json({
+      error: "billing_link_missing",
+      message: "Configure portal.billing_tenant_link antes de cadastrar clientes."
+    });
+    return;
+  }
+
   try {
+    await withTenantTransaction(publicTenantId, (client) =>
+      assertTenantCanMutate(client, publicTenantId, "create_cliente")
+    );
     const row = await insertCliente(tenantId, parsed.value);
     res.status(201).json({ cliente: row });
   } catch (error: unknown) {
+    if (error instanceof SaasBillingError) {
+      const status =
+        error.code === "SUBSCRIPTION_READ_ONLY"
+          ? 403
+          : error.code === "LIMIT_CLIENTES"
+            ? 402
+            : 400;
+      res.status(status).json({ error: error.code, message: error.message });
+      return;
+    }
     if (error instanceof DatabaseError && error.code === "23505") {
       res.status(409).json({
         error: "unique_violation",
@@ -677,8 +707,6 @@ export function createPortalRouter(): Router {
   protectedRoutes.get("/notas-fiscais", asyncHandler(listNotasFiscais));
   protectedRoutes.get("/cobrancas", asyncHandler(listCobrancas));
   protectedRoutes.get("/cobrancas/:chargeId", asyncHandler(getPortalCobrancaHttp));
-  protectedRoutes.get("/cobrancas/:chargeId/nfse", asyncHandler(getPortalNfseHandler));
-  protectedRoutes.get("/cobrancas/:chargeId/nfse/pdf", asyncHandler(getPortalNfsePdfHandler));
   protectedRoutes.post("/cobrancas", asyncHandler(createPortalChargeHttp));
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
   protectedRoutes.patch("/cobrancas/:chargeId", asyncHandler(patchPortalCobrancaHttp));

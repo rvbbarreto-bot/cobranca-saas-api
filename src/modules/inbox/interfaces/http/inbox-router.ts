@@ -8,15 +8,7 @@ import { withTenantTransaction } from "../../../../platform/persistence/with-ten
 import { scheduleWebhookProcessJob } from "../../../../platform/jobs/enqueue-webhook-process";
 import { processPendingWebhooksForTenant } from "../../application/process-webhook-inbox";
 import { insertWebhookInbox } from "../../infrastructure/webhook-inbox-repository";
-import { postInboxNfseCallbackHandler } from "../../../nfse/interfaces/http/nfse-portal-handlers";
-
 export const inboxRouter = Router();
-
-inboxRouter.post(
-  "/nfse-callback",
-  webhookRateLimit,
-  asyncHandler(postInboxNfseCallbackHandler)
-);
 
 inboxRouter.post(
   "/webhooks/process-pending",

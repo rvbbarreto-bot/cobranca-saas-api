@@ -7,13 +7,13 @@ import type { NotificationSendJobPayload } from "../enqueue-notification";
 async function onJob(job: Job<NotificationSendJobPayload>): Promise<void> {
   const { chargeId, tenantId, eventType } = job.data;
   if (!chargeId?.trim() || !tenantId?.trim() || !eventType?.trim()) {
-    throw new Error("Job notifications:send exige chargeId, tenantId e eventType.");
+    throw new Error("Job notifications-send exige chargeId, tenantId e eventType.");
   }
   await processNotificationSend(job.data);
 }
 
 /**
- * Worker BullMQ da fila notifications:send (email Resend + WhatsApp Z-API).
+ * Worker BullMQ da fila notifications-send (email Resend + WhatsApp Z-API).
  */
 export function registerNotificationSendWorker(): Worker<NotificationSendJobPayload> {
   return new Worker<NotificationSendJobPayload>(QUEUE_NOTIFICATION_SEND, onJob, {
