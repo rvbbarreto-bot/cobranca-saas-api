@@ -56,11 +56,19 @@ else
   fail "Endpoint assinatura do escritório ausente"
 fi
 
-echo -e "${BLUE}[5/5] Enforcement de limites${NC}"
+echo -e "${BLUE}[5/6] Enforcement de limites${NC}"
 if grep -rq 'assertTenantCanMutate\|LIMIT_COBRANCAS_MES' "$PROJECT_ROOT/src" --include="*.ts" 2>/dev/null; then
   ok "Metering/limites referenciados no código"
 else
   fail "Enforcement de limites não encontrado"
+fi
+
+echo -e "${BLUE}[6/6] UI portal — bloco assinatura${NC}"
+if grep -q 'fetchEscritorioAssinatura' "$PROJECT_ROOT/apps/portal-web/src/lib/api.ts" 2>/dev/null \
+  && grep -q 'Plano e assinatura' "$PROJECT_ROOT/apps/portal-web/src/pages/EscritorioPage.tsx" 2>/dev/null; then
+  ok "EscritorioPage consome assinatura"
+else
+  fail "UI assinatura ausente no portal"
 fi
 
 echo ""
@@ -69,8 +77,8 @@ echo -e "  Resultado: ${GREEN}$PASSOU passou${NC} | ${RED}$FALHOU falhou${NC}"
 echo -e "${BLUE}══════════════════════════════════════${NC}"
 echo ""
 
-if [ "$FALHOU" -eq 0 ] && [ "$PASSOU" -eq 5 ]; then
-  echo -e "  ${GREEN}✅ SPRINT 4 (fase 1) VALIDADA — 5/5 OK${NC}"
+if [ "$FALHOU" -eq 0 ] && [ "$PASSOU" -eq 6 ]; then
+  echo -e "  ${GREEN}✅ SPRINT 4 (fase 1) VALIDADA — 6/6 OK${NC}"
   exit 0
 fi
 

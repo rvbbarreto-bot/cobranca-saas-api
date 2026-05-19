@@ -13,7 +13,7 @@
 | Sprint 1 — gateway + emissão | `main` | Concluído |
 | Sprint 2 — notificações + régua + CRUD escritório | `main` (`b2dfd1e`) | Concluído |
 | Sprint 3 — portal cliente + relatórios | `main` (PR #2/#3) | Concluído |
-| **Sprint 4 — SaaS billing (fase 1)** | **`cursor/sprint4-saas-billing`** | **Em PR — não mergeado em `main`** |
+| **Sprint 4 — SaaS billing (fase 1)** | **`cursor/sprint4-saas-billing`** | **PR #4 — pronto para merge** (testes + UI + docs) |
 
 **Testes na branch Sprint 4 (local):** `172` testes Vitest passando (`npm test`).
 
@@ -88,17 +88,17 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 - [x] Enforcement: `assertTenantCanMutate` em POST cobrança e POST cliente
 - [x] Testes unitários `assert-tenant-can-mutate` (4 casos)
 
-### 4.2 Pendências para merge (DoD do PR)
+### 4.2 Checklist merge PR #4 (fase 1)
 
-| # | Item | Responsável | Critério de aceite |
-|---|------|-------------|-------------------|
-| 1 | **Contrato HTTP** | Dev | Atualizar [docs/API_CONTRATO_E_SMOKE.md](../docs/API_CONTRATO_E_SMOKE.md) — rotas SaaS + códigos `402`/`403` |
-| 2 | **Teste integração provision** | Dev | `POST /v1/tenants/provision` → `assinaturas.status=trial` + `trial_ends_at` |
-| 3 | **Testes GET assinatura / plans** | Dev | ≥ 4 casos (happy path, sem assinatura, plano inexistente no provision) |
-| 4 | **UI portal escritório** | Front | Tela ou bloco em `/escritorio` mostrando plano, uso e `read_only` |
-| 5 | **CI** | Dev | `npm run quality:gate` verde no PR |
-| 6 | **validacao_sprint4.sh** | Dev | `5/5` antes do merge |
-| 7 | **Review PO** | PO | Demo: criar tenant → bater limite → ver `402`/`403` |
+| # | Item | Status |
+|---|------|--------|
+| 1 | Contrato HTTP (`API_CONTRATO_E_SMOKE.md`) | ✅ |
+| 2 | Teste integração provision + trial | ✅ `tests/saas-billing/sprint4-billing.integration.test.ts` |
+| 3 | Testes GET assinatura / plans | ✅ integração + `escritorio-assinatura-router.test.ts` |
+| 4 | UI `/escritorio` — bloco assinatura | ✅ `EscritorioPage` + `fetchEscritorioAssinatura` |
+| 5 | `validacao_sprint4.sh` | ✅ **6/6** (Git Bash/WSL/CI) |
+| 6 | `npm run quality:gate` | Validar no CI antes do merge |
+| 7 | Review PO | Demo: provision → limites → `402`/`403` |
 
 ### 4.3 Backlog Sprint 4 (PR seguinte, não bloqueia fase 1)
 

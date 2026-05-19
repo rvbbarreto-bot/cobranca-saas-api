@@ -128,10 +128,10 @@ Somente owner da plataforma.
 [x] Provision com plano_slug + trial 14d
 [x] Limites em POST cobrancas e POST clientes
 [x] npm run build ✅ + npm test ✅ (172 testes)
-[ ] validacao_sprint4.sh 5/5 (rodar antes do merge)
-[ ] API_CONTRATO_E_SMOKE.md atualizado
-[ ] Teste integração provision + assinatura trial
-[ ] UI /escritorio — bloco assinatura/uso
+[x] validacao_sprint4.sh 6/6
+[x] API_CONTRATO_E_SMOKE.md atualizado
+[x] Teste integração provision + assinatura trial
+[x] UI /escritorio — bloco assinatura/uso
 ```
 
 *Referência: `Especificacao_Requisitos_SaaS_Cobrancas_v2.docx` §6.2 planos/assinaturas · US-21*

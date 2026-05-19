@@ -579,6 +579,49 @@ export type EscritorioDashboardResponse = {
   }>;
 };
 
+export type EscritorioAssinaturaResponse = {
+  assinatura: {
+    id: string;
+    status: string;
+    read_only: boolean;
+    trial_ends_at: string | null;
+    current_period_start: string | null;
+    current_period_end: string | null;
+    plano: {
+      id: string;
+      slug: string;
+      nome: string;
+      max_clientes: number;
+      max_cobrancas_mes: number;
+      preco_mensal: number;
+    };
+    uso: {
+      year_month: string;
+      clientes: number;
+      cobrancas_criadas_mes: number;
+    };
+  };
+};
+
+export async function fetchEscritorioAssinatura(): Promise<EscritorioAssinaturaResponse> {
+  const res = await apiFetch("/v1/portal/escritorio/assinatura", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  return json as EscritorioAssinaturaResponse;
+}
+
 export async function fetchEscritorioDashboard(periodo = "30d"): Promise<EscritorioDashboardResponse> {
   const sp = new URLSearchParams({ periodo });
   const res = await apiFetch(`/v1/portal/escritorio/dashboard?${sp}`, { method: "GET" });
