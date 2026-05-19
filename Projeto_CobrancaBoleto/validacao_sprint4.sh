@@ -28,28 +28,28 @@ echo ""
 echo -e "${BLUE}   VALIDAÇÃO SPRINT 4 — SaaS Billing   ${NC}"
 echo ""
 
-echo -e "${BLUE}[1/5] Migration 023${NC}"
+echo -e "${BLUE}[1/6] Migration 023${NC}"
 if ls "$MIGRATIONS_DIR"/023_*.sql 1>/dev/null 2>&1; then
   ok "Migration 023 encontrada"
 else
   fail "Migration 023 ausente"
 fi
 
-echo -e "${BLUE}[2/5] Módulo saas-billing${NC}"
+echo -e "${BLUE}[2/6] Módulo saas-billing${NC}"
 if [ -d "$PROJECT_ROOT/src/modules/saas-billing" ]; then
   ok "src/modules/saas-billing existe"
 else
   fail "Módulo saas-billing ausente"
 fi
 
-echo -e "${BLUE}[3/5] Rotas SaaS${NC}"
+echo -e "${BLUE}[3/6] Rotas SaaS${NC}"
 if grep -rq '"/plans"' "$PROJECT_ROOT/src/modules/saas-billing" 2>/dev/null; then
   ok "GET /v1/saas/plans referenciado"
 else
   fail "Rota /saas/plans não encontrada"
 fi
 
-echo -e "${BLUE}[4/5] Assinatura portal escritório${NC}"
+echo -e "${BLUE}[4/6] Assinatura portal escritório${NC}"
 if grep -rq 'escritorio/assinatura\|"/assinatura"' "$PROJECT_ROOT/src/modules/portal-read" 2>/dev/null; then
   ok "GET escritorio/assinatura referenciado"
 else
