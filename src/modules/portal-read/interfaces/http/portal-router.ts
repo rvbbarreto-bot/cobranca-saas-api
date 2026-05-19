@@ -46,10 +46,6 @@ import { recordPortalLoginAuditInTransaction } from "../../application/record-po
 import { authRateLimit } from "../../../../platform/http/middleware/rate-limit.middleware";
 import { createEscritorioRouter } from "./escritorio-router";
 import { createClientePortalRouter } from "./cliente-portal-router";
-import {
-  getPortalNfseHandler,
-  getPortalNfsePdfHandler
-} from "../../../nfse/interfaces/http/nfse-portal-handlers";
 
 /**
  * Login portal com senha (Sprint A). Disponivel em producao — nao passa por mockAuthRoutesGate.
@@ -677,8 +673,6 @@ export function createPortalRouter(): Router {
   protectedRoutes.get("/notas-fiscais", asyncHandler(listNotasFiscais));
   protectedRoutes.get("/cobrancas", asyncHandler(listCobrancas));
   protectedRoutes.get("/cobrancas/:chargeId", asyncHandler(getPortalCobrancaHttp));
-  protectedRoutes.get("/cobrancas/:chargeId/nfse", asyncHandler(getPortalNfseHandler));
-  protectedRoutes.get("/cobrancas/:chargeId/nfse/pdf", asyncHandler(getPortalNfsePdfHandler));
   protectedRoutes.post("/cobrancas", asyncHandler(createPortalChargeHttp));
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
   protectedRoutes.patch("/cobrancas/:chargeId", asyncHandler(patchPortalCobrancaHttp));

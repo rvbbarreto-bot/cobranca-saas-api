@@ -1,14 +1,10 @@
-# Deploy Sprint 3 — Pré-requisitos
+# Deploy Sprint 3 — Checklist
 
-## Antes de subir
+## Antes de subir para staging/produção
 
-- [ ] Rodar `npm run migrate` (migrations 021 e 022)
-- [ ] Verificar `FOCUS_NFE_TOKEN` configurado em staging (homologação Focus NFe)
-- [ ] Verificar `WEBHOOK_NFSE_SECRET` configurado e igual ao painel Focus NFe
+- [ ] `npm run migrate` → confirmar migration 021 aplicada
 - [ ] Verificar `PORTAL_CLIENT_URL` aponta para o frontend correto
-- [ ] Redis limpo de filas antigas com hífen (se ainda não foi feito)
-
-## Redis — flush de filas legadas (se necessário)
+- [ ] Redis limpo de filas legadas com hífen (se ainda não feito):
 
 ```bash
 redis-cli DEL "bull:notifications-send:*"
@@ -18,8 +14,9 @@ redis-cli DEL "bull:charges-emission:*"
 ## Verificação pós-deploy
 
 - [ ] `GET /health/ready` → 200
-- [ ] `npm run migrate` roda sem erros
-- [ ] `POST /v1/inbox/webhooks` com secret incorreto → 401
-- [ ] `GET /v1/portal/escritorio/dashboard` → 200 (não 500)
+- [ ] `POST /v1/portal/cliente/auth/request-access` → 200 (sem revelar e-mail)
+- [ ] `GET /v1/portal/escritorio/dashboard` → 200 com objeto JSON
+- [ ] `GET /v1/portal/escritorio/cobrancas/export?format=csv` → stream CSV
 - [ ] `bash Projeto_CobrancaBoleto/validacao_fase_0.sh` → 0 falhas
 - [ ] `bash Projeto_CobrancaBoleto/validacao_sprint3.sh` → 0 falhas
+- [ ] Confirmar: nenhuma rota `/nfse` existe (`grep -r "nfse" src/modules`)

@@ -78,6 +78,7 @@ export async function requestClienteMagicLink(
       forceChannel: "email",
       metadata: {
         token,
+        clienteId: cliente.id,
         email: cliente.email,
         tenant_slug: input.tenantSlug,
         escritorio_nome: input.escritorioNome ?? "Escritório"

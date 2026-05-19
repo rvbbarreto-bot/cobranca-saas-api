@@ -1,5 +1,13 @@
 import type { PoolClient } from "pg";
 
+export type ClienteCobrancaPayment = {
+  type: string | null;
+  boleto_url: string | null;
+  pix_qrcode_base64: string | null;
+  pix_emv: string | null;
+  expires_at: string | null;
+};
+
 export type ClienteCobrancaListItem = {
   id: string;
   canonical_status: string;
@@ -7,22 +15,29 @@ export type ClienteCobrancaListItem = {
   due_date: string;
   description: string | null;
   type: string | null;
-  payment: {
-    type: string | null;
-    boleto_url: string | null;
-    pix_qrcode_base64: string | null;
-    pix_emv: string | null;
-    expires_at: string | null;
-  } | null;
-  nfse: {
-    status: string;
-    numero_nfse: string | null;
-    pdf_url: string | null;
-  } | null;
+  payment: ClienteCobrancaPayment | null;
 };
 
-function mapPayment(row: Record<string, unknown>) {
-  if (!row.payment_type && !row.boleto_url && !row.pix_qrcode_base64) {
+export type ClienteCobrancaEvent = {
+  event_type: string;
+  old_status: string | null;
+  new_status: string | null;
+  created_at: string;
+};
+
+export type ClienteCobrancaDetail = ClienteCobrancaListItem & {
+  events: ClienteCobrancaEvent[];
+};
+
+function clienteOwnershipSql(clienteParam: string): string {
+  return `(
+    c.customer_id = ${clienteParam}::uuid
+    OR (NULLIF(c.metadata->>'portal_cliente_id', ''))::uuid = ${clienteParam}::uuid
+  )`;
+}
+
+function mapPayment(row: Record<string, unknown>): ClienteCobrancaPayment | null {
+  if (!row.payment_type && !row.boleto_url && !row.pix_qrcode_base64 && !row.pix_emv) {
     return null;
   }
   return {
@@ -37,6 +52,40 @@ function mapPayment(row: Record<string, unknown>) {
       : null
   };
 }
+
+function mapListRow(row: Record<string, unknown>): ClienteCobrancaListItem {
+  return {
+    id: String(row.id),
+    canonical_status: String(row.canonical_status),
+    amount: String(row.amount),
+    due_date: String(row.due_date),
+    description: row.description ? String(row.description) : null,
+    type: row.type ? String(row.type) : null,
+    payment: mapPayment(row)
+  };
+}
+
+const CHARGE_SELECT_SQL = `
+  SELECT
+    c.id::text AS id,
+    c.canonical_status,
+    c.amount::text AS amount,
+    c.due_date::text AS due_date,
+    c.reference AS description,
+    c.type,
+    pt.type AS payment_type,
+    pt.boleto_url,
+    pt.pix_qrcode_base64,
+    pt.pix_emv,
+    pt.expires_at
+  FROM charges c
+  LEFT JOIN LATERAL (
+    SELECT type, boleto_url, pix_qrcode_base64, pix_emv, expires_at
+    FROM payment_transactions
+    WHERE charge_id = c.id
+    ORDER BY created_at DESC
+    LIMIT 1
+  ) pt ON true`;
 
 export async function listClienteCobrancas(
   client: PoolClient,
@@ -53,61 +102,16 @@ export async function listClienteCobrancas(
   }
 
   const r = await client.query(
-    `SELECT
-       c.id::text AS id,
-       c.canonical_status,
-       c.amount::text AS amount,
-       c.due_date::text AS due_date,
-       c.reference AS description,
-       c.type,
-       pt.type AS payment_type,
-       pt.boleto_url,
-       pt.pix_qrcode_base64,
-       pt.pix_emv,
-       pt.expires_at,
-       n.status AS nfse_status,
-       n.numero_nfse,
-       n.pdf_url
-     FROM charges c
-     LEFT JOIN LATERAL (
-       SELECT type, boleto_url, pix_qrcode_base64, pix_emv, expires_at
-       FROM payment_transactions
-       WHERE charge_id = c.id
-       ORDER BY created_at DESC
-       LIMIT 1
-     ) pt ON true
-     LEFT JOIN nfse_emissions n ON n.charge_id = c.id
+    `${CHARGE_SELECT_SQL}
      WHERE c.tenant_id = $1::uuid
-       AND (
-         c.customer_id = $2::uuid
-         OR (c.metadata->>'portal_cliente_id')::uuid = $2::uuid
-       )
+       AND ${clienteOwnershipSql("$2")}
        ${statusFilter}
      ORDER BY c.created_at DESC
      LIMIT $3 OFFSET $4`,
     params
   );
 
-  return r.rows.map((row) => {
-    const rec = row as Record<string, unknown>;
-    const nfseStatus = rec.nfse_status ? String(rec.nfse_status) : null;
-    return {
-      id: String(rec.id),
-      canonical_status: String(rec.canonical_status),
-      amount: String(rec.amount),
-      due_date: String(rec.due_date),
-      description: rec.description ? String(rec.description) : null,
-      type: rec.type ? String(rec.type) : null,
-      payment: mapPayment(rec),
-      nfse: nfseStatus
-        ? {
-            status: nfseStatus,
-            numero_nfse: rec.numero_nfse ? String(rec.numero_nfse) : null,
-            pdf_url: rec.pdf_url ? String(rec.pdf_url) : null
-          }
-        : null
-    };
-  });
+  return r.rows.map((row) => mapListRow(row as Record<string, unknown>));
 }
 
 export async function clienteOwnsCharge(
@@ -119,12 +123,51 @@ export async function clienteOwnsCharge(
   const r = await client.query(
     `SELECT 1 FROM charges c
      WHERE c.id = $1::uuid AND c.tenant_id = $2::uuid
-       AND (
-         c.customer_id = $3::uuid
-         OR (c.metadata->>'portal_cliente_id')::uuid = $3::uuid
-       )
-     LIMIT 1`,
+       AND ${clienteOwnershipSql("$3")}`,
     [chargeId, publicTenantId, clienteId]
   );
   return (r.rowCount ?? 0) > 0;
+}
+
+export async function getClienteCobrancaDetail(
+  client: PoolClient,
+  publicTenantId: string,
+  chargeId: string,
+  clienteId: string
+): Promise<ClienteCobrancaDetail | null> {
+  const r = await client.query(
+    `${CHARGE_SELECT_SQL}
+     WHERE c.id = $1::uuid
+       AND c.tenant_id = $2::uuid
+       AND ${clienteOwnershipSql("$3")}`,
+    [chargeId, publicTenantId, clienteId]
+  );
+  const row = r.rows[0] as Record<string, unknown> | undefined;
+  if (!row) {
+    return null;
+  }
+
+  const eventsR = await client.query<{
+    event_type: string;
+    old_status: string | null;
+    new_status: string | null;
+    created_at: Date;
+  }>(
+    `SELECT event_type, old_status, new_status, created_at
+     FROM charge_events
+     WHERE charge_id = $1::uuid AND tenant_id = $2::uuid
+     ORDER BY created_at ASC`,
+    [chargeId, publicTenantId]
+  );
+
+  return {
+    ...mapListRow(row),
+    events: eventsR.rows.map((ev) => ({
+      event_type: ev.event_type,
+      old_status: ev.old_status,
+      new_status: ev.new_status,
+      created_at:
+        ev.created_at instanceof Date ? ev.created_at.toISOString() : String(ev.created_at)
+    }))
+  };
 }

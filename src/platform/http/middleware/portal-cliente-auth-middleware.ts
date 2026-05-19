@@ -25,7 +25,9 @@ export function portalClienteAuthMiddleware(req: Request, res: Response, next: N
 
   req.portalCliente = {
     clienteId: auth.userId,
-    automacaoTenantId: tenant.tenantId
+    tenantId: tenant.tenantId,
+    automacaoTenantId: tenant.tenantId,
+    role: "cliente_cnpj"
   };
   next();
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#  VALIDAÇÃO SPRINT 3 — NFS-e + Portal Cliente + Relatórios
+#  VALIDAÇÃO SPRINT 3 — Portal Cliente + Relatórios (sem NFS-e)
 #  Execute da raiz do projeto cobranca-saas-api:
 #     bash Projeto_CobrancaBoleto/validacao_sprint3.sh
 # ============================================================
@@ -22,10 +22,11 @@ info()  { echo -e "  ${BLUE}ℹ  INFO${NC}   $1"; }
 
 echo ""
 echo -e "${BLUE}══════════════════════════════════════════════════${NC}"
-echo -e "${BLUE}   VALIDAÇÃO SPRINT 3 — NFS-e + Portal Cliente    ${NC}"
+echo -e "${BLUE}   VALIDAÇÃO SPRINT 3 — Portal Cliente + Relatórios ${NC}"
 echo -e "${BLUE}══════════════════════════════════════════════════${NC}"
 echo ""
 
+# ── Detectar raiz do projeto ──────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [[ "$(basename "$SCRIPT_DIR")" == "Projeto_CobrancaBoleto" ]]; then
   PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -35,76 +36,97 @@ fi
 info "Raiz do projeto: $PROJECT_ROOT"
 echo ""
 
-echo -e "${BLUE}[1/8] Worker nfse-emit${NC}"
-if [ -f "$PROJECT_ROOT/src/platform/jobs/workers/nfse-emit.worker.ts" ]; then
-  ok "nfse-emit.worker.ts existe"
+MIGRATIONS_DIR="$PROJECT_ROOT/db/migrations"
+
+# ────────────────────────────────────────────────────────────
+echo -e "${BLUE}[1/6] Migration 021 (cliente_access_tokens)${NC}"
+# ────────────────────────────────────────────────────────────
+if ls "$MIGRATIONS_DIR"/021_*.sql 1>/dev/null 2>&1; then
+  ok "Migration 021 encontrada em db/migrations/"
+  info "$(ls "$MIGRATIONS_DIR"/021_*.sql | head -1)"
 else
-  fail "nfse-emit.worker.ts ausente"
+  fail "Nenhum arquivo 021_*.sql em db/migrations/"
 fi
 echo ""
 
-echo -e "${BLUE}[2/8] FocusNFeAdapter${NC}"
-if [ -f "$PROJECT_ROOT/src/modules/nfse/infrastructure/focus-nfe/focus-nfe-adapter.ts" ]; then
-  ok "FocusNFeAdapter existe"
+# ────────────────────────────────────────────────────────────
+echo -e "${BLUE}[2/6] Tabela cliente_access_tokens no código${NC}"
+# ────────────────────────────────────────────────────────────
+CAT_REFS=$(grep -r "cliente_access_tokens" "$PROJECT_ROOT/src" --include="*.ts" -l 2>/dev/null | wc -l)
+if [ "$CAT_REFS" -gt 0 ]; then
+  ok "cliente_access_tokens referenciada em $CAT_REFS arquivo(s) TypeScript"
 else
-  fail "FocusNFeAdapter ausente"
+  fail "Nenhuma referência a cliente_access_tokens em src/"
 fi
 echo ""
 
-echo -e "${BLUE}[3/8] Referência nfse_emissions no código${NC}"
-if grep -rq "nfse_emissions" "$PROJECT_ROOT/src" 2>/dev/null; then
-  ok "nfse_emissions referenciada em src/"
+# ────────────────────────────────────────────────────────────
+echo -e "${BLUE}[3/6] Endpoints /v1/portal/cliente${NC}"
+# ────────────────────────────────────────────────────────────
+CLIENTE_ENDPOINTS=$(grep -r "portal/cliente" "$PROJECT_ROOT/src" --include="*.ts" -l 2>/dev/null | wc -l)
+if [ "$CLIENTE_ENDPOINTS" -gt 0 ]; then
+  ok "Endpoints portal/cliente referenciados em $CLIENTE_ENDPOINTS arquivo(s)"
 else
-  fail "nfse_emissions não encontrada em src/"
+  fail "Nenhuma referência a portal/cliente em src/"
 fi
 echo ""
 
-echo -e "${BLUE}[4/8] Tabela cliente_access_tokens (migrations)${NC}"
-if grep -rq "cliente_access_tokens" "$PROJECT_ROOT/db/migrations" 2>/dev/null; then
-  ok "cliente_access_tokens em db/migrations/"
+# ────────────────────────────────────────────────────────────
+echo -e "${BLUE}[4/6] Endpoint dashboard do escritório${NC}"
+# ────────────────────────────────────────────────────────────
+DASHBOARD_REFS=$(grep -r "escritorio/dashboard" "$PROJECT_ROOT/src" --include="*.ts" -l 2>/dev/null | wc -l)
+if [ "$DASHBOARD_REFS" -gt 0 ]; then
+  ok "escritorio/dashboard referenciado em $DASHBOARD_REFS arquivo(s)"
 else
-  fail "cliente_access_tokens ausente em migrations"
+  fail "Nenhuma referência a escritorio/dashboard em src/"
 fi
 echo ""
 
-echo -e "${BLUE}[5/8] Migration 021${NC}"
-if ls "$PROJECT_ROOT/db/migrations/"021_* 1>/dev/null 2>&1; then
-  ok "Migration 021 presente"
+# ────────────────────────────────────────────────────────────
+echo -e "${BLUE}[5/6] Export CSV de cobranças${NC}"
+# ────────────────────────────────────────────────────────────
+EXPORT_REFS=$(grep -rE "export.*format|format.*csv" "$PROJECT_ROOT/src" --include="*.ts" -l 2>/dev/null | wc -l)
+if [ "$EXPORT_REFS" -gt 0 ]; then
+  ok "Export CSV (format=csv) referenciado em $EXPORT_REFS arquivo(s)"
 else
-  fail "Migration 021 ausente"
+  fail "Nenhuma referência a export/format CSV em src/"
 fi
 echo ""
 
-echo -e "${BLUE}[6/8] Rotas /v1/portal/cliente${NC}"
-if grep -rq "portal/cliente\|/cliente" "$PROJECT_ROOT/src/modules/portal-read" 2>/dev/null; then
-  ok "Rotas portal cliente encontradas"
+# ────────────────────────────────────────────────────────────
+echo -e "${BLUE}[6/6] Ausência de NFS-e no código TypeScript${NC}"
+# ────────────────────────────────────────────────────────────
+NFSE_REFS=$(grep -rE "nfse_emissions|focus_nfe|FocusNFe|nfseEmit" \
+  "$PROJECT_ROOT/src" --include="*.ts" -l 2>/dev/null)
+
+if [ -z "$NFSE_REFS" ]; then
+  ok "Nenhuma referência a NFS-e (nfse_emissions, focus_nfe, FocusNFe, nfseEmit) em src/"
 else
-  fail "Rotas portal cliente não encontradas"
+  fail "Referências NFS-e encontradas (Sprint 3 não inclui NFS-e):"
+  while IFS= read -r f; do
+    [ -n "$f" ] && info "  → $f"
+  done <<< "$NFSE_REFS"
 fi
 echo ""
 
-echo -e "${BLUE}[7/8] GET dashboard escritório${NC}"
-if grep -rq "dashboard" "$PROJECT_ROOT/src/modules/portal-read" 2>/dev/null; then
-  ok "Endpoint dashboard referenciado"
-else
-  fail "Dashboard não encontrado"
-fi
-echo ""
-
-echo -e "${BLUE}[8/8] Export CSV${NC}"
-if grep -rqE "export.*csv|csv.*export|streamCobrancasCsvRows|cobrancas/export" "$PROJECT_ROOT/src" 2>/dev/null; then
-  ok "Export CSV referenciado"
-else
-  fail "Export CSV não encontrado"
-fi
-echo ""
-
+# ────────────────────────────────────────────────────────────
+# RESULTADO FINAL
+# ────────────────────────────────────────────────────────────
+TOTAL=$((PASSOU + FALHOU))
 echo -e "${BLUE}══════════════════════════════════════════════════${NC}"
-echo -e "  Resultado: ${GREEN}${PASSOU} OK${NC}  ${RED}${FALHOU} FALHA${NC}  ${YELLOW}${AVISO} AVISO${NC}"
+echo -e "  Resultado: ${GREEN}$PASSOU passou${NC} | ${RED}$FALHOU falhou${NC} | ${YELLOW}$AVISO aviso${NC} (de $TOTAL verificações)"
 echo -e "${BLUE}══════════════════════════════════════════════════${NC}"
 echo ""
 
-if [ "$FALHOU" -gt 0 ]; then
+if [ "$FALHOU" -eq 0 ] && [ "$PASSOU" -eq 6 ]; then
+  echo -e "  ${GREEN}✅ SPRINT 3 VALIDADA — 6/6 OK${NC}"
+  echo -e "  Portal cliente, dashboard e export CSV presentes; NFS-e ausente do código."
+  exit 0
+elif [ "$FALHOU" -eq 0 ]; then
+  echo -e "  ${GREEN}✅ Nenhuma falha${NC} ($PASSOU verificações OK)"
+  exit 0
+else
+  echo -e "  ${RED}⛔ SPRINT 3 INCOMPLETA — $FALHOU item(s) com falha${NC}"
+  echo -e "  Corrija os itens ❌ e execute novamente."
   exit 1
 fi
-exit 0

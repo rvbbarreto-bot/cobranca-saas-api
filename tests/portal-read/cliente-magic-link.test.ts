@@ -13,6 +13,10 @@ import {
   requestClienteMagicLink,
   verifyClienteMagicLinkToken
 } from "../../src/modules/portal-read/application/cliente-magic-link";
+import {
+  signClientePortalToken,
+  verifyAccessToken
+} from "../../src/modules/identity-access/application/jwt-service";
 
 describe("cliente magic link", () => {
   beforeEach(() => {
@@ -39,8 +43,16 @@ describe("cliente magic link", () => {
 
     expect(r.enqueued).toBe(true);
     expect(enqueueMock).toHaveBeenCalledWith(
-      expect.objectContaining({ eventType: "magic_link" }),
-      expect.any(Object)
+      expect.objectContaining({
+        eventType: "magic_link",
+        forceChannel: "email",
+        metadata: expect.objectContaining({
+          clienteId: "cli-1",
+          email: "a@test.com",
+          tenant_slug: "escritorio-x"
+        })
+      }),
+      expect.objectContaining({ jobName: "magic-link" })
     );
   });
 
@@ -81,5 +93,50 @@ describe("cliente magic link", () => {
     };
     const r = await verifyClienteMagicLinkToken(client as never, "x", "tenant-a");
     expect(r).toBeNull();
+  });
+
+  it("verify-token já usado retorna null (used_at preenchido)", async () => {
+    const client = {
+      query: vi.fn(async (sql: string) => {
+        if (sql.includes("FOR UPDATE")) {
+          return { rows: [] };
+        }
+        return { rowCount: 0 };
+      })
+    };
+    const r = await verifyClienteMagicLinkToken(client as never, "used-token", "tenant-a");
+    expect(r).toBeNull();
+  });
+
+  it("verify-token válido emite JWT com role cliente_cnpj", async () => {
+    const prev = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = "test-secret-magic-link";
+
+    const token = "abc123";
+    const client = {
+      query: vi.fn(async (sql: string) => {
+        if (sql.includes("FOR UPDATE")) {
+          return {
+            rows: [{ id: "tok-1", tenant_id: "tenant-a", cliente_id: "cli-1" }]
+          };
+        }
+        return { rowCount: 1 };
+      })
+    };
+
+    const verified = await verifyClienteMagicLinkToken(client as never, token, "tenant-a");
+    expect(verified?.clienteId).toBe("cli-1");
+
+    const jwt = signClientePortalToken(verified!.clienteId, "tenant-a");
+    const claims = verifyAccessToken(jwt);
+    expect(claims.roles).toContain("cliente_cnpj");
+    expect(claims.sub).toBe("cli-1");
+    expect(claims.tid).toBe("tenant-a");
+
+    if (prev === undefined) {
+      delete process.env.JWT_SECRET;
+    } else {
+      process.env.JWT_SECRET = prev;
+    }
   });
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../../../platform/http/async-handler";
+import { escritorioCsvExportRateLimit } from "../../../../platform/http/middleware/rate-limit.middleware";
 import { auditContextFromRequest } from "../../../../platform/audit/audit-context";
 import { withTenantTransaction } from "../../../../platform/persistence/with-tenant-transaction";
 import { getPublicTenantIdForAutomacao } from "../../infrastructure/billing-tenant-link-repository";
@@ -24,15 +25,35 @@ import {
   resolveDashboardPeriod
 } from "../../application/escritorio-dashboard";
 import { streamCobrancasCsvRows } from "../../application/escritorio-cobrancas-export";
-import { postEscritorioNfseRetryHandler } from "../../../nfse/interfaces/http/nfse-portal-handlers";
 
 function isEscritorioAdmin(req: Request): boolean {
   return req.portalMembership?.role === "admin_escritorio";
 }
 
-function canReadEscritorioDashboard(req: Request): boolean {
+/** tenant_owner (JWT owner) + admin_escritorio; operador e viewer → negado. */
+export function canExportEscritorioCobrancas(req: Request): boolean {
+  if (req.authContext?.roles.includes("viewer")) {
+    return false;
+  }
+  if (req.portalMembership?.role === "operador") {
+    return false;
+  }
+  if (req.portalMembership?.role === "admin_escritorio") {
+    return true;
+  }
+  return req.authContext?.roles.includes("owner") === true;
+}
+
+/** tenant_owner (JWT owner) + admin_escritorio + operador; viewer → negado. */
+export function canReadEscritorioDashboard(req: Request): boolean {
+  if (req.authContext?.roles.includes("viewer")) {
+    return false;
+  }
   const role = req.portalMembership?.role;
-  return role === "admin_escritorio" || role === "operador";
+  if (role === "admin_escritorio" || role === "operador") {
+    return true;
+  }
+  return req.authContext?.roles.includes("owner") === true;
 }
 
 async function resolvePublicTenant(req: Request, res: Response): Promise<string | null> {
@@ -242,6 +263,7 @@ export function createEscritorioRouter(): Router {
     })
   );
 
+  /** GET /v1/portal/escritorio/dashboard */
   router.get(
     "/dashboard",
     asyncHandler(async (req, res) => {
@@ -265,9 +287,13 @@ export function createEscritorioRouter(): Router {
 
   router.get(
     "/cobrancas/export",
+    escritorioCsvExportRateLimit,
     asyncHandler(async (req, res) => {
-      if (!isEscritorioAdmin(req)) {
-        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+      if (!canExportEscritorioCobrancas(req)) {
+        res.status(403).json({
+          error: "portal_forbidden",
+          message: "Exportacao CSV restrita a admin_escritorio ou tenant_owner."
+        });
         return;
       }
       const format = typeof req.query.format === "string" ? req.query.format.trim() : "";
@@ -292,8 +318,6 @@ export function createEscritorioRouter(): Router {
       res.end();
     })
   );
-
-  router.post("/nfse/:chargeId/retry", asyncHandler(postEscritorioNfseRetryHandler));
 
   router.get(
     "/templates/:templateId/preview",

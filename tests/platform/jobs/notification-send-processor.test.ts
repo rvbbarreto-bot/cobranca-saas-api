@@ -301,6 +301,58 @@ describe("processNotificationSend", () => {
     ]);
   });
 
+  it("magic_link envia e-mail com URL do PORTAL_CLIENT_URL", async () => {
+    const prevUrl = process.env.PORTAL_CLIENT_URL;
+    process.env.PORTAL_CLIENT_URL = "https://portal.cliente.test";
+
+    const state: MockState = {
+      charge: null,
+      emailTemplate: {
+        subject: "Acesso — {{escritorio_nome}}",
+        body_template: "Link: {{magic_link_url}}"
+      },
+      whatsappTemplate: null,
+      payment: null,
+      communicationEvents: []
+    };
+
+    const sendEmail = vi.fn().mockResolvedValue({ messageId: "msg-magic" });
+
+    await processNotificationSend(
+      {
+        tenantId,
+        eventType: "magic_link",
+        forceChannel: "email",
+        metadata: {
+          token: "raw-token-xyz",
+          email: "devedor@test.com",
+          tenant_slug: "meu-escritorio"
+        }
+      },
+      {
+        withTenant: async (_tid, fn) => fn(createMockClient(state)),
+        resendAdapter: { sendEmail },
+        zapiAdapter: { sendWhatsApp: vi.fn() }
+      }
+    );
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "devedor@test.com",
+        html: "Link: https://portal.cliente.test/acesso?token=raw-token-xyz&tenant=meu-escritorio"
+      })
+    );
+    expect(state.communicationEvents).toEqual([
+      expect.objectContaining({ channel: "email", status: "sent" })
+    ]);
+
+    if (prevUrl === undefined) {
+      delete process.env.PORTAL_CLIENT_URL;
+    } else {
+      process.env.PORTAL_CLIENT_URL = prevUrl;
+    }
+  });
+
   it("cobrança não encontrada → UnrecoverableError charge_not_found", async () => {
     const state: MockState = {
       charge: null,
