@@ -2,6 +2,10 @@
 
 Pacote extraído do repositório **Projeto_EmissaoNF** (desenvolvimento: portal boletos, clientes, webhooks, máquina de estados, job `process-webhook-pending`).
 
+## Retomada da fábrica (PO + Tech Lead)
+
+**Documento mestre:** [Projeto_CobrancaBoleto/RETOMADA_FABRICA.md](./Projeto_CobrancaBoleto/RETOMADA_FABRICA.md) — branch ativa, o que está feito, pendências Sprint 4 e gates de qualidade.
+
 ## Pré-requisitos
 
 - Node.js 20+

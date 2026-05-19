@@ -4,7 +4,9 @@
 
 ---
 
-> **Gate de entrada:** `npm test` ≥ 167 testes verdes · `validacao_sprint3.sh` 6/6 · CI verde.
+> **Gate de entrada:** `npm test` ≥ 172 testes verdes · `validacao_sprint3.sh` 6/6 · CI verde em `main`.
+> **Branch de trabalho:** `cursor/sprint4-saas-billing` (até merge do PR Sprint 4).
+> **Kickoff retomada:** [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md)
 
 ---
 
@@ -39,7 +41,7 @@ FORA DE ESCOPO: NFS-e (projeto separado)
 **Critérios de aceite:**
 - [x] Migration idempotente
 - [x] 3 planos no seed
-- [ ] `npm run migrate` em dev/staging
+- [x] `npm run migrate` em dev (validar em staging no PR)
 
 ---
 
@@ -119,14 +121,17 @@ Somente owner da plataforma.
 ## Checklist PR Sprint 4 (fase 1)
 
 ```markdown
-[ ] Migration 023 aplicada
-[ ] Módulo src/modules/saas-billing/
-[ ] GET /v1/saas/plans
-[ ] GET /v1/portal/escritorio/assinatura
-[ ] Provision com plano_slug + trial 14d
-[ ] Limites em POST cobrancas e POST clientes
-[ ] npm run build ✅ + npm test ✅
-[ ] validacao_sprint4.sh 5/5
+[x] Migration 023 aplicada
+[x] Módulo src/modules/saas-billing/
+[x] GET /v1/saas/plans
+[x] GET /v1/portal/escritorio/assinatura
+[x] Provision com plano_slug + trial 14d
+[x] Limites em POST cobrancas e POST clientes
+[x] npm run build ✅ + npm test ✅ (172 testes)
+[ ] validacao_sprint4.sh 5/5 (rodar antes do merge)
+[ ] API_CONTRATO_E_SMOKE.md atualizado
+[ ] Teste integração provision + assinatura trial
+[ ] UI /escritorio — bloco assinatura/uso
 ```
 
 *Referência: `Especificacao_Requisitos_SaaS_Cobrancas_v2.docx` §6.2 planos/assinaturas · US-21*

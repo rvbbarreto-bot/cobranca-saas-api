@@ -1,6 +1,10 @@
 # 🏭 PROMPT DE KICKOFF — FÁBRICA DE SOFTWARE
 ## SaaS de Cobranças Recorrentes · Versão 2.0 · Maio 2026
 
+> **⚠️ Retomada Maio 2026:** o estado do repositório avançou além da Fase 0/1 descritas abaixo.
+> **Comece por** [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md) (snapshot, branch ativa, pendências Sprint 4).
+> Este arquivo permanece como referência de **regras**, **convenções** e **detalhe histórico** das Sprints 0–1.
+
 > **Como usar este documento**
 > Este prompt foi engenheirado para uso duplo:
 > - **Agente de IA (Claude Code, Cursor, Copilot Workspace):** cole a seção `SYSTEM PROMPT` diretamente na janela de contexto do agente antes de iniciar qualquer tarefa.
