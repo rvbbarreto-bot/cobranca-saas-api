@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+
+# Secrets e overrides locais (nunca commitar)
+.env
+.env.local
+.env.*.local
+.env.*
+!.env.example

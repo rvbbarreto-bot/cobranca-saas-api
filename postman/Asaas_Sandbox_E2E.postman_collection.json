@@ -1,0 +1,105 @@
+{
+  "info": {
+    "name": "Cobranca SaaS — Asaas Sandbox E2E",
+    "description": "Fluxo Sprint 1: portal → cobrança → webhook Asaas → process pending.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3333" },
+    { "key": "tenantPublicUuid", "value": "00000000-0000-4000-8000-000000000001" },
+    { "key": "automacaoTenantId", "value": "1" },
+    { "key": "portalToken", "value": "" },
+    { "key": "chargeId", "value": "" },
+    { "key": "asaasPaymentId", "value": "" },
+    { "key": "webhookSecret", "value": "{{WEBHOOK_INBOX_SECRET}}" },
+    { "key": "correlationId", "value": "postman-e2e-001" }
+  ],
+  "item": [
+    {
+      "name": "1 — Portal login",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"portal-seed@local.dev\",\n  \"tenant_id\": \"{{automacaoTenantId}}\",\n  \"password\": \"PortalSeedDev!ChangeMe1\"\n}"
+        },
+        "url": "{{baseUrl}}/v1/portal/auth/login"
+      }
+    },
+    {
+      "name": "2 — Criar cliente portal",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+          { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documento\": \"39053344705\",\n  \"nome\": \"Pagador Postman E2E\",\n  \"email\": \"pagador-e2e@local.dev\"\n}"
+        },
+        "url": "{{baseUrl}}/v1/portal/clientes"
+      }
+    },
+    {
+      "name": "3 — Criar cobrança (rascunho)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+          { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "x-correlation-id", "value": "{{correlationId}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"reference\": \"postman-e2e-ref\",\n  \"idempotency_key\": \"idem-postman-e2e-001\",\n  \"amount\": 10.5,\n  \"due_date\": \"2030-12-20\",\n  \"portal_cliente_id\": \"{{portalClienteId}}\"\n}"
+        },
+        "url": "{{baseUrl}}/v1/portal/cobrancas"
+      }
+    },
+    {
+      "name": "4 — GET cobrança (payment)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+          { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+          { "key": "x-correlation-id", "value": "{{correlationId}}" }
+        ],
+        "url": "{{baseUrl}}/v1/portal/cobrancas/{{chargeId}}"
+      }
+    },
+    {
+      "name": "5 — Webhook Asaas (simulado)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "x-tenant-id", "value": "{{tenantPublicUuid}}" },
+          { "key": "x-webhook-secret", "value": "{{webhookSecret}}" },
+          { "key": "x-external-event-id", "value": "asaas-postman-pay-received" },
+          { "key": "x-correlation-id", "value": "{{correlationId}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"PAYMENT_RECEIVED\",\n  \"payment\": {\n    \"id\": \"{{asaasPaymentId}}\",\n    \"status\": \"RECEIVED\",\n    \"externalReference\": \"idem-postman-e2e-001\"\n  }\n}"
+        },
+        "url": "{{baseUrl}}/v1/inbox/webhooks"
+      }
+    },
+    {
+      "name": "6 — Processar inbox",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+          { "key": "x-tenant-id", "value": "{{tenantPublicUuid}}" }
+        ],
+        "url": "{{baseUrl}}/v1/inbox/webhooks/process-pending?limit=50"
+      }
+    }
+  ]
+}

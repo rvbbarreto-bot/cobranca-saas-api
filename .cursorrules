@@ -1,0 +1,58 @@
+# cobranca-saas-api — Cursor rules
+
+API de cobrança, portal e inbox (Express + TypeScript + PostgreSQL). SPA em `apps/portal-web`. Contrato e escopo: `docs/API_CONTRATO_E_SMOKE.md`, `docs/MVP_ESCOPO_CONGELADO.md`, `docs/FASE2_KICKOFF_QUALIDADE.md`.
+
+## Stack e comandos
+
+- Node 20+, TypeScript strict, Vitest, `pg`, Zod, Express.
+- Antes de PR: `npm run quality:gate` (build + coverage API + portal:test + test:integration com `DATABASE_URL`).
+- Migrações: `npm run migrate` — arquivos em `db/migrations/*.sql`, ordem lexicográfica.
+- Não commitar `.env` nem segredos.
+
+## Arquitetura
+
+- Módulos em `src/modules/<nome>/`: `domain/`, `application/`, `infrastructure/`, `interfaces/http/`.
+- Plataforma compartilhada: `src/platform/` (HTTP, tenancy, persistence, health).
+- Rotas montadas em `src/app.ts` sob `/v1`. Portal em `/v1/portal` (antes do `tenantResolutionMiddleware` global).
+- Este pacote **não** inclui `/internal/fiscal` (permanece no repo EmissaoNF).
+
+## Multi-tenant (obrigatório)
+
+- Escritas e leituras sensíveis ao tenant: usar `withTenantTransaction(tenantUuid, fn)` ou `setTenantSession` — nunca confiar só no filtro manual em SQL.
+- Portal resolve tenant de automação via middleware (`portalAutomacaoTenantMiddleware`) e vínculo `billing_tenant_link`.
+- Rotas core usam `x-tenant-id` + JWT após `tenantResolutionMiddleware`.
+- Testes de isolamento: `tests/cross-tenant.integration.test.ts`.
+
+## HTTP e erros
+
+- Handlers async: `asyncHandler` de `platform/http/async-handler`.
+- Respostas JSON com `error` (código estável) e `message` (humano). Validar body com Zod onde o módulo já usa o padrão.
+- Alterar paths ou códigos HTTP: atualizar `docs/API_CONTRATO_E_SMOKE.md`.
+- Alterar rotas/env do front: atualizar `docs/PORTAL_WEB.md`.
+
+## Segurança e produção
+
+- `ENABLE_MOCK_AUTH` e rotas mock só em dev; não expandir mocks em prod sem flag explícita.
+- `JWT_SECRET`, `CORS_ORIGIN`, TLS em `DATABASE_URL`: seguir `docs/PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md` e `npm run check:readiness`.
+- Papéis portal: respeitar `isEscritorioStaff` e RBAC existente em `portal-router` / middleware.
+
+## Testes
+
+- Unitários: `npm test` (exclui `*.integration.test.ts`).
+- Integração: `npm run test:integration` — requer Postgres migrado.
+- Cobertura mínima ~82% em `application`/`domain` (ver `vitest.config.ts`).
+- Vitest força `NODE_ENV=test` e mocks em `tests/setup/vitest-setup.ts`.
+- Mudanças em `POST /v1/portal/clientes` ou concorrência: considerar `npm run test:stress:portal-clientes`.
+
+## Estilo de mudança
+
+- PRs pequenos; uma preocupação por commit lógico.
+- Reutilizar repositórios e helpers existentes; não duplicar regras de negócio (ex.: transição de status em `charge-status-transition.ts`).
+- Idempotência de cobrança: `idempotency_key` + `ON CONFLICT` no repositório.
+- Correlation: preservar `x-correlation-id` e logs JSON do middleware de acesso.
+
+## Portal web (`apps/portal-web`)
+
+- Vite + React + TS; proxy `/v1` em dev.
+- Testes do front: `npm run portal:test`.
+- Alinhar tipos e chamadas API com o contrato documentado; breaking changes exigem coordenação API + SPA.

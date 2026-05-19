@@ -1,0 +1,1 @@
+-- Reservado: templates Sprint 3 adicionados em 021_cliente_access_tokens.sql (magic_link).

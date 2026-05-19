@@ -1,0 +1,73 @@
+# Stack local — TAREFA 0.4 (PROMPT_FABRICA_KICKOFF.md)
+# Uso: cp .env.example .env (preencher JWT_SECRET etc.) && docker compose up --build
+# Depois: GET http://localhost:3333/health/ready (status "ok" apos migrate + schema)
+
+services:
+  api:
+    build:
+      context: .
+      target: production
+    ports:
+      - "3333:3333"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://app:${DB_PASSWORD:-dev_only}@postgres:5432/cobranca_saas
+      REDIS_URL: redis://redis:6379
+      ALLOW_INSECURE_DATABASE_URL: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3333/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  migrate:
+    build:
+      context: .
+      target: builder
+    command: ["npm", "run", "migrate"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgres://app:${DB_PASSWORD:-dev_only}@postgres:5432/cobranca_saas
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cobranca_saas
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_only}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d cobranca_saas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:
+  redisdata:
