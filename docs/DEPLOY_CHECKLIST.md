@@ -2,7 +2,7 @@
 
 ## Antes de subir para staging/produção
 
-- [ ] `npm run migrate` → `public.schema_migrations` com 25 registros; 021/022 aplicadas
+- [ ] `npm run migrate` → migrations até **023** aplicadas (Sprint 4: `planos`, `assinaturas`, `tenant_usage_monthly`)
 - [ ] Verificar `PORTAL_CLIENT_URL` aponta para o frontend correto
 - [ ] Redis limpo de filas legadas com hífen (se ainda não feito):
 
@@ -21,6 +21,9 @@ redis-cli KEYS "bull:notifications:send*" | xargs -r redis-cli DEL
 - [ ] `GET /v1/portal/escritorio/cobrancas/export?format=csv` → stream CSV
 - [ ] `bash Projeto_CobrancaBoleto/validacao_fase_0.sh` → 0 falhas
 - [ ] `bash Projeto_CobrancaBoleto/validacao_sprint3.sh` → 0 falhas
+- [ ] `bash Projeto_CobrancaBoleto/validacao_sprint4.sh` → 5/5
+- [ ] `GET /v1/saas/plans` (JWT owner) → 3 planos
+- [ ] `GET /v1/portal/escritorio/assinatura` → JSON com `plano` e `uso`
 - [ ] Confirmar: nenhuma rota `/nfse` existe (`grep -r "nfse" src/modules`)
 
 ## Teste E2E Sprint 3 (integração, com Postgres)

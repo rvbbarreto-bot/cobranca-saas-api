@@ -25,6 +25,7 @@ import {
   resolveDashboardPeriod
 } from "../../application/escritorio-dashboard";
 import { streamCobrancasCsvRows } from "../../application/escritorio-cobrancas-export";
+import { getTenantSubscriptionUseCase } from "../../../saas-billing/application/get-tenant-subscription";
 
 function isEscritorioAdmin(req: Request): boolean {
   return req.portalMembership?.role === "admin_escritorio";
@@ -260,6 +261,30 @@ export function createEscritorioRouter(): Router {
         }
         throw error;
       }
+    })
+  );
+
+  /** GET /v1/portal/escritorio/assinatura */
+  router.get(
+    "/assinatura",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const tenantId = await resolvePublicTenant(req, res);
+      if (!tenantId) return;
+      const assinatura = await withTenantTransaction(tenantId, (client) =>
+        getTenantSubscriptionUseCase(client, tenantId)
+      );
+      if (!assinatura) {
+        res.status(404).json({
+          error: "subscription_not_found",
+          message: "Nenhuma assinatura vinculada a este tenant."
+        });
+        return;
+      }
+      res.json({ assinatura });
     })
   );
 

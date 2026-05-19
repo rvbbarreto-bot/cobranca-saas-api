@@ -1,10 +1,12 @@
 import type { Pool } from "pg";
+import { createSubscriptionForTenant } from "../../saas-billing/application/create-subscription-for-tenant";
 
 export type ProvisionPublicTenantInput = {
   slug: string;
   name: string;
   status: "active" | "suspended" | "trial";
   automacaoTenantId?: string | null;
+  planoSlug?: string;
 };
 
 export type ProvisionPublicTenantResult = {
@@ -37,6 +39,12 @@ export function parseProvisionPublicTenantBody(body: unknown):
       : typeof o.automacaoTenantId === "string"
         ? o.automacaoTenantId.trim()
         : "";
+  const planoSlug =
+    typeof o.plano_slug === "string"
+      ? o.plano_slug.trim().toLowerCase()
+      : typeof o.planoSlug === "string"
+        ? o.planoSlug.trim().toLowerCase()
+        : "";
 
   if (!slug || !isValidTenantSlug(slug)) {
     return {
@@ -59,7 +67,8 @@ export function parseProvisionPublicTenantBody(body: unknown):
       slug,
       name,
       status,
-      automacaoTenantId: automacaoTenantId || undefined
+      automacaoTenantId: automacaoTenantId || undefined,
+      planoSlug: planoSlug || undefined
     }
   };
 }
@@ -91,6 +100,11 @@ export async function provisionPublicTenant(
       );
       billingLinked = true;
     }
+
+    await createSubscriptionForTenant(client, {
+      tenantId: row.id,
+      planoSlug: input.planoSlug
+    });
 
     await client.query("COMMIT");
     return {

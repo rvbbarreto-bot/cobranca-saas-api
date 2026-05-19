@@ -7,6 +7,11 @@ import type { Charge } from "../../billing-core/domain/charge";
 import { insertChargeEvent } from "../../billing-core/infrastructure/charge-events-repository";
 import { insertCharge } from "../../billing-core/infrastructure/charge-repository";
 import { schedulePaymentEmissionJob } from "../../../platform/jobs/enqueue-payment-emission";
+import {
+  assertTenantCanMutate,
+  recordChargeCreatedForMetering
+} from "../../saas-billing/application/assert-tenant-can-mutate";
+import { SaasBillingError } from "../../saas-billing/domain/saas-billing-error";
 
 const portalChargeCreateSchema = createChargeBodySchema.extend({
   portal_cliente_id: z.string().uuid().optional()
@@ -26,6 +31,7 @@ function chargeAuditSnapshot(charge: Charge): Record<string, unknown> {
 export async function createPortalChargeUseCase(
   client: PoolClient,
   automacaoTenantId: string,
+  publicTenantId: string,
   raw: unknown,
   audit?: AuditRequestContext
 ): Promise<{ charge: Charge; inserted: boolean }> {
@@ -46,6 +52,15 @@ export async function createPortalChargeUseCase(
     if (chk.rowCount === 0) {
       throw new Error("PORTAL_CLIENTE_NOT_FOUND");
     }
+  }
+
+  try {
+    await assertTenantCanMutate(client, publicTenantId, "create_charge");
+  } catch (e) {
+    if (e instanceof SaasBillingError) {
+      throw e;
+    }
+    throw e;
   }
 
   const metadata: Record<string, unknown> = { ...(data.metadata ?? {}) };
@@ -93,6 +108,7 @@ export async function createPortalChargeUseCase(
   }
 
   if (result.inserted) {
+    await recordChargeCreatedForMetering(client, publicTenantId);
     schedulePaymentEmissionJob({
       id: result.charge.id,
       tenantId: result.charge.tenantId

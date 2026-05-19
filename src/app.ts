@@ -10,6 +10,7 @@ import { tenantRouter } from "./modules/tenant-provisioning/interfaces/http/tena
 import { billingRouter } from "./modules/billing-core/interfaces/http/billing-router";
 import { inboxRouter } from "./modules/inbox/interfaces/http/inbox-router";
 import { createPortalRouter } from "./modules/portal-read/interfaces/http/portal-router";
+import { saasBillingRouter } from "./modules/saas-billing/interfaces/http/saas-billing-router";
 import { healthReadyHandler } from "./platform/health/readiness-http";
 
 /**
@@ -40,6 +41,7 @@ export function createApp() {
   v1.use("/auth", authRouter);
   v1.use("/tenants", tenantRouter);
   v1.use("/billing", billingRouter);
+  v1.use("/saas", saasBillingRouter);
   v1.use("/inbox", inboxRouter);
 
   app.use("/v1", v1);

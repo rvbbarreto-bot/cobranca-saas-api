@@ -21,6 +21,7 @@ export default defineConfig({
       "tests/tenant-provisioning/**/*.test.ts",
       "tests/payment-gateway/**/*.test.ts",
       "tests/notifications/**/*.test.ts",
+      "tests/saas-billing/**/*.test.ts",
       "tests/platform/jobs/**/*.test.ts",
       "tests/health/**/*.test.ts",
       "tests/cross-tenant.integration.test.ts",
@@ -54,7 +55,9 @@ export default defineConfig({
         "src/modules/portal-read/application/escritorio-dashboard.ts",
         "src/modules/portal-read/application/escritorio-cobrancas-export.ts",
         "src/platform/jobs/application/**/*.ts",
-        "src/modules/tenant-provisioning/application/provision-public-tenant.ts"
+        "src/modules/tenant-provisioning/application/provision-public-tenant.ts",
+        "src/modules/saas-billing/application/**/*.ts",
+        "src/modules/saas-billing/domain/**/*.ts"
       ],
       exclude: ["**/*.d.ts", "**/index.ts"],
       thresholds: {

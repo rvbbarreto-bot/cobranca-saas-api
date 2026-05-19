@@ -9,6 +9,7 @@ import {
   parseProvisionPublicTenantBody,
   provisionPublicTenant
 } from "../../application/provision-public-tenant";
+import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
 
 export const tenantRouter = Router();
 
@@ -39,6 +40,10 @@ tenantRouter.post(
         billing_linked: result.billingLinked
       });
     } catch (error: unknown) {
+      if (error instanceof SaasBillingError && error.code === "PLAN_NOT_FOUND") {
+        res.status(400).json({ error: error.code, message: error.message });
+        return;
+      }
       if (error instanceof DatabaseError && error.code === "23505") {
         res.status(409).json({
           error: "unique_violation",

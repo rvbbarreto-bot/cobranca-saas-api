@@ -17,6 +17,11 @@ vi.mock("../../src/platform/jobs/enqueue-payment-emission", () => ({
   enqueuePaymentEmissionJob: enqueueMock
 }));
 
+vi.mock("../../src/modules/saas-billing/application/assert-tenant-can-mutate", () => ({
+  assertTenantCanMutate: vi.fn().mockResolvedValue(undefined),
+  recordChargeCreatedForMetering: vi.fn().mockResolvedValue(undefined)
+}));
+
 vi.mock("../../src/modules/billing-core/infrastructure/charge-repository", () => ({
   insertCharge: vi.fn().mockResolvedValue({
     inserted: true,
@@ -50,6 +55,7 @@ describe("createPortalChargeUseCase", () => {
     const out = await createPortalChargeUseCase(
       client,
       "1",
+      "00000000-0000-4000-8000-000000000001",
       {
         reference: "r1",
         idempotency_key: "idem-12345678",
