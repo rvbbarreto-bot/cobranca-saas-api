@@ -19,7 +19,7 @@
     "job:webhook-inbox": "tsx scripts/process-webhook-pending.ts",
     "test": "vitest run --exclude **/*.integration.test.ts",
     "test:coverage": "vitest run --exclude **/*.integration.test.ts --coverage",
-    "test:integration": "vitest run tests/cross-tenant.integration.test.ts tests/webhook-charge-status.integration.test.ts tests/functional/api-battery.integration.test.ts tests/health/health-ready.integration.test.ts tests/portal-read/sprint-a-portal-login.integration.test.ts tests/tenant-provisioning/sprint-a-provision.integration.test.ts tests/portal-read/portal-clientes-post.integration.test.ts",
+    "test:integration": "vitest run tests/cross-tenant.integration.test.ts tests/webhook-charge-status.integration.test.ts tests/functional/api-battery.integration.test.ts tests/health/health-ready.integration.test.ts tests/portal-read/sprint-a-portal-login.integration.test.ts tests/tenant-provisioning/sprint-a-provision.integration.test.ts tests/portal-read/portal-clientes-post.integration.test.ts tests/portal-read/sprint3-e2e-flow.integration.test.ts",
     "test:integration:sprint3": "vitest run tests/portal-read/sprint3-e2e-flow.integration.test.ts",
     "test:integration:sprint3:docker": "docker compose run --rm --no-deps migrate npx vitest run tests/portal-read/sprint3-e2e-flow.integration.test.ts",
     "test:integration:asaas": "vitest run tests/asaas-sandbox.e2e.integration.test.ts",

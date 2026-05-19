@@ -39,6 +39,8 @@ jobs:
       REDIS_URL: redis://localhost:6379
       JWT_SECRET: "0123456789abcdefghijklmnopqrstuvwxyzABCD"
       WEBHOOK_INBOX_SECRET: "whsec_ci_example_min_32_chars____________"
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      PORTAL_CLIENT_URL: "http://localhost:5173"
       # check:readiness usa --strict: nao usar ENABLE_MOCK_AUTH=true aqui.
       ENABLE_MOCK_AUTH: "false"
       # CI nao simula producao no check:prod-env (evita exigir sslmode na URL do servico Postgres).
@@ -73,7 +75,7 @@ jobs:
       - name: Readiness (env + DB + schema)
         run: npm run check:readiness
 
-      - name: Integration tests
+      - name: Integration tests (incl. Sprint 3 E2E)
         run: npm run test:integration
 
       - name: Stress POST /v1/portal/clientes (concorrencia controlada)

@@ -135,14 +135,12 @@ Critérios de aceite:
      webhookProcess:  new Queue('inbox:process',    { connection: redisConnection }),
      chargeSync:      new Queue('charges:sync',     { connection: redisConnection }),
      notificationSend:new Queue('notifications:send',{ connection: redisConnection }),
-     nfseEmit:        new Queue('nfse:emit',        { connection: redisConnection }),
    };
 
    export const JOB_OPTS = {
      emission:     { attempts: 3, backoff: { type: 'exponential', delay: 30_000 },
                      removeOnComplete: { count: 100 }, removeOnFail: { count: 50 } },
      notification: { attempts: 3, backoff: { type: 'exponential', delay: 120_000 } },
-     nfse:         { attempts: 5, backoff: { type: 'exponential', delay: 60_000 } },
      sync:         { attempts: 1 },
    } as const;
 
@@ -402,8 +400,7 @@ PAYMENT_CONFIRMED / PAYMENT_RECEIVED → canonical_status = 'paga'
   2. INSERT charge_events (old→new status, payload com valor pago)
   3. writeAuditLog
   4. queues.notificationSend.add('payment-confirmed', { chargeId, tenantId })
-  5. queues.nfseEmit.add('emit', { chargeId, tenantId }, JOB_OPTS.nfse)
-  6. Cancelar jobs pendentes de régua para esta cobrança:
+  5. Cancelar jobs pendentes de régua para esta cobrança:
      await queues.notificationSend.obliterate() — NÃO, usar jobId para cancelar
      Estratégia: ao enfileirar régua, usar jobId = 'regua-{chargeId}-{daysOffset}'
      Ao pagar: remover jobs com getJob('regua-{chargeId}-*') e job.remove()
@@ -428,7 +425,7 @@ PAYMENT_RESTORED → canonical_status = 'emitida'
 Deduplicação (já implementada): webhook_inbox.processed_at NOT NULL = já processado → 200 silencioso
 
 Testes obrigatórios (1 por evento = 6 testes mínimos):
-  ✅ PAYMENT_CONFIRMED → paga, nfse-emit enfileirado, notificação enfileirada
+  ✅ PAYMENT_CONFIRMED → paga, notificação enfileirada, jobs de régua cancelados
   ✅ PAYMENT_OVERDUE → vencida, D+3 e D+7 enfileirados
   ✅ PAYMENT_DELETED → cancelada, jobs de régua removidos
   ✅ PAYMENT_REFUNDED → cancelada
@@ -586,20 +583,14 @@ GET    /v1/portal/escritorio/config
 PATCH  /v1/portal/escritorio/config
 
 Schema Zod para PATCH:
-  cnpj_emissor?:          z.string().length(14) (só dígitos, validar DV)
   razao_social?:          z.string().min(3)
-  inscricao_municipal?:   z.string()
-  regime_tributario?:     z.enum(['simples','presumido','real'])
-  codigo_municipio?:      z.string().length(7)
-  aliquota_iss?:          z.number().min(0).max(10)
   gateway_provider?:      z.enum(['asaas','pagarme'])
   gateway_api_key?:       z.string().min(10)  ← criptografar antes de salvar
-  focus_nfe_token?:       z.string().min(10)  ← criptografar antes de salvar
   whatsapp_provider?:     z.enum(['zapi','twilio'])
   whatsapp_token?:        z.string()          ← criptografar antes de salvar
 
 REGRAS DE SEGURANÇA:
-  - gateway_api_key, focus_nfe_token, whatsapp_token: criptografar com AES-256-GCM
+  - gateway_api_key, whatsapp_token: criptografar com AES-256-GCM
     antes de salvar (usar src/platform/crypto/encrypt.ts)
   - Na resposta GET: mascarar chaves → mostrar apenas últimos 4 chars: '****abcd'
   - Nunca retornar o valor completo das chaves em nenhum endpoint
@@ -697,7 +688,7 @@ Testes:
 7. Worker notification-send envia WhatsApp via Z-API sandbox
    → communication_events status='sent'
 8. Webhook Asaas PAYMENT_CONFIRMED chega em POST /v1/inbox/webhooks
-   → canonical_status='paga', nfse-emit enfileirado (sem processar ainda — Fase 3)
+   → canonical_status='paga', notificação de pagamento confirmado enfileirada
    → Jobs de régua cancelados
 9. GET /v1/portal/cobrancas/:id mostra canonical_status='paga'
 
@@ -738,4 +729,4 @@ SPRINT 1 FINAL + SPRINT 2
 ---
 
 *Pacote emitido por: PO + Tech Manager + Engenheiro de Prompt IA · Maio 2026*
-*Próxima fase após esta entrega: Sprint 3 — NFS-e via Focus NFe*
+*Próxima fase após esta entrega: Sprint 3 — Portal do Cliente + Relatórios*

@@ -121,9 +121,9 @@ if [ -d "$MIGRATIONS_DIR" ]; then
 
   # Verifica migrations específicas da Fase 0
   if ls "$MIGRATIONS_DIR"/013_*.sql 2>/dev/null | grep -q .; then
-    ok "Migration 013 (desacoplamento NFS-e) existe"
+    ok "Migration 013 (desacoplamento monolito) existe"
   else
-    fail "Migration 013_desacoplamento_nfse.sql não existe"
+    fail "Migration 013_desacoplamento_monolito.sql não existe"
   fi
 
   if ls "$MIGRATIONS_DIR"/014_*.sql 2>/dev/null | grep -q .; then
