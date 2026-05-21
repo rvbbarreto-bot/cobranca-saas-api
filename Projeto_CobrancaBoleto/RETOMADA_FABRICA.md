@@ -7,15 +7,18 @@
 
 ## 1. Onde estamos (snapshot)
 
-| Marco | Commit / PR | Status |
-|-------|-------------|--------|
-| Sprints B–D | PR #6, #8, #9 | Concluído |
-| **Sprint E — n8n** | **`main`** `6ef4c63` (PR #10) | **Concluído** |
-| **Sprint F — editar cobrança** | — | **← ATUAL** |
+| Marco | PR | Status |
+|-------|-----|--------|
+| Sprints B–F | #6–#11 | Concluído |
+| Sprint G — `charge.emitted` n8n | #12 | Concluído (branch integração) |
+| Sprint H — homolog Asaas E2E | #14 | Concluído (branch integração) |
+| **FASE2 A — auth produção** | — | **← ATUAL** |
 
-**Testes:** `npm test` 203+ · `portal:test` 29 · CI `quality:gate`
+**Testes:** `npm test` 208+ · `portal:test` 33 · CI `quality:gate`
 
-**Branch fábrica:** `feat/sprint-f-portal-editar-cobranca` ← `main`
+**Branch fábrica:** `feat/fase2-a-auth-producao` ← `main` (após consolidar integração sprint1 se necessário)
+
+**Atenção release:** G/H podem estar em `feat/sprint1-payment-emission-portal` (`cf6b334`) e ainda não em `main` — Tech Lead consolida antes de produção.
 
 ---
 
@@ -27,93 +30,52 @@ npm ci && npm run migrate && npm run seed:dev
 npm run build && npm test && npm run portal:test && npm run quality:gate
 ```
 
-Scripts: `validacao_fase_0.sh`, `validacao_sprint3.sh`, `validacao_sprint4.sh`
-
 ---
 
 ## 3. Implementado (não refazer)
 
-- API + portal: login, dashboard, cobranças/clientes/NFs, magic link, `/configuracoes`, activate, cursor, PATCH cliente (**UI** `/clientes/:id/editar`)
-- PATCH cobrança **API** + `patchPortalCobranca` em `api.ts` — falta só **tela** edição (Sprint F)
-- Inbox idempotência, n8n outbound (5 eventos), SaaS billing 024
+- Portal + API (editar cobrança, configurações, paginação, SaaS billing)
+- Inbox idempotência, n8n (6 eventos), runner E2E Asaas + checklist Sprint 1
+- Flags mock auth + `check:prod-env` (base já no código)
 
 ---
 
-## 4. Trabalho imediato — Sprint F
+## 4. Trabalho imediato — FASE2 A
 
-**Pacote:** [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md)
+**Pacote:** [DEMANDA_FASE2_A_AUTH_PRODUCAO.md](./DEMANDA_FASE2_A_AUTH_PRODUCAO.md)
 
 | # | Item |
 |---|------|
-| F.1 | `cobrancaEditFormSchema` |
-| F.2 | `CobrancaEditPage` — `/cobrancas/:chargeId/editar` |
-| F.3 | Links em `BoletoDetalhePage` / `CobrancasPage` (ocultar se `paga`/`cancelada`) |
-| F.4 | Vitest `CobrancaEditPage.test.tsx` |
-| F.5 | `PORTAL_WEB.md` |
-| F.6 | PR + handoff TL |
+| A.1 | `RUNBOOK_AUTH_PRODUCAO.md` |
+| A.2 | `check:prod-env` anti-placeholder |
+| A.3–A.4 | Testes unit + integração mocks 404 |
+| A.5 | Contrato + portal ajuda |
+| A.6 | CI check prod-env (opcional) |
+| A.7 | PR + handoff TL |
 
-### Histórico B–E
+### Backlog pós–FASE2 A
 
-| Sprint | PR |
-|--------|-----|
-| B activate + paginação | #6 |
-| C `/configuracoes` | #8 |
-| D inbox + deploy | #9 |
-| E n8n régua/ciclo | #10 |
-
-### Backlog
-
-- **G:** `charge.emitted` n8n; runbook `ENABLE_MOCK_AUTH` / JWT (FASE2 A)
-- **H:** `e2e:asaas:evidence` + checklist Sprint 1 (homolog PO)
+- CI `workflow_dispatch` Asaas E2E
+- Aceite PO checklist sandbox (processo)
 
 ---
 
 ## 5. Ordem de execução
 
 ```
-git pull main → feat/sprint-f-portal-editar-cobranca
-DEMANDA_SPRINT_F → quality:gate → PR → handoff (sem merge IA)
+git pull main → feat/fase2-a-auth-producao
+DEMANDA_FASE2_A → quality:gate → PR → handoff (sem merge IA)
 ```
 
 ---
 
-## 6. Regras absolutas
-
-Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · migrations NNN · cobertura ≥82% · secrets fora do git.
-
----
-
-## 7. Documentação
-
-| Doc | Uso |
-|-----|-----|
-| [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md) | **Atual** |
-| [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) | PR / merge |
-| [docs/N8N_WEBHOOKS.md](../docs/N8N_WEBHOOKS.md) | n8n |
-| [docs/FASE2_KICKOFF_QUALIDADE.md](../docs/FASE2_KICKOFF_QUALIDADE.md) | DoD |
-
----
-
-## 8. SYSTEM PROMPT (colar no Cursor)
+## 6. SYSTEM PROMPT (colar no Cursor)
 
 ```
-Repositório: cobranca-saas-api. main (6ef4c63) — Sprint E mergeada.
-
-PRÓXIMA: Sprint F — DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md
-Branch: feat/sprint-f-portal-editar-cobranca
-
-PATCH /v1/portal/cobrancas/:id já existe. Criar UI edição (espelhar ClienteEditPage).
-Bloquear edição se paga/cancelada. portal:test + PORTAL_WEB.md.
-
-Governança: IA abre PR; Tech Lead merge. Sem NFS-e.
+Repositório: cobranca-saas-api.
+FASE2 A ATUAL: runbook auth produção + JWT/mock + testes.
+Branch: feat/fase2-a-auth-producao
+Pacote: Projeto_CobrancaBoleto/DEMANDA_FASE2_A_AUTH_PRODUCAO.md
+Gate: npm test + portal:test + quality:gate
+Governança: IA abre PR; Tech Lead merge.
 ```
-
----
-
-## 9–10. Ritual PO / Governança
-
-IA: commit + PR + handoff. **Proibido:** merge `main`. TL: review + merge. PO: demo edição cobrança.
-
----
-
-*Atualizado após merge PR #10 (Sprint E).*

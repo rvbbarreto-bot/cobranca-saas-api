@@ -1,5 +1,7 @@
 # Passo 3 — Endurecer produção (paralelo ao desenvolvimento)
 
+**Runbook operacional (auth, JWT, mocks):** [RUNBOOK_AUTH_PRODUCAO.md](./RUNBOOK_AUTH_PRODUCAO.md) — preferir como checklist único em novos deploys.
+
 Este guia assume que o **passo 2** já passou no seu ambiente: `migrate`, `seed:dev` (só **dev/homolog**), `npm run test:functional` com **10/10** verdes. O **escopo MVP** está congelado até a próxima entrega: [MVP_ESCOPO_CONGELADO.md](./MVP_ESCOPO_CONGELADO.md).
 
 Em **produção** não use `seed:dev` com dados fictícios a menos que seja ambiente de homologação controlado; use usuários reais, `automacao` real ou política da empresa.

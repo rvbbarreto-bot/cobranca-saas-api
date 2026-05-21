@@ -210,7 +210,16 @@ Corpo inclui `id` (UUID da linha em `webhook_inbox`). Unicidade: `(tenant_id, ex
 
 ## 4. Variaveis de ambiente (requisitos + DevOps)
 
-Guia completo de **producao** (deploy, pipeline, health, CORS, checklist): [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md). Validação automatizada: `npm run check:prod-env -- --strict`.
+**Runbook auth producao:** [RUNBOOK_AUTH_PRODUCAO.md](./RUNBOOK_AUTH_PRODUCAO.md) (JWT, mocks, smoke, rotacao).  
+Guia deploy: [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md). Validação: `NODE_ENV=production npm run check:prod-env -- --strict`.
+
+### 4.1 Autenticacao — rotas mock vs login real
+
+| Ambiente | Core token | Portal token | Provision |
+|----------|------------|--------------|-----------|
+| Dev (`ENABLE_MOCK_AUTH` ou `NODE_ENV` ≠ production) | `POST /v1/auth/token/mock` | `POST /v1/portal/auth/token/mock` | `POST /v1/tenants/provision/mock` |
+| **Producao** | **404** | **404** | **404** |
+| Producao / homolog real | Fluxo core da plataforma | `POST /v1/portal/auth/login` | `POST /v1/tenants/provision` |
 
 | Variavel | Papel |
 |----------|--------|

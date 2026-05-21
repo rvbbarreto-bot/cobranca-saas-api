@@ -4,31 +4,30 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **main** (`6ef4c63`): Sprints B, C, D, E mergeados (PR #6–#10).
-- **Próxima entrega:** Sprint F — [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md)
-- **Testes:** `npm test` → 203+ · `npm run portal:test` → 29 · `npm run quality:gate`
+- **Código:** Sprints B–H entregues (ver branch `feat/sprint1-payment-emission-portal` se `main` estiver atrás).
+- **Próxima entrega:** FASE2 A — [DEMANDA_FASE2_A_AUTH_PRODUCAO.md](./DEMANDA_FASE2_A_AUTH_PRODUCAO.md)
+- **Testes:** `npm test` 208+ · `portal:test` 33 · `quality:gate`
 
 ## NÃO refazer
 
-- PATCH cobrança na API, inbox, n8n (5 eventos), `/configuracoes`, paginação, activate assinatura.
-- NFS-e / `/internal/fiscal` fora de escopo.
+- Runner E2E, n8n, portal editar cobrança, inbox dedup.
+- Novo IdP/OAuth (fora de escopo).
 
-## Sprint F — ATUAL (portal editar cobrança)
+## FASE2 A — ATUAL (auth produção)
 
-1. `git pull main` → `feat/sprint-f-portal-editar-cobranca`
-2. UI `/cobrancas/:id/editar` + schema + links em detalhe/lista
-3. `portal:test` + `PORTAL_WEB.md`
+1. `git pull main` → `feat/fase2-a-auth-producao`
+2. Runbook `docs/RUNBOOK_AUTH_PRODUCAO.md`
+3. Endurecer `check:prod-env` + testes mocks 404 em produção
 4. PR + handoff TL — **sem merge**
 
-## Backlog (após F)
+## Backlog (após FASE2 A)
 
-| Sprint | Tema |
-|--------|------|
-| G | `charge.emitted` n8n + runbook auth prod (FASE2 A) |
-| H | Homolog: `e2e:asaas:evidence` + checklist Sprint 1 preenchido |
+| Item | Tema |
+|------|------|
+| Homolog PO | Checklist Asaas assinado (processo) |
+| CI opcional | Job manual Asaas E2E |
+| Release | Consolidar `main` com integração sprint1 |
 
-## Regras e gates
+## Regras
 
-Ver [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) e gates em RETOMADA §2.
-
-Multi-tenant · sem secrets no git · DoD FASE2 · PRs < 400 linhas úteis.
+[GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) · multi-tenant · secrets fora do git.

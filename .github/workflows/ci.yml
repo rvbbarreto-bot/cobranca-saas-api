@@ -60,6 +60,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Production env check (JWT placeholders, mock auth)
+        run: npm run check:prod-env -- --strict
+        env:
+          NODE_ENV: production
+          FORCE_PROD_ENV_CHECK: "1"
+          ALLOW_INSECURE_DATABASE_URL: "1"
+
       - name: Unit tests
         run: npm test
 

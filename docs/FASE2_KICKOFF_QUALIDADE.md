@@ -24,9 +24,9 @@
    - Nova cobrança (`/cobrancas/nova` → `POST /v1/portal/cobrancas`), filtro por status na lista, cobranças por cliente no detalhe, export CSV em `/relatorios`.  
    - **P0 entregue:** `PATCH /v1/portal/clientes/:id` e `PATCH /v1/portal/cobrancas/:id` (retificar sem duplicar; cobrança bloqueada se `paga`/`cancelada`).
 
-2. **A — Endurecimento auth / tenants** — *parcial*  
+2. **A — Endurecimento auth / tenants** — *em curso (FASE2 A)*  
    - Página **Escritório** (`/escritorio`) + **Ajuda core** (`/ajuda/provisionamento-core`) com passos para `POST /v1/tenants/provision`.  
-   - Próximo: revisão formal `ENABLE_MOCK_AUTH` / rotação `JWT_SECRET` por runbook de deploy.
+   - Pacote fábrica: [DEMANDA_FASE2_A_AUTH_PRODUCAO.md](../Projeto_CobrancaBoleto/DEMANDA_FASE2_A_AUTH_PRODUCAO.md) → runbook `RUNBOOK_AUTH_PRODUCAO.md`, `check:prod-env`, testes mocks 404.
 
 3. **Observabilidade**  
    - Fluxos novos reutilizam middleware existente (`x-correlation-id` + log de acesso JSON).

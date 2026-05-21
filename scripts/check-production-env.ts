@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { validateJwtSecretForProduction } from "../src/platform/config/jwt-secret-policy";
 import { databaseUrlIndicatesTls, shouldEnforceDatabaseTlsInChecks } from "../src/platform/health/database-url-tls";
 /**
  * Valida variaveis criticas antes do deploy em producao.
@@ -39,11 +40,9 @@ function main(): void {
     );
   }
 
-  if (!jwt || jwt.length < 32) {
-    const len = jwt ? jwt.length : 0;
-    issues.push(
-      `JWT_SECRET ausente ou com menos de 32 caracteres (atual: ${len}). Ajuste o .env ou defina $env:JWT_SECRET no PowerShell.`
-    );
+  const jwtCheck = validateJwtSecretForProduction(jwt);
+  if (!jwtCheck.ok) {
+    issues.push(jwtCheck.reason);
   }
 
   if (!webhook) {
