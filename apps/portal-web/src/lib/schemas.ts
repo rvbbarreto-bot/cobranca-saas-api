@@ -65,6 +65,14 @@ export const cobrancaFormSchema = z.object({
 
 export type CobrancaFormValues = z.infer<typeof cobrancaFormSchema>;
 
+/** Edição de cobrança (PATCH) — valor e vencimento. */
+export const cobrancaEditFormSchema = z.object({
+  amount: z.coerce.number().positive("Valor deve ser maior que zero"),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use a data no formato AAAA-MM-DD")
+});
+
+export type CobrancaEditFormValues = z.infer<typeof cobrancaEditFormSchema>;
+
 export function normalizeClientePayload(values: ClienteFormValues): {
   documento: string;
   nome: string;
