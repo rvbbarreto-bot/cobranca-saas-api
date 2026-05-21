@@ -2,7 +2,7 @@
 
 **Emitido por:** Tech Lead · **Para:** Fábrica (IA + dev)  
 **Data:** Maio 2026 · **Base:** `main` @ `1f4c328` (após PR #9 Sprint D)  
-**Prioridade:** P3 · **Estimativa:** 5–7 dias · **Branch sugerida:** `feat/sprint-e-n8n-orquestracao`
+**Prioridade:** P3 · **Estimativa:** 5–7 dias · **Branch:** `feat/sprint-e-n8n-orquestracao` · **PR #10** mergeado em `main` (`6ef4c63`)
 
 ---
 

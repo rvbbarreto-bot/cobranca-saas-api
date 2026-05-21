@@ -60,10 +60,10 @@ Ordem sugerida após análise do que já está no ar e do risco de produto. A PO
 
 | Ordem | Item | Motivo |
 |-------|------|--------|
-| **P0** | ~~PATCH cliente/cobrança~~ **Entregue:** `PATCH` API + helpers `patchPortalCliente` / `patchPortalCobranca` no SPA | Retificar sem duplicar; UI de edição pode seguir em PR pequeno. |
+| **P0** | ~~PATCH API~~ **Entregue** · **UI editar cobrança** → **Sprint F:** [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](../Projeto_CobrancaBoleto/DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md) (cliente já tem `/clientes/:id/editar`) | Retificar sem duplicar. |
 | **P1** | ~~Paginação / cursor~~ **Entregue:** `limit` + `cursor` nos `GET` portal (cobranças, clientes, NFs, cobranças por cliente); contrato em [API_CONTRATO_E_SMOKE.md](./API_CONTRATO_E_SMOKE.md) secção 2.1; migração `012` para `id` na view de NFs | Evita listas lentas; próximo: botões “Carregar mais” no SPA. |
 | **P2** | ~~**Inbox + job** — idempotência webhook~~ **Entregue (Sprint D):** [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md) + `tests/inbox/webhook-inbox-idempotency.integration.test.ts` | Pré-requisito estável antes de n8n. |
-| **P3** | **Orquestração n8n** (canais, régua) — **Sprint E em curso:** [DEMANDA_SPRINT_E_N8N_ORQUESTRACAO.md](../Projeto_CobrancaBoleto/DEMANDA_SPRINT_E_N8N_ORQUESTRACAO.md) | Depois de P2 (inbox) entregue. |
+| **P3** | ~~**Orquestração n8n**~~ **Entregue (Sprint E, PR #10):** [N8N_WEBHOOKS.md](./N8N_WEBHOOKS.md) | — |
 
 **Ritual sugerido (30 min):** PO traz 2–3 histórias priorizadas; engenharia estima e aponta dependências (BD, segurança, UX); saída = ordem P0–P3 atualizada nesta secção com data.
 
