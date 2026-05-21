@@ -603,6 +603,38 @@ export type EscritorioAssinaturaResponse = {
   };
 };
 
+export type ActivateEscritorioAssinaturaResponse = {
+  activation: {
+    gatewayCustomerId: string;
+    gatewaySubscriptionId: string;
+    status: string;
+    nextDueDate: string;
+  };
+};
+
+export async function activateEscritorioAssinatura(): Promise<ActivateEscritorioAssinaturaResponse> {
+  const res = await apiFetch("/v1/portal/escritorio/assinatura/activate", { method: "POST" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as Partial<ActivateEscritorioAssinaturaResponse>;
+  if (!o.activation?.gatewaySubscriptionId) {
+    throw new ApiError("Resposta sem activation", res.status, json);
+  }
+  return json as ActivateEscritorioAssinaturaResponse;
+}
+
 export async function fetchEscritorioAssinatura(): Promise<EscritorioAssinaturaResponse> {
   const res = await apiFetch("/v1/portal/escritorio/assinatura", { method: "GET" });
   const text = await res.text();
@@ -683,7 +715,11 @@ export function parseJwtPayload(token: string): { sub?: string; tid?: string; ro
     return {};
   }
   try {
-    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payloadPart = parts[1];
+    if (!payloadPart) {
+      return {};
+    }
+    const b64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
     const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
     return JSON.parse(atob(padded)) as { sub?: string; tid?: string; roles?: string[] };
   } catch {

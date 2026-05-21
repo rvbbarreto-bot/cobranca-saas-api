@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { PortalLoadMore } from "../components/PortalLoadMore";
 import { fetchClientes, fetchCobrancas } from "../lib/api";
 import type { ChargeRow, ClienteRow } from "../lib/api";
 import {
@@ -89,8 +90,19 @@ function buildRowViews(clientes: ClienteRow[], charges: ChargeRow[]): RowView[] 
   });
 }
 
+const CLIENTES_PAGE_SIZE = 50;
+
 export function ClientesPage(): JSX.Element {
-  const q = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes() });
+  const q = useInfiniteQuery({
+    queryKey: ["clientes"],
+    queryFn: ({ pageParam }) =>
+      fetchClientes({
+        limit: CLIENTES_PAGE_SIZE,
+        cursor: pageParam as string | undefined
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined
+  });
   const cobQ = useQuery({
     queryKey: ["cobrancas", "forClientes"],
     queryFn: () => fetchCobrancas({ limit: 200 })
@@ -99,8 +111,10 @@ export function ClientesPage(): JSX.Element {
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "cobranca" | "atencao" | "programado">("todos");
 
+  const allClientes = useMemo(() => q.data?.pages.flatMap((p) => p.data) ?? [], [q.data?.pages]);
+
   const rows = useMemo(() => {
-    const data = q.data?.data ?? [];
+    const data = allClientes;
     const charges = cobQ.data?.data ?? [];
     const enriched = buildRowViews(data, charges);
     return enriched.filter((r) => {
@@ -118,7 +132,7 @@ export function ClientesPage(): JSX.Element {
       }
       return r.statusPill === statusFiltro;
     });
-  }, [q.data?.data, cobQ.data?.data, busca, statusFiltro]);
+  }, [allClientes, cobQ.data?.data, busca, statusFiltro]);
 
   return (
     <div className="shell-page">
@@ -145,7 +159,7 @@ export function ClientesPage(): JSX.Element {
         </div>
       ) : null}
 
-      {q.data && !q.isLoading ? (
+      {q.data && !q.isLoading && !q.isError ? (
         <>
           <div className="proto-toolbar">
             <div className="proto-toolbar__field" style={{ flex: "1 1 200px", minWidth: "200px" }}>
@@ -189,7 +203,7 @@ export function ClientesPage(): JSX.Element {
           </div>
 
           <div className="table-wrap">
-            {q.data.count === 0 ? (
+            {allClientes.length === 0 && !q.hasNextPage ? (
               <p className="muted padded">Nenhum cliente cadastrado. Clique em &quot;Novo cliente&quot;.</p>
             ) : (
               <table className="table">
@@ -252,10 +266,17 @@ export function ClientesPage(): JSX.Element {
               </table>
             )}
           </div>
-          <p className="muted small" style={{ marginTop: "0.65rem" }}>
-            Total no servidor: {q.data.count}
-            {rows.length !== q.data.data.length ? ` · Filtrados: ${rows.length}` : null}
-          </p>
+          <PortalLoadMore
+            hasMore={Boolean(q.hasNextPage)}
+            loading={q.isFetchingNextPage}
+            onLoadMore={() => void q.fetchNextPage()}
+            loadedCount={allClientes.length}
+          />
+          {rows.length !== allClientes.length ? (
+            <p className="muted small" style={{ marginTop: "0.35rem" }}>
+              Filtro local: {rows.length} de {allClientes.length} carregados
+            </p>
+          ) : null}
         </>
       ) : null}
     </div>

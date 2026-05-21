@@ -1,7 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { PortalLoadMore } from "../components/PortalLoadMore";
 import { fetchNotasFiscais } from "../lib/api";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const NOTAS_PAGE_SIZE = 50;
 
 function fmtMoney(v: string | null | undefined): string {
   if (v == null || v === "") {
@@ -15,7 +18,18 @@ function fmtMoney(v: string | null | undefined): string {
 }
 
 export function NotasFiscaisPage(): JSX.Element {
-  const q = useQuery({ queryKey: ["notasFiscais"], queryFn: () => fetchNotasFiscais() });
+  const q = useInfiniteQuery({
+    queryKey: ["notasFiscais"],
+    queryFn: ({ pageParam }) =>
+      fetchNotasFiscais({
+        limit: NOTAS_PAGE_SIZE,
+        cursor: pageParam as string | undefined
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined
+  });
+
+  const rows = useMemo(() => q.data?.pages.flatMap((p) => p.data) ?? [], [q.data?.pages]);
 
   return (
     <div className="shell-page">
@@ -27,7 +41,7 @@ export function NotasFiscaisPage(): JSX.Element {
 
       {q.data && !q.isLoading ? (
         <div className="table-wrap">
-          {q.data.count === 0 ? (
+          {rows.length === 0 ? (
             <p className="muted padded">Nenhuma nota fiscal encontrada para este escritório.</p>
           ) : (
             <table className="table">
@@ -42,7 +56,7 @@ export function NotasFiscaisPage(): JSX.Element {
                 </tr>
               </thead>
               <tbody>
-                {q.data.data.map((row, idx) => (
+                {rows.map((row, idx) => (
                   <tr key={`${String(row.numero_nfse)}-${idx}`}>
                     <td>{row.nome_tomador ?? "—"}</td>
                     <td>{row.cpf_cnpj_tomador ?? "—"}</td>
@@ -57,7 +71,12 @@ export function NotasFiscaisPage(): JSX.Element {
               </tbody>
             </table>
           )}
-          <p className="muted small">Total: {q.data.count}</p>
+          <PortalLoadMore
+            hasMore={Boolean(q.hasNextPage)}
+            loading={q.isFetchingNextPage}
+            onLoadMore={() => void q.fetchNextPage()}
+            loadedCount={rows.length}
+          />
         </div>
       ) : null}
     </div>

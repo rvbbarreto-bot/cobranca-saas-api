@@ -5,6 +5,7 @@ import {
   fetchCobrancas,
   fetchPortalCobrancaDetail,
   fetchPortalMe,
+  activateEscritorioAssinatura,
   fetchClienteCobrancas,
   postPortalCobranca,
   patchPortalCliente,
@@ -287,6 +288,38 @@ describe("patchPortalCobranca", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/v1/portal/cobrancas/ch1");
     expect(init.method).toBe("PATCH");
+  });
+});
+
+describe("activateEscritorioAssinatura", () => {
+  afterEach(() => {
+    clearSession();
+    vi.unstubAllGlobals();
+  });
+
+  it("POST activate retorna gatewaySubscriptionId", async () => {
+    saveSession("tok", "tenant-99", "u@x.co");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            activation: {
+              gatewayCustomerId: "cus_1",
+              gatewaySubscriptionId: "sub_1",
+              status: "active",
+              nextDueDate: "2026-06-01"
+            }
+          })
+      })
+    );
+    const r = await activateEscritorioAssinatura();
+    expect(r.activation.gatewaySubscriptionId).toBe("sub_1");
+    const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
+    expect(url).toContain("/v1/portal/escritorio/assinatura/activate");
+    expect(init.method).toBe("POST");
   });
 });
 

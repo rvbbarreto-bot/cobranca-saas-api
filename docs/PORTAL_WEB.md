@@ -38,16 +38,16 @@ Ver `apps/portal-web/.env.example`.
 | Rota | Descrição |
 |------|-----------|
 | `/login` | E-mail, `tenant_id`, senha → `POST /v1/portal/auth/login`. |
-| `/escritorio` | Perfil do tenant, **plano/assinatura** (`GET /v1/portal/escritorio/assinatura`), ligação billing. |
+| `/escritorio` | Perfil do tenant, **plano/assinatura** (`GET /v1/portal/escritorio/assinatura`), botão **Ativar cobrança recorrente** (`POST …/assinatura/activate`, admin), ligação billing. |
 | `/` e `*` | Redireciona para `/dashboard` se autenticado, senão `/login`. |
 | `/dashboard` | Atalhos (área autenticada). |
-| `/notas-fiscais` | `GET /v1/portal/notas-fiscais`. |
-| `/cobrancas` | `GET /v1/portal/cobrancas`; filtro local por status; atalhos nova cobrança / relatórios. |
+| `/notas-fiscais` | `GET /v1/portal/notas-fiscais` com **Carregar mais** (`limit` + `cursor`). |
+| `/cobrancas` | `GET /v1/portal/cobrancas` paginado; filtro local por status; **Carregar mais**; atalhos nova cobrança / relatórios. |
 | `/cobrancas/nova` | `POST /v1/portal/cobrancas`; query opcional `?clienteId=<uuid>`. |
 | `/relatorios` | Export CSV a partir da lista de cobranças (client-side). |
 | `/escritorio` | Resumo tenant + estado do billing link (`GET` cobranças / `auth/me`). |
 | `/ajuda/provisionamento-core` | Texto de apoio ao `POST /v1/tenants/provision` (superfície core). |
-| `/clientes` | `GET /v1/portal/clientes`; `/clientes/novo` (POST); `/clientes/:id` (detalhe + `GET …/clientes/:id/cobrancas`). |
+| `/clientes` | `GET /v1/portal/clientes` paginado (**Carregar mais**); `/clientes/novo` (POST); `/clientes/:id` (detalhe + cobranças). |
 
 O layout autenticado (`AppShell`) chama `GET /v1/portal/auth/me` para nome e papel no cabeçalho (com fallback para dados da sessão).
 
