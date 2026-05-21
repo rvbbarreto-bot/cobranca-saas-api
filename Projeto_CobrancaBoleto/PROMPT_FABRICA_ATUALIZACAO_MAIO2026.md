@@ -6,7 +6,7 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 - **main:** Sprints B–G mergeados (PR #6–#12).
 - **Próxima entrega:** Sprint H — [DEMANDA_SPRINT_H_HOMOLOG_ASAAS_EVIDENCIA.md](./DEMANDA_SPRINT_H_HOMOLOG_ASAAS_EVIDENCIA.md)
-- **Testes:** `npm test` → 207+ · `npm run portal:test` → 33 · `npm run quality:gate`
+- **Testes:** `npm test` → 208+ · `npm run portal:test` → 33 · `npm run quality:gate`
 
 ## NÃO refazer
 

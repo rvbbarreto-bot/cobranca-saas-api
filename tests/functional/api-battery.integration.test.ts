@@ -252,6 +252,50 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
     expect(patched.body?.charge?.dueDate).toBe("2031-10-20");
   });
 
+  it("B6b PATCH /v1/portal/cobrancas/:id em cobranca paga -> 409 charge_not_editable", async (ctx) => {
+    if (!tokenDemo) {
+      ctx.skip();
+    }
+    const ref = `f2-patch-paga-${Date.now()}`;
+    const idem = `idem-patch-paga-${Date.now()}`;
+    const post = await request(app)
+      .post("/v1/portal/cobrancas")
+      .set("Authorization", `Bearer ${tokenPortal}`)
+      .set("x-tenant-id", SEED_AUTOMACAO_SLUG)
+      .send({
+        reference: ref,
+        idempotency_key: idem,
+        amount: 20,
+        due_date: "2031-11-01"
+      })
+      .expect(201);
+    const chargeId = post.body.charge.id as string;
+    const reference = post.body.charge.reference as string;
+
+    const webhookChain = request(app).post("/v1/inbox/webhooks").set("x-tenant-id", "demo");
+    if (webhookSecret) {
+      webhookChain.set("x-webhook-secret", webhookSecret);
+    }
+    await webhookChain
+      .set("x-external-event-id", `evt-paga-${ref}`)
+      .send({ canonical_status: "paga", reference })
+      .expect(202);
+
+    await request(app)
+      .post("/v1/inbox/webhooks/process-pending?limit=100")
+      .set("Authorization", `Bearer ${tokenDemo}`)
+      .set("x-tenant-id", "demo")
+      .expect(200);
+
+    const blocked = await request(app)
+      .patch(`/v1/portal/cobrancas/${chargeId}`)
+      .set("Authorization", `Bearer ${tokenPortal}`)
+      .set("x-tenant-id", SEED_AUTOMACAO_SLUG)
+      .send({ amount: 99 })
+      .expect(409);
+    expect(blocked.body?.error).toBe("charge_not_editable");
+  });
+
   it("C1 cross-tenant: JWT demo + header other -> 403 em /v1/auth/me", async () => {
     await request(app)
       .get("/v1/auth/me")

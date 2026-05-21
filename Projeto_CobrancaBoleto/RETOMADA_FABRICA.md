@@ -10,12 +10,12 @@
 | Marco | Commit / PR | Status |
 |-------|-------------|--------|
 | Sprints B–F | PR #6–#11 | Concluído |
-| **Sprint G — `charge.emitted` n8n** | PR #12 (merge TL) | **Concluído** |
-| **Sprint H — homolog Asaas E2E** | — | **← ATUAL** |
+| **Sprint G — `charge.emitted` n8n** | PR #12 | **Concluído** |
+| **Sprint H — homolog Asaas E2E** | PR #14 (em revisão) | **← ATUAL** |
 
-**Testes:** `npm test` 207+ · `portal:test` 33 · CI `quality:gate`
+**Testes:** `npm test` 208+ · `portal:test` 33 · CI `quality:gate`
 
-**Branch fábrica:** `feat/sprint-h-homolog-asaas-evidencia` ← `main`
+**Branch fábrica:** `feat/sprint-h-homolog-asaas-evidencia` ← `main` + integração `feat/sprint1-payment-emission-portal`
 
 ---
 
@@ -35,7 +35,7 @@ Scripts: `validacao_fase_0.sh`, `validacao_sprint3.sh`, `validacao_sprint4.sh`
 
 - API + portal completo (incl. editar cobrança `/cobrancas/:id/editar`)
 - Inbox idempotência, n8n outbound (**6 eventos**, incl. `charge.emitted`)
-- Runner E2E Asaas (`npm run e2e:asaas:evidence`) — **refinar e homologar na Sprint H**
+- Runner E2E Asaas (`npm run e2e:asaas:evidence`) — homologado na Sprint H (assertions nomeadas)
 
 ---
 

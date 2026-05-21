@@ -41,10 +41,19 @@ N8N_PLATFORM_WEBHOOK_SECRET=openssl_rand_hex_32
 | `event` | Origem | Payload |
 |---------|--------|---------|
 | `charge.paid` | `applyWebhookSideEffectPlan` (`payment_confirmed`) | `{ charge_id }` |
+| `charge.emitted` | `processPaymentEmission` (emissão gateway OK) | `{ charge_id }` |
 | `charge.overdue` | `payment_overdue` (após enfileirar régua 3d/7d) | `{ charge_id }` |
 | `charge.cancelled` | `payment_cancelled` | `{ charge_id }` |
 | `notification.regua_enqueued` | `enqueueReguaNotificationJob` (webhook overdue + `daily-regua`) | `{ charge_id, event_type, days_offset, channel? }` |
 | `subscription.past_due` | `applyAsaasPlatformSubscriptionWebhook` | `{ subscription_id, plano_slug, gateway_subscription_id }` |
+
+### `charge.emitted`
+
+Disparado após o worker de emissão concluir com sucesso (`canonical_status` → `emitida`).
+
+```json
+{ "charge_id": "uuid-da-cobranca" }
+```
 
 ### `charge.paid`
 
