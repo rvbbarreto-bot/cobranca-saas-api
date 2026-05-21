@@ -1,19 +1,20 @@
 ## Summary
 
-- Alinha runner `e2e:asaas:evidence` aos **13 critérios** do checklist Sprint 1.
-- Adiciona testes **unitários** (utils/evidência) e **funcionais** (script sem DB → erro).
-- Documenta homolog PO: `docs/evidencias/README.md`, template JSON redigido, `.gitignore` para evidências reais.
+- Alinha `asaas-sandbox-e2e-runner` aos **14 assertions** nomeadas do checklist Sprint 1 (`asaas-e2e-evidence-utils.ts`).
+- `.gitignore` para JSON real; template `asaas-e2e-EXAMPLE.redacted.json` + `docs/evidencias/README.md`.
+- **Unit:** `tests/dev/asaas-e2e-evidence.test.ts` · **Funcional:** script sem `DATABASE_URL` → exit 1.
+- Checklist, `ASAAS_SANDBOX_E2E.md` (homolog PO) e `DEPLOY_CHECKLIST.md` atualizados.
 
 ## Test plan
 
-- [ ] `npm run build`
-- [ ] `npm test`
-- [ ] `npm run portal:test`
-- [ ] `npm run quality:gate`
-- [ ] Homolog manual (fora do CI): `npm run e2e:asaas:evidence` com Asaas Sandbox — anexar print no PR, JSON **não** commitado
+- [x] `npm run build`
+- [x] `npm test`
+- [x] `npm run portal:test`
+- [ ] `npm run quality:gate` (CI com `DATABASE_URL`)
+- [ ] Homolog manual: `npm run e2e:asaas:evidence` — print + JSON anexados ao PR (**não** commitados)
 
 ## Handoff Tech Lead
 
-- Validar mapeamento checklist ↔ assertions no JSON de exemplo.
+- Conferir mapeamento checklist ↔ assertions no JSON de exemplo.
 - Merge quando CI verde.
-- PO assina checklist após execução sandbox do executor.
+- PO assina checklist após execução sandbox.
