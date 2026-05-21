@@ -4,8 +4,8 @@ Você atua no repositório **cobranca-saas-api** (Node 20, TS 5.7, Express, `pg`
 
 ## Estado atual (fonte da verdade)
 
-- **main** (`aa720d3`): Sprints 0–4.7 concluídos (inclui PR #5 — Asaas Subscriptions, migration `024`).
-- **Branch ativa:** `main` (`git pull`). Novas features em `feat/*` curtas (Sprint B/C).
+- **main** (`36f3a42`): até Sprint B (PR #6) mergeado.
+- **Branch ativa:** `feat/sprint-c-portal-configuracoes` — ver [DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md](./DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md).
 - **Testes:** `npm test` → 185 unitários; `npm run portal:test` → 22. Meta CI: `npm run quality:gate` (requer `DATABASE_URL` + migrate).
 
 ## NÃO refazer (já implementado)
@@ -28,12 +28,11 @@ Você atua no repositório **cobranca-saas-api** (Node 20, TS 5.7, Express, `pg`
    - `GET /v1/portal/escritorio/assinatura` → `gateway_subscription_id` preenchido
 5. Demo PO: trial → activate → webhook `subscription.past_due` (opcional sandbox)
 
-### Sprint B — Portal assinatura + paginação (branch `feat/portal-assinatura-pagination`)
+### Sprint B — concluído (PR #6)
 
-1. [x] **UI:** botão “Ativar cobrança recorrente” em `EscritorioPage` → `POST .../assinatura/activate`; estados loading/409/503; testes Vitest.
-2. [x] **Paginação:** “Carregar mais” em `/cobrancas`, `/clientes`, `/notas-fiscais` via `useInfiniteQuery` + `next_cursor`.
-3. [x] `docs/API_CONTRATO_E_SMOKE.md` e `docs/PORTAL_WEB.md` atualizados.
-4. [ ] Abrir PR → `main`; CI `portal:test` verde.
+### Sprint C — Portal `/configuracoes` (**ATUAL**)
+
+Ver [DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md](./DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md): UI config + régua + templates; testes API router; PR + handoff TL.
 
 ### Sprint C — Configurações escritório (5–8 dias)
 
