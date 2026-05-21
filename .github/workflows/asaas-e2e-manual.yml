@@ -1,0 +1,98 @@
+# Homologacao manual Asaas Sandbox — nao roda em push/PR (Sprint J).
+# Disparo: Actions > Asaas E2E (manual) > Run workflow.
+# Secret obrigatorio: ASAAS_API_KEY (sandbox). Sem secret, job informativo conclui com aviso.
+name: Asaas E2E (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_seed:
+        description: "Pular npm run seed:dev (DB ja populado)"
+        type: boolean
+        default: false
+      skip_migrate:
+        description: "Pular npm run migrate (schema ja aplicado)"
+        type: boolean
+        default: false
+
+jobs:
+  asaas-e2e-not-configured:
+    if: ${{ secrets.ASAAS_API_KEY == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: ASAAS_API_KEY ausente
+        run: |
+          echo "::notice title=Asaas E2E skipped::Configure o secret ASAAS_API_KEY (sandbox) em Settings > Secrets and variables > Actions."
+          echo "Workflow concluido sem executar E2E."
+
+  asaas-e2e:
+    if: ${{ secrets.ASAAS_API_KEY != '' }}
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cobranca_asaas_e2e
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cobranca_asaas_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/cobranca_asaas_e2e
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: "0123456789abcdefghijklmnopqrstuvwxyzABCD"
+      WEBHOOK_INBOX_SECRET: "whsec_ci_example_min_32_chars____________"
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      PORTAL_CLIENT_URL: "http://localhost:5173"
+      ENABLE_MOCK_AUTH: "false"
+      NODE_ENV: development
+      ASAAS_API_KEY: ${{ secrets.ASAAS_API_KEY }}
+      ASAAS_API_URL: https://sandbox.asaas.com/api/v3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Migrate
+        if: ${{ inputs.skip_migrate != true }}
+        run: npm run migrate
+
+      - name: Seed dev
+        if: ${{ inputs.skip_seed != true }}
+        run: npm run seed:dev
+
+      - name: E2E Asaas evidence
+        run: npm run e2e:asaas:evidence
+
+      - name: Upload evidence JSON
+        uses: actions/upload-artifact@v4
+        with:
+          name: asaas-e2e-evidence-${{ github.run_id }}
+          path: docs/evidencias/asaas-e2e-*.json
+          retention-days: 30
+          if-no-files-found: error
