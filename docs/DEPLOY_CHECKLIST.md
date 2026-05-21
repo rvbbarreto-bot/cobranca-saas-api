@@ -22,6 +22,8 @@ Atualizado na **Sprint D** (inbox idempotência + endurecimento produção). Ver
 | `ENABLE_MOCK_AUTH` | **`false`** explícito (mock auth/provision desligados) |
 | `ENCRYPTION_KEY` | 32 bytes hex (credenciais gateway no portal) |
 | `PORTAL_CLIENT_URL` | URL do frontend publicado |
+| `N8N_PLATFORM_WEBHOOK_URL` | Opcional — outbound n8n; vazio = noop |
+| `N8N_PLATFORM_WEBHOOK_SECRET` | Opcional — header `X-Webhook-Secret` para o trigger n8n |
 
 Validação local antes do deploy:
 
@@ -86,5 +88,6 @@ Gera `docs/evidencias/asaas-e2e-*.json` (inclui assertion de idempotência webho
 ## Referências
 
 - Contrato inbox: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md)
+- n8n outbound + workflow: [N8N_WEBHOOKS.md](./N8N_WEBHOOKS.md), [N8N_REGUA_WORKFLOW_EXEMPLO.md](./N8N_REGUA_WORKFLOW_EXEMPLO.md)
 - API geral: [API_CONTRATO_E_SMOKE.md](./API_CONTRATO_E_SMOKE.md)
 - DoD fase 2: [FASE2_KICKOFF_QUALIDADE.md](./FASE2_KICKOFF_QUALIDADE.md)

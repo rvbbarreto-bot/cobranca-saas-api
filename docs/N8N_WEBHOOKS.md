@@ -1,6 +1,8 @@
-# Webhooks outbound — integração n8n (Sprint 4.6)
+# Webhooks outbound — integração n8n (Sprint 4.6 + E)
 
 A API pode notificar um workflow n8n quando eventos de negócio ocorrem. O envio é **opcional** e **assíncrono** (não bloqueia cobrança nem inbox).
+
+Workflow exemplo: [N8N_REGUA_WORKFLOW_EXEMPLO.md](./N8N_REGUA_WORKFLOW_EXEMPLO.md).
 
 ## Configuração
 
@@ -36,27 +38,56 @@ N8N_PLATFORM_WEBHOOK_SECRET=openssl_rand_hex_32
 
 ## Eventos
 
+| `event` | Origem | Payload |
+|---------|--------|---------|
+| `charge.paid` | `applyWebhookSideEffectPlan` (`payment_confirmed`) | `{ charge_id }` |
+| `charge.overdue` | `payment_overdue` (após enfileirar régua 3d/7d) | `{ charge_id }` |
+| `charge.cancelled` | `payment_cancelled` | `{ charge_id }` |
+| `notification.regua_enqueued` | `enqueueReguaNotificationJob` (webhook overdue + `daily-regua`) | `{ charge_id, event_type, days_offset, channel? }` |
+| `subscription.past_due` | `applyAsaasPlatformSubscriptionWebhook` | `{ subscription_id, plano_slug, gateway_subscription_id }` |
+
 ### `charge.paid`
 
 Disparado após webhook Asaas confirmar pagamento e a API enfileirar notificação de confirmação.
 
-**Origem:** `applyWebhookSideEffectPlan` (`payment_confirmed`).
+```json
+{ "charge_id": "uuid-da-cobranca" }
+```
 
-**Payload:**
+### `charge.overdue`
+
+Disparado quando cobrança fica vencida (`payment_overdue`) e jobs de régua pós-vencimento são enfileirados.
+
+```json
+{ "charge_id": "uuid-da-cobranca" }
+```
+
+### `charge.cancelled`
+
+Disparado quando cobrança é cancelada e jobs de régua pendentes são removidos.
+
+```json
+{ "charge_id": "uuid-da-cobranca" }
+```
+
+### `notification.regua_enqueued`
+
+Disparado a cada job BullMQ de régua enfileirado (não substitui envio Resend/Z-API).
 
 ```json
 {
-  "charge_id": "uuid-da-cobranca"
+  "charge_id": "uuid",
+  "event_type": "pos_vencimento_3d",
+  "days_offset": 3,
+  "channel": "email"
 }
 ```
 
+`channel` só aparece se `forceChannel` foi passado no enqueue.
+
 ### `subscription.past_due`
 
-Disparado quando webhook Asaas de cobrança da **assinatura SaaS** mapeia status `past_due` (ex.: `PAYMENT_OVERDUE` com `payment.subscription`).
-
-**Origem:** `applyAsaasPlatformSubscriptionWebhook`.
-
-**Payload:**
+Disparado quando webhook Asaas da assinatura SaaS mapeia `past_due`.
 
 ```json
 {
@@ -71,8 +102,11 @@ Disparado quando webhook Asaas de cobrança da **assinatura SaaS** mapeia status
 1. Nó **Webhook** (POST), path único.
 2. Validar `X-Webhook-Secret` com IF node (opcional).
 3. Switch em `$json.event`:
-   - `charge.paid` → fluxo pós-pagamento (CRM, e-mail interno, etc.).
-   - `subscription.past_due` → fluxo de retenção.
+   - `charge.paid` → CRM / pós-pagamento
+   - `charge.overdue` → cobrança / recuperação
+   - `charge.cancelled` → encerrar sequências
+   - `notification.regua_enqueued` → log ou métrica
+   - `subscription.past_due` → retenção SaaS
 
 ## Idempotência
 
@@ -82,7 +116,7 @@ O n8n deve tratar `charge_id` + `event` como chave de deduplicação. A API pode
 
 | Direção | Rota | Uso |
 |---------|------|-----|
-| **Entrada** | `POST /v1/inbox/webhooks` | n8n / Asaas → API (já existente). Idempotência: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md). |
+| **Entrada** | `POST /v1/inbox/webhooks` | n8n / Asaas → API. Idempotência: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md). |
 | **Saída** | `N8N_PLATFORM_WEBHOOK_URL` | API → n8n (este documento). |
 
 Não confundir com `WEBHOOK_INBOX_SECRET` (entrada). Use secret dedicado para outbound.

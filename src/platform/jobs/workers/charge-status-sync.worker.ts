@@ -2,14 +2,14 @@ import { Worker, type Job } from "bullmq";
 import { isJobsEnabled, redisConnection } from "../redis-connection";
 import { getQueues, JOB_OPTS, QUEUE_CHARGE_SYNC } from "../queues";
 import { processChargeStatusSync, processDailyChargingRegua } from "../application/charge-status-sync-processor";
-import { enqueueNotificationJob, reguaJobId } from "../enqueue-notification";
+import { enqueueReguaNotificationJob, reguaJobId } from "../enqueue-notification";
 
 type SyncJobData = Record<string, never>;
 
 async function onJob(job: Job<SyncJobData>): Promise<void> {
   if (job.name === "daily-regua") {
     await processDailyChargingRegua(async (payload) => {
-      await enqueueNotificationJob(
+      await enqueueReguaNotificationJob(
         {
           chargeId: payload.chargeId,
           tenantId: payload.tenantId,

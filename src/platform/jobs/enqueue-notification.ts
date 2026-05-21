@@ -1,3 +1,4 @@
+import { emitN8nPlatformEvent } from "../integrations/n8n-outbound";
 import { isJobsEnabled } from "./redis-connection";
 import { getQueues, JOB_OPTS } from "./queues";
 
@@ -35,11 +36,33 @@ export async function enqueuePaymentConfirmedNotification(
   await enqueueNotificationJob(payload, { jobName: "payment-confirmed" });
 }
 
+/** Notifica n8n após enfileirar job de régua (fire-and-forget; noop sem URL). */
+export function emitReguaEnqueuedToN8n(payload: NotificationSendJobPayload): void {
+  if (!payload.chargeId) {
+    return;
+  }
+  const body: Record<string, unknown> = {
+    charge_id: payload.chargeId,
+    event_type: payload.eventType,
+    days_offset: payload.daysOffset ?? null
+  };
+  if (payload.forceChannel) {
+    body.channel = payload.forceChannel;
+  }
+  emitN8nPlatformEvent({
+    event: "notification.regua_enqueued",
+    occurred_at: new Date().toISOString(),
+    tenant_id: payload.tenantId,
+    payload: body
+  });
+}
+
 export async function enqueueReguaNotificationJob(
   payload: NotificationSendJobPayload,
   options?: { jobId?: string; delay?: number }
 ): Promise<void> {
   await enqueueNotificationJob(payload, { jobName: "regua", ...options });
+  emitReguaEnqueuedToN8n(payload);
 }
 
 export async function cancelReguaJobsForCharge(chargeId: string): Promise<void> {
