@@ -1,6 +1,15 @@
 # Deploy — Checklist (staging / produção)
 
-Atualizado na **Sprint D** (inbox idempotência + endurecimento produção). Ver também [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md).
+Atualizado na **Sprint D** (inbox idempotência + endurecimento produção).  
+**Auth / JWT / mocks:** [RUNBOOK_AUTH_PRODUCAO.md](./RUNBOOK_AUTH_PRODUCAO.md) · [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md).
+
+---
+
+## Homolog Sprint 1 (antes de produção)
+
+- [ ] [SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_CHECKLIST.md) assinado pelo PO/Tech Lead
+- [ ] `npm run e2e:asaas:evidence` executado em sandbox (evidência anexada ao ticket, **não** no git)
+- [ ] `npm run quality:gate` verde na branch de release
 
 ---
 
@@ -28,10 +37,11 @@ Atualizado na **Sprint D** (inbox idempotência + endurecimento produção). Ver
 Validação local antes do deploy:
 
 ```bash
+NODE_ENV=production ENABLE_MOCK_AUTH=false npm run check:prod-env -- --strict
 npm run check:readiness
-# ou
-npm run check:prod-env -- --strict
 ```
+
+Detalhes e smoke pós-deploy: [RUNBOOK_AUTH_PRODUCAO.md](./RUNBOOK_AUTH_PRODUCAO.md).
 
 ### Redis / filas
 
@@ -81,7 +91,7 @@ Checklist: [evidencias/SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_
 npm run e2e:asaas:evidence
 ```
 
-Gera `docs/evidencias/asaas-e2e-*.json` (inclui assertion de idempotência webhook). Não commitar `.env` nem API keys.
+Gera `docs/evidencias/asaas-e2e-*.json` (gitignored). Ver [evidencias/README.md](./evidencias/README.md). Não commitar `.env` nem API keys.
 
 ---
 

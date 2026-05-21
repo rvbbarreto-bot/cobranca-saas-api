@@ -45,6 +45,7 @@ describe("emitN8nPlatformEvent", () => {
   });
 
   it.each([
+    ["charge.emitted", { charge_id: "c-em" }],
     ["charge.overdue", { charge_id: "c-over" }],
     ["charge.cancelled", { charge_id: "c-can" }],
     [

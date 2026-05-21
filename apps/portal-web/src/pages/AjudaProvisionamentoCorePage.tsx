@@ -39,8 +39,9 @@ curl -s -X POST http://localhost:3333/v1/tenants/provision \\
   -d '{"slug":"novo-escritorio","name":"Nome","status":"trial"}'`}
         </pre>
         <p className="muted small">
-          Em produção: <code>ENABLE_MOCK_AUTH=false</code> — obter token core por fluxo real de autenticação da vossa
-          plataforma.
+          Em produção: <code>ENABLE_MOCK_AUTH=false</code> — rotas mock retornam 404; obter token core pelo fluxo real da
+          plataforma. Runbook ops:{" "}
+          <code>docs/RUNBOOK_AUTH_PRODUCAO.md</code> no repositório <code>cobranca-saas-api</code>.
         </p>
       </div>
     </div>

@@ -28,6 +28,9 @@ export default defineConfig({
       "tests/webhook-charge-status.integration.test.ts",
       "tests/inbox/webhook-inbox-idempotency.integration.test.ts",
       "tests/functional/api-battery.integration.test.ts",
+      "tests/functional/production-mock-auth-gate.integration.test.ts",
+      "tests/functional/e2e-asaas-evidence-script.test.ts",
+      "tests/dev/**/*.test.ts",
       "tests/portal-read/portal-cobranca-emission-flow.integration.test.ts",
       "tests/portal-read/sprint3-e2e-flow.integration.test.ts",
       "tests/saas-billing/sprint4-billing.integration.test.ts"
@@ -60,7 +63,9 @@ export default defineConfig({
         "src/modules/tenant-provisioning/application/provision-public-tenant.ts",
         "src/modules/saas-billing/application/**/*.ts",
         "src/modules/saas-billing/domain/**/*.ts",
-        "src/platform/integrations/n8n-outbound.ts"
+        "src/platform/integrations/n8n-outbound.ts",
+        "src/platform/config/jwt-secret-policy.ts",
+        "src/dev/asaas-e2e-evidence-utils.ts"
       ],
       exclude: ["**/*.d.ts", "**/index.ts"],
       thresholds: {

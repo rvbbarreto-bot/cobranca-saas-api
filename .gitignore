@@ -8,3 +8,7 @@ coverage/
 .env.*.local
 .env.*
 !.env.example
+
+# Evidencias E2E reais (manter template commitado)
+docs/evidencias/asaas-e2e-*.json
+!docs/evidencias/asaas-e2e-EXAMPLE.redacted.json

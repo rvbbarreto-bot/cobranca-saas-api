@@ -1,0 +1,49 @@
+{
+  "executedAt": "2026-05-21T15:00:00.000Z",
+  "git": {
+    "branch": "feat/sprint-h-homolog-asaas-evidencia",
+    "commit": "0000000000000000000000000000000000000000"
+  },
+  "environment": {
+    "nodeEnv": "development",
+    "asaasApiUrl": "https://sandbox.asaas.com/api/v3",
+    "databaseUrl": "postgres://app:***@localhost:5432/cobranca",
+    "hasAsaasApiKey": true,
+    "hasEncryptionKey": true,
+    "hasWebhookSecret": true
+  },
+  "tenantPublicId": "00000000-0000-4000-8000-000000000001",
+  "automacaoTenantId": "00000000-0000-4000-8000-000000000099",
+  "correlationId": "e2e-EXAMPLE-REDIGIDO",
+  "steps": {
+    "createCharge": {
+      "chargeId": "10000000-0000-4000-8000-000000000001",
+      "reference": "e2e-asaas-EXAMPLE",
+      "idempotency_key": "idem-e2e-EXAMPLE",
+      "canonicalStatus": "rascunho"
+    },
+    "afterEmission": {
+      "ch": { "canonical_status": "emitida", "provider_charge_id": "pay_EXAMPLE" },
+      "pt": { "gateway_transaction_id": "pay_EXAMPLE", "has_raw": true }
+    },
+    "finalCanonicalStatus": "paga"
+  },
+  "assertions": [
+    { "name": "ambiente_asaas_sandbox", "ok": true, "detail": "url=https://sandbox.asaas.com/api/v3" },
+    { "name": "identificador_externo", "ok": true, "detail": "idempotency_key=idem-e2e-EXAMPLE" },
+    { "name": "vinculo_interno_asaas", "ok": true, "detail": "provider_charge_id=pay_EXAMPLE" },
+    { "name": "cobranca_criada_asaas", "ok": true, "detail": "gateway_transaction_id=pay_EXAMPLE" },
+    { "name": "payment_transaction_com_raw", "ok": true },
+    { "name": "charge_event_emissao", "ok": true },
+    { "name": "charge_event_webhook", "ok": true },
+    { "name": "webhook_inbox_inserido", "ok": true },
+    { "name": "correlation_id_rastreavel", "ok": true },
+    { "name": "webhook_idempotente_sem_evento_duplicado", "ok": true },
+    { "name": "relatorio_sem_segredos", "ok": true },
+    { "name": "env_nao_commitada", "ok": true },
+    { "name": "reproducivel_documentado", "ok": true },
+    { "name": "evidencia_json_gerada", "ok": true, "detail": "docs/evidencias/asaas-e2e-EXAMPLE.redacted.json" }
+  ],
+  "automatedTestsNote": "Template redigido — nao e saida de execucao real. Ver docs/evidencias/README.md",
+  "secretsPolicy": "Credenciais apenas em .env local ou cofre; nunca commitar ASAAS_API_KEY."
+}

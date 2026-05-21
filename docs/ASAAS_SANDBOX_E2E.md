@@ -35,8 +35,9 @@ Gera `docs/evidencias/asaas-e2e-<timestamp>.json` com:
 
 - branch/commit
 - passos (cliente, cobrança, emissão, consulta Asaas, webhook, dedup)
-- assertions (13 critérios técnicos)
+- assertions nomeadas (14 entradas — checklist Sprint 1; ver [SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_CHECKLIST.md))
 - payloads **sem** segredos
+- template redigido: [asaas-e2e-EXAMPLE.redacted.json](./evidencias/asaas-e2e-EXAMPLE.redacted.json)
 
 ### Vitest (CI opcional)
 
@@ -93,6 +94,16 @@ FROM charge_events WHERE charge_id = '<uuid>' ORDER BY created_at;
 SELECT external_event_id, source, payload, processed_at
 FROM webhook_inbox ORDER BY created_at DESC LIMIT 5;
 ```
+
+## Homolog PO / Tech Lead (Sprint H)
+
+1. Executar `npm run e2e:asaas:evidence` com API key **sandbox** real (não mock de adapter).
+2. Conferir terminal: todas as assertions `ok` (nomes estáveis no JSON).
+3. Preencher checklist: [`docs/evidencias/SPRINT1_ACEITE_CHECKLIST.md`](./evidencias/SPRINT1_ACEITE_CHECKLIST.md) usando coluna **Assertion runner**.
+4. Anexar print + JSON ao ticket/PR — **não** commitar o JSON gerado (ver [evidencias/README.md](./evidencias/README.md)).
+5. Tech Lead mergeia após `quality:gate` verde no PR da fábrica.
+
+**Evento n8n `charge.emitted`:** validado em testes unitários (`payment-emission-n8n.test.ts`); opcional no E2E sandbox (n8n URL pode estar vazio).
 
 ## Checklist de aceite PO
 
