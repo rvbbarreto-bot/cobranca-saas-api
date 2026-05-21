@@ -14,9 +14,11 @@
 | Sprint 2 — notificações + régua + CRUD escritório (API) | `main` | Concluído |
 | Sprint 3 — portal cliente + relatórios | `main` (PR #2/#3) | Concluído |
 | Sprint 4 — SaaS billing + MRR + n8n outbound | `main` (`409c69c`) | Concluído (PR #4) |
-| **Sprint 4.7 — Asaas Subscriptions** | **`main`** (`aa720d3`) | **Concluído** (PR #5 mergeado) |
+| **Sprint 4.7 — Asaas Subscriptions** | **`main`** (`aa720d3`) | Concluído (PR #5) |
+| **Sprint B — portal activate + paginação** | **`main`** (`36f3a42`) | **Concluído** (PR #6) |
+| **Sprint C — `/configuracoes`** | **`feat/sprint-c-portal-configuracoes`** | **Em fila** — ver demanda |
 
-**Testes unitários (local):** `185` Vitest (`npm test`) + `22` portal (`npm run portal:test`).
+**Testes unitários (local):** `185+` Vitest (`npm test`) + `24` portal (`npm run portal:test`).
 
 **Branch de trabalho da fábrica:** `main` (após `git pull`). Sprint B/C em branches curtas `feat/*` se necessário.
 
@@ -91,17 +93,21 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 | 5 | Smoke sandbox Asaas (activate + GET assinatura) | PO / TL |
 | 6 | Demo PO: trial → activate → `gateway_subscription_id` | Pendente aceite |
 
-### 4.2 Sprint B — Portal (branch `feat/portal-assinatura-pagination`)
+### 4.2 Sprint B — Portal ✅ (PR #6 → `main` `36f3a42`)
 
-- [x] UI `POST .../assinatura/activate` em `EscritorioPage` + testes Vitest
-- [x] “Carregar mais” (`next_cursor`) em cobranças, clientes, notas fiscais
-- [x] `API_CONTRATO_E_SMOKE.md` / `PORTAL_WEB.md` (Sprint B portal)
-- [ ] Merge PR + `npm run portal:test` no CI
+- [x] UI `POST .../assinatura/activate` + paginação `next_cursor`
+- [x] Merge PR #6
 
-### 4.3 Sprint C — Configurações escritório (API já existe)
+### 4.3 Sprint C — Configurações escritório (**demanda ativa**)
 
-- [ ] `/configuracoes`: gateway Asaas, CRUD régua, templates + preview
-- [ ] Testes router/integração config/regua
+**Pacote:** [DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md](./DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md)  
+**Branch:** `feat/sprint-c-portal-configuracoes`
+
+- [ ] C.1 — funções API no `apps/portal-web/src/lib/api.ts`
+- [ ] C.2 — página `/configuracoes` (gateway + régua + templates)
+- [ ] C.3 — testes Vitest portal
+- [ ] C.4 — `escritorio-config-router.test.ts` (+ regua mínimo)
+- [ ] C.5 — contrato HTTP + PR + handoff Tech Lead
 
 ### 4.4 Sprint D — Qualidade / produção (contínuo)
 
@@ -119,9 +125,9 @@ Semana 1 — Aceite + Sprint B
   2. Aceite PO PR #5 (smoke Asaas sandbox)
   3. PR feat: portal activate + paginação cursor
 
-Semana 2 — Sprint C (configurações)
-  4. Tela /configuracoes (config + régua + templates)
-  5. Testes mínimos + contrato HTTP
+Semana 2 — Sprint C (configurações) ← ATUAL
+  4. Executar DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md
+  5. PR → handoff Tech Lead (não merge pela IA)
 
 Contínuo
   - DoD: docs/FASE2_KICKOFF_QUALIDADE.md
@@ -163,15 +169,15 @@ Contínuo
 Repositório: cobranca-saas-api (SaaS cobranças Boleto/PIX, multi-tenant BR).
 
 ESTADO (Maio 2026):
-- main (aa720d3): Sprints 0–4.7 concluídos — inclui activate assinatura Asaas (migration 024).
-- 185 testes API + 22 portal; quality:gate exige DATABASE_URL migrado.
+- main (36f3a42): até Sprint B mergeado (PR #6).
+- Próxima entrega: Sprint C — DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md
 
 ANTES DE CODAR:
-1. Ler Projeto_CobrancaBoleto/RETOMADA_FABRICA.md e PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md
-2. git checkout main && git pull
-3. Não reimplementar secção 3 do RETOMADA_FABRICA
+1. Ler DEMANDA_SPRINT_C + RETOMADA_FABRICA + GOVERNANCA_FABRICA_COMMIT_PR.md
+2. git checkout main && git pull && feat/sprint-c-portal-configuracoes
+3. API escritório config/regua/templates já existe — só portal + testes router
 
-PRÓXIMA ENTREGA: conforme briefing; após entregar: abrir PR e HANDOFF ao Tech Lead (não fazer merge).
+PRÓXIMA ENTREGA: Sprint C. Após PR: handoff Tech Lead (IA não faz merge).
 
 Regras: multi-tenant, audit_log, inbox pattern, sem NFS-e, sem secrets no código.
 Governança: IA só abre PR — Tech Lead aprova e mergeia (GOVERNANCA_FABRICA_COMMIT_PR.md).
