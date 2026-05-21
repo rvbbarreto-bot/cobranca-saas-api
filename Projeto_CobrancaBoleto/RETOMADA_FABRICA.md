@@ -171,9 +171,10 @@ ANTES DE CODAR:
 2. git checkout main && git pull
 3. Não reimplementar secção 3 do RETOMADA_FABRICA
 
-PRÓXIMA ENTREGA: Sprint B — UI activate + paginação cursor no portal.
+PRÓXIMA ENTREGA: conforme briefing; após entregar: abrir PR e HANDOFF ao Tech Lead (não fazer merge).
 
 Regras: multi-tenant, audit_log, inbox pattern, sem NFS-e, sem secrets no código.
+Governança: IA só abre PR — Tech Lead aprova e mergeia (GOVERNANCA_FABRICA_COMMIT_PR.md).
 Stack: Node 20, Express, pg, BullMQ.
 ```
 
@@ -186,11 +187,16 @@ Stack: Node 20, Express, pg, BullMQ.
 3. Priorizar **uma** linha da tabela 4.2 (Sprint B ou C).
 4. Atualizar secção 4 com data e responsável.
 
-## 10. Autorização PO — commit e PR pela fábrica
+## 10. Autorização PO — IA abre PR, Tech Lead aprova
 
-Entregas **P0/P1 importantes:** o PO autorizou Tech Lead + fábrica a fazer **commit + push + PR** para `main` quando o checklist G1–G7 estiver verde (ver [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md)).
+| Ator | Ação |
+|------|------|
+| **IA (fábrica)** | Commit + push + **abrir PR** + **handoff** ao Tech Lead (template no doc de governança) |
+| **IA** | **Proibido:** merge em `main`, `gh pr merge`, auto-approve |
+| **Tech Lead** | Revisar PR, CI, código → **approve + merge** |
+| **PO** | Aceite produto (demo) em P0/P1 |
 
-**Merge em `main`:** continua a ser decisão do PO após CI + review (a fábrica não faz merge sem pedido explícito).
+Checklist G1–G7: [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md).
 
 ---
 

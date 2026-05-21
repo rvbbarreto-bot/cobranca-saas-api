@@ -1,110 +1,124 @@
-# Governança — Autorização PO para commit e PR (metodologia fábrica)
+# Governança — Autorização PO: IA abre PR, Tech Lead aprova
 
-**Vigência:** Maio 2026  
-**Papéis:** PO (produto) · Tech Lead / fábrica (engenharia + agente de IA)  
+**Vigência:** Maio 2026 (atualizado)  
+**Papéis:** PO (produto) · **Tech Lead** (aprovação técnica + merge) · **Fábrica IA** (implementação + PR)  
 **Repositório:** `cobranca-saas-api`
 
 ---
 
 ## 1. Decisão do PO (registro)
 
-O PO **autoriza** o Tech Lead e a fábrica de desenvolvimento a:
+| Ator | Pode | Não pode |
+|------|------|----------|
+| **Fábrica (IA)** | Commit + push em `feat/*` / `fix/*`; **abrir PR** para `main`; **informar Tech Lead** para aprovação | **Merge** em `main`; aprovar o próprio PR; force push em `main` |
+| **Tech Lead** | Revisar PR; pedir alterações; **aprovar e mergear** quando CI + critérios técnicos OK | Ignorar handoff da IA sem revisar |
+| **PO** | Aceite de produto (demo); priorizar sprint; revogar autorização | — |
 
-1. Criar **commits** em branches `feat/*` ou `fix/*` quando a entrega estiver **pronta para revisão**.
-2. Abrir **Pull Request** para `main` **sem esperar pedido explícito de commit** em cada PR, desde que os critérios da secção 2 estejam cumpridos.
-
-**Não autorizado sem alinhamento explícito do PO:**
-
-- Merge direto em `main` (sempre via PR + review).
-- `git push --force` em `main` / `master`.
-- Commit de secrets, `.env` real, ou artefatos de evidência pessoais fora de `docs/evidencias/` acordados.
+A IA **só abre o PR** e **notifica o Tech Lead**. O merge fica **sempre** com o Tech Lead (alinhado ao PO em entregas P0/P1).
 
 ---
 
-## 2. Quando a fábrica pode commitar + abrir PR (entrega importante)
+## 2. Quando a IA pode commitar + abrir PR (entrega importante)
 
-Uma entrega é **importante** e pode seguir o fluxo automático commit → push → PR quando **todas** as condições abaixo forem verdadeiras:
+Checklist **G1–G7** (todos obrigatórios):
 
 | # | Critério | Verificação |
 |---|----------|-------------|
-| G1 | Escopo fechado (sprint / história P0–P1 do briefing) | Item marcado em `RETOMADA_FABRICA.md` ou `PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md` |
-| G2 | `npm run build` sem erro TypeScript | Local ou CI |
-| G3 | `npm test` verde (API) | Unitários |
-| G4 | `npm run portal:test` verde (se tocou `apps/portal-web`) | Portal |
-| G5 | DoD mínimo em `docs/FASE2_KICKOFF_QUALIDADE.md` | Contrato/docs atualizados se mudou API ou rotas SPA |
-| G6 | Branch curta `feat/<nome>` a partir de `main` atualizado | `git pull origin main` antes do branch |
-| G7 | PR com corpo: Summary + Test plan + referência sprint | Template secção 4 |
+| G1 | Escopo fechado (P0/P1 no briefing) | `RETOMADA_FABRICA.md` / `PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md` |
+| G2 | `npm run build` sem erro | Local ou CI |
+| G3 | `npm test` verde | API |
+| G4 | `npm run portal:test` verde | Se tocou `apps/portal-web` |
+| G5 | DoD Fase 2 (contrato/docs se mudou API/SPA) | `FASE2_KICKOFF_QUALIDADE.md` |
+| G6 | Branch `feat/*` a partir de `main` atualizado | `git pull origin main` |
+| G7 | PR com Summary + Test plan + handoff Tech Lead | Secções 4 e 5 |
 
-**Entregas P2/P3 ou spike:** apenas commit na branch; PR quando o PO priorizar na sessão de 30 min (ritual `RETOMADA_FABRICA.md` §9).
-
-**Exceção:** `npm run quality:gate` (integração + Postgres) — a fábrica **abre o PR** mesmo se o gate só correr no CI; o corpo do PR deve indicar “CI: quality:gate pendente no runner”.
+**P2/P3 / spike:** só commit na branch; PR quando o PO priorizar no ritual de 30 min.
 
 ---
 
-## 3. Fluxo operacional (fábrica)
+## 3. Fluxo — IA (fábrica)
 
 ```
-1. git fetch origin && git checkout main && git pull
-2. git checkout -b feat/<sprint-ou-historia>
-3. Implementar + testes + docs
-4. npm run build && npm test && (portal:test se aplicável)
-5. git add <ficheiros da entrega>   # nunca .env, tmp, docx pessoais
-6. git commit -m "<tipo>(<scope>): <resumo>" -m "<porquê / sprint>"
-7. git push -u origin HEAD
-8. gh pr create --base main --title "..." --body "..."
-9. Atualizar RETOMADA_FABRICA (secção 1 e 4) na mesma branch ou follow-up
-10. PO: review + merge quando CI verde + demo aceite (se P0/P1)
+1. git pull origin main → feat/<nome>
+2. Implementar + testes + docs
+3. npm run build && npm test && (portal:test)
+4. git commit + git push
+5. gh pr create --base main
+6. HANDOFF → informar Tech Lead (obrigatório, secção 5)
+7. PARAR — não fazer merge nem gh pr merge
 ```
-
-**Tipos de commit (Conventional Commits):**
-
-- `feat` — nova capacidade para o utilizador
-- `fix` — correção de bug
-- `docs` — só documentação
-- `chore` — tooling, scripts, sem mudança de comportamento
 
 ---
 
-## 4. Template do PR (copiar no `gh pr create`)
+## 4. Fluxo — Tech Lead (após handoff)
+
+```
+1. Abrir URL do PR
+2. Verificar CI (build, test, portal:test, quality:gate)
+3. Review de código + segurança (tenant, secrets, migrations)
+4. Pedir changes OU Approve
+5. Merge em main (squash ou merge commit — política da equipa)
+6. PO: demo/aceite produto se P0/P1
+```
+
+---
+
+## 5. Handoff obrigatório (IA → Tech Lead)
+
+Após `gh pr create`, a IA deve **entregar ao Tech Lead** (chat, Slack, ou comentário no PR) este bloco:
+
+```markdown
+## Handoff — PR pronto para revisão técnica
+
+- **PR:** <URL>
+- **Branch:** `feat/...`
+- **Sprint:** <ex. Sprint B>
+- **Gates locais:** build ✅ | test ✅ | portal:test ✅/N/A
+- **CI:** aguardando / link Actions
+- **Demo sugerida:** <3 passos>
+- **Riscos / atenção:** <migrations, env, breaking>
+- **Ação pedida:** @Tech Lead — revisar e **aprovar merge** (IA não faz merge).
+```
+
+**Regra:** sem handoff explícito, o PR **não** está “entregue” na metodologia fábrica.
+
+---
+
+## 6. Template do corpo do PR
 
 ```markdown
 ## Summary
-- <1–3 bullets do que mudou e porquê>
+- …
 
-## Sprint / autorização
-- Sprint: <ex. Sprint B — portal activate + paginação>
-- Governança: PO autorizou commit+PR conforme GOVERNANCA_FABRICA_COMMIT_PR.md
-- Branch: `feat/...`
+## Sprint / governança
+- Sprint: …
+- IA: commit + PR apenas — merge pelo **Tech Lead** (GOVERNANCA_FABRICA_COMMIT_PR.md)
 
 ## Test plan
-- [ ] `npm run build`
-- [ ] `npm test`
-- [ ] `npm run portal:test` (se portal)
-- [ ] CI / `quality:gate` (GitHub Actions)
-- [ ] Demo manual: <passos curtos>
+- [ ] …
 
-## Fora de escopo
-- <o que não entrou neste PR>
+## Revisão
+- [ ] **Tech Lead:** aprovação técnica + merge
+- [ ] **PO:** aceite produto (se P0/P1)
 ```
 
 ---
 
-## 5. Responsabilidades
+## 7. Responsabilidades (resumo)
 
 | Papel | Responsabilidade |
 |-------|------------------|
-| **PO** | Priorizar sprint; aceitar merge após demo/CI; revogar ou restringir autorização por escrito |
-| **Tech Lead** | Garantir G1–G7; revisar PRs da fábrica; não mergear o próprio PR sem segundo par se política da equipa exigir |
-| **Fábrica (IA/dev)** | Executar secção 3; não commitar lixo; atualizar documentação mestre |
+| **PO** | Prioridade; aceite produto; autorização vigente |
+| **Tech Lead** | **Único** responsável por merge após review + CI |
+| **IA** | Código + testes + PR + **handoff**; **nunca** merge |
 
 ---
 
-## 6. Referências
+## 8. Referências
 
-- [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md)
+- [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md) §10
 - [PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md](./PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md)
-- [FASE2_KICKOFF_QUALIDADE.md](../docs/FASE2_KICKOFF_QUALIDADE.md)
 
 ---
 
-*Registo PO: autorização ativa para entregas importantes (P0/P1) em Maio 2026.*
+*Registo PO: IA só abre PR; Tech Lead aprova e mergeia. Maio 2026.*

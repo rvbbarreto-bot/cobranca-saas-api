@@ -71,11 +71,16 @@ npm run build && npm test && npm run portal:test
 npm run quality:gate                      # antes de abrir/atualizar PR
 ```
 
-## Commit e PR (autorização PO)
+## Commit e PR (autorização PO — IA vs Tech Lead)
 
-O PO autorizou a fábrica (Tech Lead) a **commitar e abrir PR para `main`** em entregas **importantes** (P0/P1) quando G1–G7 em [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) estiverem cumpridos — **sem** pedir commit em cada mensagem.
+| Quem | Faz |
+|------|-----|
+| **IA (tu)** | `feat/*` → testes → commit → push → **`gh pr create`** → **handoff ao Tech Lead** |
+| **IA** | **Nunca** `gh pr merge` nem merge em `main` |
+| **Tech Lead** | Review → approve → **merge** (CI + critérios G1–G7) |
+| **PO** | Aceite produto (demo) em P0/P1 |
 
-Fluxo: branch `feat/*` → testes → commit → push → `gh pr create` → PO faz merge após CI + demo.
+Detalhe: [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md). Após abrir o PR, colar o bloco **Handoff** (secção 5 do doc) e pedir revisão ao Tech Lead.
 
 ## Definition of Done por PR
 
