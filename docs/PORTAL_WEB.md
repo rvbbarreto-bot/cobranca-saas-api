@@ -57,6 +57,7 @@ O layout autenticado (`AppShell`) chama `GET /v1/portal/auth/me` para nome e pap
 
 ## Contrato com a API
 
+- **Producao:** autenticacao apenas via `POST /v1/portal/auth/login` (email + `tenant_id` + password). Rotas `/auth/token/mock` estao desligadas na API — ver [RUNBOOK_AUTH_PRODUCAO.md](../docs/RUNBOOK_AUTH_PRODUCAO.md).
 - Login: corpo `{ email, tenant_id, password }`; resposta `{ access_token, token_type, expires_in }`.
 - Sessão: `localStorage` (`portal.access_token`, `portal.tenant_id`, `portal.email`).
 - Lista cobranças: resposta `{ data, count, billing_link_status?, message? }`; itens em **camelCase** (`reference`, `dueDate`, `amount`, `canonicalStatus`).

@@ -1,3 +1,4 @@
+import { validateJwtSecretForProduction } from "../platform/config/jwt-secret-policy";
 import { getWebhookInboxSecret, isMockAuthRoutesEnabled, isProductionNodeEnv } from "../platform/config/runtime-flags";
 
 /**
@@ -15,10 +16,10 @@ export function logProductionWarnings(): void {
     );
   }
 
-  const secret = process.env.JWT_SECRET?.trim();
-  if (!secret || secret.length < 32) {
+  const jwtCheck = validateJwtSecretForProduction(process.env.JWT_SECRET);
+  if (!jwtCheck.ok) {
     // eslint-disable-next-line no-console
-    console.warn("[boot] AVISO: JWT_SECRET ausente ou curto (<32). Defina segredo forte em producao.");
+    console.warn(`[boot] AVISO: ${jwtCheck.reason}`);
   }
 
   if (!getWebhookInboxSecret()) {

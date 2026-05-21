@@ -1,6 +1,7 @@
 # Deploy — Checklist (staging / produção)
 
-Atualizado na **Sprint D** (inbox idempotência + endurecimento produção). Ver também [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md).
+Atualizado na **Sprint D** (inbox idempotência + endurecimento produção).  
+**Auth / JWT / mocks:** [RUNBOOK_AUTH_PRODUCAO.md](./RUNBOOK_AUTH_PRODUCAO.md) · [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md).
 
 ---
 
@@ -36,10 +37,11 @@ Atualizado na **Sprint D** (inbox idempotência + endurecimento produção). Ver
 Validação local antes do deploy:
 
 ```bash
+NODE_ENV=production ENABLE_MOCK_AUTH=false npm run check:prod-env -- --strict
 npm run check:readiness
-# ou
-npm run check:prod-env -- --strict
 ```
+
+Detalhes e smoke pós-deploy: [RUNBOOK_AUTH_PRODUCAO.md](./RUNBOOK_AUTH_PRODUCAO.md).
 
 ### Redis / filas
 
