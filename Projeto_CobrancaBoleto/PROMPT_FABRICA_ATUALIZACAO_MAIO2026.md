@@ -4,28 +4,30 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **main** (`6ef4c63`): Sprints B, C, D, E mergeados (PR #6–#10).
-- **Próxima entrega:** Sprint F — [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md)
-- **Testes:** `npm test` → 203+ · `npm run portal:test` → 29 · `npm run quality:gate`
+- **main:** Sprints B–G mergeados (PR #6–#12).
+- **Próxima entrega:** Sprint H — [DEMANDA_SPRINT_H_HOMOLOG_ASAAS_EVIDENCIA.md](./DEMANDA_SPRINT_H_HOMOLOG_ASAAS_EVIDENCIA.md)
+- **Testes:** `npm test` → 207+ · `npm run portal:test` → 33 · `npm run quality:gate`
 
 ## NÃO refazer
 
-- PATCH cobrança na API, inbox, n8n (5 eventos), `/configuracoes`, paginação, activate assinatura.
+- Portal/API já entregues (editar cobrança, n8n 6 eventos, inbox, régua).
+- Reimplementar runner E2E do zero — **estender e alinhar** ao checklist.
 - NFS-e / `/internal/fiscal` fora de escopo.
 
-## Sprint F — ATUAL (portal editar cobrança)
+## Sprint H — ATUAL (homolog Asaas + evidências)
 
-1. `git pull main` → `feat/sprint-f-portal-editar-cobranca`
-2. UI `/cobrancas/:id/editar` + schema + links em detalhe/lista
-3. `portal:test` + `PORTAL_WEB.md`
-4. PR + handoff TL — **sem merge**
+1. `git pull main` → `feat/sprint-h-homolog-asaas-evidencia`
+2. Runner `asaas-sandbox-e2e-runner.ts` ↔ 13 critérios + template JSON redigido
+3. Unit: `tests/dev/asaas-e2e-evidence.test.ts` · Funcional: script sem DB
+4. `npm run e2e:asaas:evidence` **local** (sandbox) — evidência no PR, não no git
+5. PR + handoff TL — **sem merge**
 
-## Backlog (após F)
+## Backlog (após H)
 
-| Sprint | Tema |
-|--------|------|
-| G | `charge.emitted` n8n + runbook auth prod (FASE2 A) |
-| H | Homolog: `e2e:asaas:evidence` + checklist Sprint 1 preenchido |
+| Item | Tema |
+|------|------|
+| FASE2 A | Runbook auth prod `ENABLE_MOCK_AUTH` / JWT |
+| CI opcional | Job manual Asaas E2E com secrets GitHub |
 
 ## Regras e gates
 
