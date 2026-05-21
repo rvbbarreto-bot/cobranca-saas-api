@@ -1,40 +1,90 @@
-# Deploy Sprint 3 — Checklist
+# Deploy — Checklist (staging / produção)
 
-## Antes de subir para staging/produção
+Atualizado na **Sprint D** (inbox idempotência + endurecimento produção). Ver também [PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md](./PRODUCAO_ENDURECIMENTO_PASSO_A_PASSO.md).
 
-- [ ] `npm run migrate` → migrations até **023** aplicadas (Sprint 4: `planos`, `assinaturas`, `tenant_usage_monthly`)
-- [ ] Verificar `PORTAL_CLIENT_URL` aponta para o frontend correto
-- [ ] Redis limpo de filas legadas com hífen (se ainda não feito):
+---
+
+## Antes de subir
+
+### Banco e migrations
+
+- [ ] `npm run migrate` → cadeia aplicada até **`024_asaas_platform_subscription_billing.sql`** (inclui `023` planos/assinaturas)
+- [ ] **Não** rodar `npm run seed:dev` em produção real (apenas homolog controlado)
+
+### Variáveis de ambiente (produção)
+
+| Variável | Valor / regra |
+|----------|----------------|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | Postgres com TLS se exigido |
+| `JWT_SECRET` | ≥ 32 caracteres (recomendado 64+) |
+| `WEBHOOK_INBOX_SECRET` | **Obrigatório** — sem ele, `POST /v1/inbox/webhooks` → **503** |
+| `ENABLE_MOCK_AUTH` | **`false`** explícito (mock auth/provision desligados) |
+| `ENCRYPTION_KEY` | 32 bytes hex (credenciais gateway no portal) |
+| `PORTAL_CLIENT_URL` | URL do frontend publicado |
+
+Validação local antes do deploy:
 
 ```bash
-# Filas atuais (sem ':'): charges-emission, inbox-process, charges-sync, notifications-send
-# Limpar chaves legadas com ':' se existirem de deploy anterior:
+npm run check:readiness
+# ou
+npm run check:prod-env -- --strict
+```
+
+### Redis / filas
+
+- [ ] Filas BullMQ atuais: `charges-emission`, `inbox-process`, `charges-sync`, `notifications-send`
+- [ ] Limpar chaves legadas com `:` se migração de deploy anterior:
+
+```bash
 redis-cli KEYS "bull:charges:emission*" | xargs -r redis-cli DEL
 redis-cli KEYS "bull:notifications:send*" | xargs -r redis-cli DEL
 ```
 
+---
+
+## Gate de qualidade (CI / pré-merge)
+
+```bash
+npm run quality:gate
+```
+
+Inclui `build`, `test:coverage` (≥ 82% no escopo unitário), `portal:test` e `test:integration` (requer `DATABASE_URL` + schema migrado).
+
+Integração inbox (Sprint D):
+
+```bash
+npx vitest run tests/inbox/webhook-inbox-idempotency.integration.test.ts
+```
+
+---
+
 ## Verificação pós-deploy
 
 - [ ] `GET /health/ready` → 200
-- [ ] `POST /v1/portal/cliente/auth/request-access` → 200 (sem revelar e-mail)
-- [ ] `GET /v1/portal/escritorio/dashboard` → 200 com objeto JSON
-- [ ] `GET /v1/portal/escritorio/cobrancas/export?format=csv` → stream CSV
-- [ ] `bash Projeto_CobrancaBoleto/validacao_fase_0.sh` → 0 falhas
-- [ ] `bash Projeto_CobrancaBoleto/validacao_sprint3.sh` → 0 falhas
-- [ ] `bash Projeto_CobrancaBoleto/validacao_sprint4.sh` → 5/5
-- [ ] `GET /v1/saas/plans` (JWT owner) → 3 planos
-- [ ] `GET /v1/portal/escritorio/assinatura` → JSON com `plano` e `uso`
-- [ ] Confirmar: nenhuma rota `/nfse` existe (`grep -r "nfse" src/modules`)
+- [ ] `POST /v1/inbox/webhooks` com `X-Webhook-Secret` + `X-External-Event-Id` → **202**; reenvio → **200** `deduplicated: true` (smoke)
+- [ ] `GET /v1/portal/escritorio/dashboard` → 200
+- [ ] `GET /v1/saas/plans` (JWT owner) → planos
+- [ ] Confirmar mocks desligados: `POST /v1/auth/token/mock` → **404** ou desabilitado quando `ENABLE_MOCK_AUTH=false`
+- [ ] Scripts bash de validação (Linux/macOS ou WSL): `validacao_fase_0.sh`, `validacao_sprint3.sh`, `validacao_sprint4.sh`
 
-## Teste E2E Sprint 3 (integração, com Postgres)
+---
 
-Com `DATABASE_URL` configurado e migrations aplicadas:
+## Evidências Sprint 1 / Asaas (homolog, não no repo)
+
+Checklist: [evidencias/SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_CHECKLIST.md).
 
 ```bash
-export DATABASE_URL="postgresql://..."
-export JWT_SECRET="..."
-export ENCRYPTION_KEY="$(openssl rand -hex 32)"
-npx vitest run tests/portal-read/sprint3-e2e-flow.integration.test.ts
+# Pré-requisitos: migrate, seed:dev (homolog), ASAAS_API_KEY sandbox, secrets no .env
+npm run e2e:asaas:evidence
 ```
 
-Cobre os 11 passos: PIX → emissão → webhook `PAYMENT_CONFIRMED` → magic link → portal cliente → dashboard → export CSV.
+Gera `docs/evidencias/asaas-e2e-*.json` (inclui assertion de idempotência webhook). Não commitar `.env` nem API keys.
+
+---
+
+## Referências
+
+- Contrato inbox: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md)
+- API geral: [API_CONTRATO_E_SMOKE.md](./API_CONTRATO_E_SMOKE.md)
+- DoD fase 2: [FASE2_KICKOFF_QUALIDADE.md](./FASE2_KICKOFF_QUALIDADE.md)
