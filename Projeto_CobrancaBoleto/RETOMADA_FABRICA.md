@@ -114,7 +114,7 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 - [x] D.1 — FASE2 P2: idempotência inbox (`docs/INBOX_WEBHOOK_IDEMPOTENCIA.md`, testes unit + integração, carga leve 8 POSTs)
 - [x] D.2 — `docs/evidencias/SPRINT1_ACEITE_CHECKLIST.md` + instruções `npm run e2e:asaas:evidence`
 - [x] D.3 — `docs/DEPLOY_CHECKLIST.md` (migration 024, `ENABLE_MOCK_AUTH=false`, `WEBHOOK_INBOX_SECRET`, `quality:gate`)
-- [ ] D.4 — PR `feat/sprint-d-inbox-qualidade` + handoff Tech Lead (merge pelo TL)
+- [x] D.4 — PR #9 `feat/sprint-d-inbox-qualidade` + handoff Tech Lead (merge pelo TL)
 
 ---
 
