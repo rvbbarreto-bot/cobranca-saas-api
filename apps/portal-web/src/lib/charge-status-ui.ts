@@ -16,6 +16,11 @@ export function chargeStatusLabel(status: string): string {
 }
 
 /** Rótulos voltados ao operador do portal (alinhados ao protótipo). */
+/** Cobranças terminais não podem ser editadas via PATCH portal. */
+export function isChargeEditable(status: string): boolean {
+  return status !== "paga" && status !== "cancelada";
+}
+
 export function chargeStatusLabelPortal(status: string): string {
   if (status === "rascunho") {
     return "Agendado";

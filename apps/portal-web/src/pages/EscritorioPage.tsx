@@ -1,6 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { fetchCobrancas, fetchEscritorioAssinatura, fetchPortalMe } from "../lib/api";
+import { useState } from "react";
+import {
+  activateEscritorioAssinatura,
+  ApiError,
+  fetchCobrancas,
+  fetchEscritorioAssinatura,
+  fetchPortalMe
+} from "../lib/api";
 
 function fmtBrl(n: number): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -18,7 +25,27 @@ function usagePct(used: number, max: number): number {
   return Math.min(100, Math.round((used / max) * 100));
 }
 
+function activateErrorMessage(err: unknown): string {
+  if (err instanceof ApiError) {
+    const body = err.body as { error?: string; message?: string } | null;
+    if (body && typeof body === "object" && body.error === "SUBSCRIPTION_ALREADY_ACTIVATED") {
+      return "A cobrança recorrente já está ativa para este escritório.";
+    }
+    if (body && typeof body === "object" && body.error === "PLATFORM_BILLING_NOT_CONFIGURED") {
+      return "Cobrança recorrente indisponível: configure ASAAS_PLATFORM_API_KEY no servidor.";
+    }
+    return err.message;
+  }
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return "Não foi possível ativar a assinatura.";
+}
+
 export function EscritorioPage(): JSX.Element {
+  const queryClient = useQueryClient();
+  const [activateSuccess, setActivateSuccess] = useState<string | null>(null);
+
   const me = useQuery({ queryKey: ["portalMe"], queryFn: fetchPortalMe, staleTime: 60_000 });
   const cob = useQuery({ queryKey: ["cobrancas"], queryFn: () => fetchCobrancas() });
   const assinatura = useQuery({
@@ -32,7 +59,17 @@ export function EscritorioPage(): JSX.Element {
     }
   });
 
+  const activate = useMutation({
+    mutationFn: activateEscritorioAssinatura,
+    onSuccess: (data) => {
+      setActivateSuccess(data.activation.gatewaySubscriptionId);
+      void queryClient.invalidateQueries({ queryKey: ["escritorioAssinatura"] });
+    }
+  });
+
   const sub = assinatura.data?.assinatura;
+  const isAdmin = me.data?.user.membership_role === "admin_escritorio";
+  const canActivate = isAdmin && sub && (sub.status === "trial" || sub.status === "past_due");
 
   return (
     <div className="shell-page">
@@ -74,6 +111,37 @@ export function EscritorioPage(): JSX.Element {
               </>
             ) : null}
           </p>
+          {activateSuccess ? (
+            <div className="banner-ok" style={{ marginBottom: "0.75rem" }}>
+              Cobrança recorrente ativa. ID Asaas: <code>{activateSuccess}</code>
+            </div>
+          ) : null}
+          {activate.isError ? (
+            <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
+              {activateErrorMessage(activate.error)}
+            </div>
+          ) : null}
+          {canActivate ? (
+            <p style={{ marginTop: "0.75rem" }}>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={activate.isPending}
+                onClick={() => {
+                  setActivateSuccess(null);
+                  activate.mutate();
+                }}
+              >
+                {activate.isPending ? "A ativar…" : "Ativar cobrança recorrente"}
+              </button>
+              <span className="muted small" style={{ display: "block", marginTop: "0.35rem" }}>
+                Cria a assinatura mensal no Asaas (cartão/boleto conforme configuração da plataforma).
+              </span>
+            </p>
+          ) : null}
+          {!isAdmin && sub.status === "trial" ? (
+            <p className="muted small">Apenas <strong>admin_escritorio</strong> pode ativar a cobrança recorrente.</p>
+          ) : null}
           <p className="muted small">
             Uso em <strong>{sub.uso.year_month}</strong>
           </p>

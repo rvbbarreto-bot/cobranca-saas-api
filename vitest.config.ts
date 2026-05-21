@@ -26,6 +26,7 @@ export default defineConfig({
       "tests/health/**/*.test.ts",
       "tests/cross-tenant.integration.test.ts",
       "tests/webhook-charge-status.integration.test.ts",
+      "tests/inbox/webhook-inbox-idempotency.integration.test.ts",
       "tests/functional/api-battery.integration.test.ts",
       "tests/portal-read/portal-cobranca-emission-flow.integration.test.ts",
       "tests/portal-read/sprint3-e2e-flow.integration.test.ts",

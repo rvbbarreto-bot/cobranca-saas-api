@@ -10,6 +10,7 @@ export type SubscriptionRow = {
   current_period_start: Date | null;
   current_period_end: Date | null;
   gateway_subscription_id: string | null;
+  gateway_customer_id: string | null;
   read_only: boolean;
   plano_slug: string;
   plano_nome: string;
@@ -46,6 +47,7 @@ export async function insertSubscriptionTrial(
        current_period_start,
        current_period_end,
        gateway_subscription_id,
+       gateway_customer_id,
        read_only`,
     [input.tenantId, input.planoId, trialDays]
   );
@@ -96,6 +98,7 @@ export async function getSubscriptionByTenantId(
        a.current_period_start,
        a.current_period_end,
        a.gateway_subscription_id,
+       a.gateway_customer_id,
        a.read_only,
        p.slug AS plano_slug,
        p.nome AS plano_nome,
@@ -133,4 +136,95 @@ export async function refreshSubscriptionReadOnly(
     [tenantId]
   );
   return getSubscriptionByTenantId(client, tenantId);
+}
+
+export async function getSubscriptionByGatewaySubscriptionId(
+  client: PoolClient,
+  gatewaySubscriptionId: string
+): Promise<SubscriptionRow | null> {
+  const q = await client.query<SubscriptionRow>(
+    `SELECT
+       a.id::text AS id,
+       a.tenant_id::text AS tenant_id,
+       a.plano_id::text AS plano_id,
+       a.status,
+       a.trial_ends_at,
+       a.current_period_start,
+       a.current_period_end,
+       a.gateway_subscription_id,
+       a.gateway_customer_id,
+       a.read_only,
+       p.slug AS plano_slug,
+       p.nome AS plano_nome,
+       p.max_clientes,
+       p.max_cobrancas_mes,
+       p.preco_mensal::text AS preco_mensal
+     FROM assinaturas a
+     INNER JOIN planos p ON p.id = a.plano_id
+     WHERE a.gateway_subscription_id = $1
+     LIMIT 1`,
+    [gatewaySubscriptionId]
+  );
+  return q.rows[0] ?? null;
+}
+
+export async function updateSubscriptionFromGateway(
+  client: PoolClient,
+  input: {
+    tenantId: string;
+    status: SubscriptionStatus;
+    gatewaySubscriptionId: string;
+  }
+): Promise<SubscriptionRow> {
+  await client.query(
+    `UPDATE assinaturas
+     SET status = $2,
+         gateway_subscription_id = COALESCE(gateway_subscription_id, $3),
+         read_only = CASE WHEN $2 IN ('canceled', 'past_due', 'suspended') THEN true ELSE false END,
+         updated_at = now()
+     WHERE tenant_id = $1::uuid`,
+    [input.tenantId, input.status, input.gatewaySubscriptionId]
+  );
+  const row = await getSubscriptionByTenantId(client, input.tenantId);
+  if (!row) {
+    throw new Error("Assinatura nao encontrada apos update.");
+  }
+  return row;
+}
+
+export async function updateSubscriptionGatewayActivation(
+  client: PoolClient,
+  input: {
+    tenantId: string;
+    gatewayCustomerId: string;
+    gatewaySubscriptionId: string;
+    status: SubscriptionStatus;
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+  }
+): Promise<SubscriptionRow> {
+  await client.query(
+    `UPDATE assinaturas
+     SET gateway_customer_id = $2,
+         gateway_subscription_id = $3,
+         status = $4,
+         current_period_start = $5,
+         current_period_end = $6,
+         read_only = false,
+         updated_at = now()
+     WHERE tenant_id = $1::uuid`,
+    [
+      input.tenantId,
+      input.gatewayCustomerId,
+      input.gatewaySubscriptionId,
+      input.status,
+      input.currentPeriodStart,
+      input.currentPeriodEnd
+    ]
+  );
+  const row = await getSubscriptionByTenantId(client, input.tenantId);
+  if (!row) {
+    throw new Error("Assinatura nao encontrada apos ativacao.");
+  }
+  return row;
 }

@@ -63,11 +63,23 @@ export async function applyWebhookSideEffectPlan(plan: WebhookSideEffectPlan): P
         { jobId: reguaJobId(plan.chargeId, daysOffset), delay: 0 }
       );
     }
+    emitN8nPlatformEvent({
+      event: "charge.overdue",
+      occurred_at: new Date().toISOString(),
+      tenant_id: plan.tenantId,
+      payload: { charge_id: plan.chargeId }
+    });
     return;
   }
 
   if (plan.kind === "payment_cancelled") {
     await cancelReguaJobsForCharge(plan.chargeId);
+    emitN8nPlatformEvent({
+      event: "charge.cancelled",
+      occurred_at: new Date().toISOString(),
+      tenant_id: plan.tenantId,
+      payload: { charge_id: plan.chargeId }
+    });
     return;
   }
 

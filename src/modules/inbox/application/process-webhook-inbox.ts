@@ -12,6 +12,7 @@ import {
   markWebhookInboxProcessed
 } from "../infrastructure/webhook-inbox-repository";
 import { updateChargeCanonicalStatus } from "../../billing-core/infrastructure/charge-repository";
+import { applyAsaasPlatformSubscriptionWebhook } from "../../saas-billing/application/process-asaas-platform-subscription-webhook";
 import { applyAsaasWebhookEvent } from "./process-asaas-webhook-event";
 import { parseWebhookChargeInstruction } from "./parse-webhook-charge-instruction";
 
@@ -59,6 +60,26 @@ export async function processPendingWebhooksForTenant(
         await markWebhookInboxDead(client, row.id, summarizeIssues(parsed.issues));
         dead += 1;
         deadParse += 1;
+        continue;
+      }
+
+      if (parsed.format === "platform_subscription" && parsed.platformSubscriptionContext) {
+        const platformResult = await applyAsaasPlatformSubscriptionWebhook(
+          client,
+          parsed.platformSubscriptionContext
+        );
+
+        if (platformResult.outcome === "not_found") {
+          await markWebhookInboxDead(client, row.id, "NO_MATCHING_SAAS_SUBSCRIPTION");
+          deadNotFound += 1;
+          dead += 1;
+          continue;
+        }
+
+        await markWebhookInboxProcessed(client, row.id);
+        if (platformResult.outcome === "applied") {
+          updated += 1;
+        }
         continue;
       }
 

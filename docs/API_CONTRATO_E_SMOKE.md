@@ -46,6 +46,23 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/saas/plans` | Bearer core; roles **owner** / **admin**; catálogo global `{ data: planos[] }` |
 | GET | `/v1/saas/metrics` | Bearer core; role **owner** apenas; `{ metrics: { mrr, currency, tenants_by_status, inadimplencia, generated_at } }` |
 | GET | `/v1/portal/escritorio/assinatura` | Bearer portal + billing link; roles admin_escritorio / owner; `{ assinatura: { status, read_only, plano, uso, … } }` ou **404** sem assinatura |
+| POST | `/v1/portal/escritorio/assinatura/activate` | admin_escritorio; cria assinatura recorrente no Asaas (`gateway_subscription_id`); **503** se `ASAAS_PLATFORM_API_KEY` ausente; **409** se já ativada |
+
+**Portal web (Sprint B):** em `/escritorio`, admin vê botão que chama `POST …/assinatura/activate`. Listagens `/cobrancas`, `/clientes` e `/notas-fiscais` usam `limit` (50) + **Carregar mais** via `next_cursor`.
+
+**Escritório — configurações (Sprint C)** — prefixo `/v1/portal/escritorio`, **admin_escritorio** (403 outros papéis):
+
+| Método | Caminho | Notas |
+|--------|---------|--------|
+| GET | `/config` | `{ config }` credenciais mascaradas (`gateway_api_key`, `whatsapp_token`) |
+| PATCH | `/config` | Campos opcionais: fiscal, `gateway_provider`, `gateway_api_key`, `whatsapp_*` |
+| GET | `/regua` | `{ data: rules[] }` |
+| POST | `/regua` | `{ days_offset, channel, template_id? }` — **409** `duplicate_rule` |
+| PATCH | `/regua/:ruleId` | `{ is_active?, channel? }` |
+| DELETE | `/regua/:ruleId` | **204** |
+| GET | `/templates` | `{ data: templates[] }` |
+| PATCH | `/templates/:templateId` | `{ subject?, body_template }` — **422** `system_template_readonly` |
+| GET | `/templates/:templateId/preview` | Query `charge_id` (UUID) — `{ subject, body_rendered }` |
 
 **Metering (Sprint 4):** em `POST /v1/portal/cobrancas` e `POST /v1/portal/clientes`, o servidor pode responder:
 
@@ -74,6 +91,26 @@ Rotas: **GET** `/v1/portal/notas-fiscais`, `/v1/portal/cobrancas`, `/v1/portal/c
 **Ordenação estável:** cobranças `created_at DESC, id DESC`; clientes `nome ASC, id ASC`; notas fiscais `created_at` (nulos como `-infinity`) **DESC** com desempate `id` **DESC** (numérico `automacao.notas_fiscais.id` exposto na view).
 
 **Migração:** listagem de notas com cursor requer **`012_portal_nf_resumo_id_pagination.sql`** (coluna `id` em `portal.vw_notas_fiscais_resumo`). Sem ela, `GET /v1/portal/notas-fiscais` falha no SQL até correr `npm run migrate`.
+
+### 2.2 Inbox — `POST /v1/inbox/webhooks` (idempotência, Sprint D)
+
+Detalhe completo: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md).
+
+| Header / campo | Obrigatório | Notas |
+|----------------|-------------|--------|
+| `x-tenant-id` | Sim | Slug tenant core |
+| `X-Webhook-Secret` | Se `WEBHOOK_INBOX_SECRET` definido | Em `production`, secret no servidor é obrigatório |
+| `X-External-Event-Id` | Recomendado para dedup | Alternativa: `body.external_event_id` |
+
+**Resposta** (sempre `accepted: true` em sucesso):
+
+| Caso | HTTP | `deduplicated` | `already_processed` |
+|------|------|----------------|---------------------|
+| Primeira gravação | **202** | `false` | `false` |
+| Reenvio (ainda na fila) | **200** | `true` | `false` |
+| Reenvio (já processado) | **200** | `true` | `true` |
+
+Corpo inclui `id` (UUID da linha em `webhook_inbox`). Unicidade: `(tenant_id, external_event_id)` — ver migration `001`.
 
 ---
 

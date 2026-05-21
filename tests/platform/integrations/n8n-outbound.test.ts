@@ -43,4 +43,28 @@ describe("emitN8nPlatformEvent", () => {
     const body = JSON.parse(String(init.body));
     expect(body.event).toBe("charge.paid");
   });
+
+  it.each([
+    ["charge.emitted", { charge_id: "c-em" }],
+    ["charge.overdue", { charge_id: "c-over" }],
+    ["charge.cancelled", { charge_id: "c-can" }],
+    [
+      "notification.regua_enqueued",
+      { charge_id: "c-r", event_type: "vencimento_hoje", days_offset: 0 }
+    ]
+  ] as const)("serializa evento %s", async (event, payload) => {
+    process.env.N8N_PLATFORM_WEBHOOK_URL = "https://n8n.test/hook";
+
+    emitN8nPlatformEvent({
+      event,
+      occurred_at: "2026-05-20T10:00:00.000Z",
+      tenant_id: "tenant-1",
+      payload
+    });
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1].body));
+    expect(body.event).toBe(event);
+    expect(body.payload).toEqual(payload);
+  });
 });

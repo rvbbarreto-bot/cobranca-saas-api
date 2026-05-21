@@ -7,6 +7,7 @@ import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain
 import { decrypt } from "../../crypto/decrypt";
 import { insertChargeEvent } from "../../../modules/billing-core/infrastructure/charge-events-repository";
 import { writeAuditLog } from "../../audit/audit.service";
+import { emitN8nPlatformEvent } from "../../integrations/n8n-outbound";
 import { withTenantTransaction } from "../../persistence/with-tenant-transaction";
 
 export type PaymentEmissionJobData = {
@@ -319,6 +320,12 @@ export async function processPaymentEmission(
   const withTenant = deps.withTenant ?? withTenantTransaction;
   await withTenant(data.tenantId, async (client) => {
     await runEmission(client, data, deps);
+  });
+  emitN8nPlatformEvent({
+    event: "charge.emitted",
+    occurred_at: new Date().toISOString(),
+    tenant_id: data.tenantId,
+    payload: { charge_id: data.chargeId }
   });
 }
 

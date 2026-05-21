@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { PortalLoadMore } from "../components/PortalLoadMore";
 import { fetchCobrancas } from "../lib/api";
 import type { ChargeRow } from "../lib/api";
 import {
@@ -9,6 +10,7 @@ import {
   chargeStatusLabelPortal,
   chargeStatusPillClass,
   competenciaFromDue,
+  isChargeEditable,
   nossoNumeroDisplay
 } from "../lib/charge-status-ui";
 
@@ -49,6 +51,11 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
       Ver
     </Link>
   );
+  const editar = isChargeEditable(s) ? (
+    <Link to={`/cobrancas/${row.id}/editar`} className="link-inline">
+      Editar
+    </Link>
+  ) : null;
   const pdf = (
     <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Integração PDF em roadmap">
       Ver PDF
@@ -93,6 +100,12 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
   return (
     <div className="table-actions">
       {detail}
+      {editar ? (
+        <>
+          <span className="sep">|</span>
+          {editar}
+        </>
+      ) : null}
       {extra.map((el, i) => (
         <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
           <span className="sep">|</span>
@@ -103,20 +116,30 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
   );
 }
 
+const COBRANCAS_PAGE_SIZE = 50;
+
 export function CobrancasPage(): JSX.Element {
-  const q = useQuery({
+  const q = useInfiniteQuery({
     queryKey: ["cobrancas"],
-    queryFn: () => fetchCobrancas({ limit: 200 })
+    queryFn: ({ pageParam }) =>
+      fetchCobrancas({
+        limit: COBRANCAS_PAGE_SIZE,
+        cursor: pageParam as string | undefined
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (last) => last.next_cursor ?? undefined
   });
   const [statusFilter, setStatusFilter] = useState("");
 
+  const allRows = useMemo(() => q.data?.pages.flatMap((p) => p.data) ?? [], [q.data?.pages]);
+  const billingMeta = q.data?.pages[0];
+
   const rows = useMemo(() => {
-    const data = q.data?.data ?? [];
     if (!statusFilter) {
-      return data;
+      return allRows;
     }
-    return data.filter((r: ChargeRow) => r.canonicalStatus === statusFilter);
-  }, [q.data?.data, statusFilter]);
+    return allRows.filter((r: ChargeRow) => r.canonicalStatus === statusFilter);
+  }, [allRows, statusFilter]);
 
   return (
     <div className="shell-page">
@@ -141,11 +164,11 @@ export function CobrancasPage(): JSX.Element {
       {q.isError ? (
         <div className="banner-err">{q.error instanceof Error ? q.error.message : "Erro ao carregar"}</div>
       ) : null}
-      {q.data?.billing_link_status === "missing" && q.data.message ? (
-        <div className="banner-warn">{q.data.message}</div>
+      {billingMeta?.billing_link_status === "missing" && billingMeta.message ? (
+        <div className="banner-warn">{billingMeta.message}</div>
       ) : null}
 
-      {q.data && !q.isLoading && q.data.billing_link_status !== "missing" ? (
+      {billingMeta && !q.isLoading && billingMeta.billing_link_status !== "missing" ? (
         <>
           <div className="proto-toolbar">
             <div className="proto-toolbar__field" style={{ flex: "1 1 220px", maxWidth: "320px" }}>
@@ -159,7 +182,8 @@ export function CobrancasPage(): JSX.Element {
               </select>
             </div>
             <p className="muted small" style={{ margin: 0, alignSelf: "center" }}>
-              A mostrar {rows.length} de {q.data.count}
+              A mostrar {rows.length}
+              {statusFilter ? ` (filtro local)` : ""} — {allRows.length} carregada{allRows.length === 1 ? "" : "s"}
             </p>
           </div>
 
@@ -207,6 +231,12 @@ export function CobrancasPage(): JSX.Element {
               </tbody>
             </table>
           </div>
+          <PortalLoadMore
+            hasMore={Boolean(q.hasNextPage)}
+            loading={q.isFetchingNextPage}
+            onLoadMore={() => void q.fetchNextPage()}
+            loadedCount={allRows.length}
+          />
         </>
       ) : null}
     </div>

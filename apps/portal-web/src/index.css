@@ -264,6 +264,23 @@ body {
   font-weight: 500;
 }
 
+.banner-ok {
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.portal-load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+}
+
 .banner-err,
 .banner-warn {
   padding: 0.65rem 0.75rem;

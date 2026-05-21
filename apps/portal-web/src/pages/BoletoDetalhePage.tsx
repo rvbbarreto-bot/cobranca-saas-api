@@ -10,6 +10,7 @@ import {
   chargeStatusLabelPortal,
   chargeStatusPillClass,
   competenciaFromDue,
+  isChargeEditable,
   nossoNumeroDisplay
 } from "../lib/charge-status-ui";
 
@@ -119,9 +120,16 @@ export function BoletoDetalhePage(): JSX.Element {
     <div className="shell-page">
       <div className="shell-page__head">
         <h2 className="shell-page__title">Detalhe do boleto</h2>
-        <Link to="/cobrancas" className="btn-secondary">
-          Voltar à lista
-        </Link>
+        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          {charge && isChargeEditable(charge.canonicalStatus) ? (
+            <Link to={`/cobrancas/${chargeId}/editar`} className="btn-primary">
+              Editar
+            </Link>
+          ) : null}
+          <Link to="/cobrancas" className="btn-secondary">
+            Voltar à lista
+          </Link>
+        </div>
       </div>
 
       {!chargeId ? <div className="banner-err">Identificador do boleto inválido.</div> : null}

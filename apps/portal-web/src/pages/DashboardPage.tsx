@@ -66,7 +66,7 @@ export function DashboardPage(): JSX.Element {
             </div>
           </div>
 
-          {q.data.top_clientes_inadimplentes.length > 0 ? (
+          {(q.data?.top_clientes_inadimplentes.length ?? 0) > 0 ? (
             <div className="dash-panel" style={{ marginTop: "1rem" }}>
               <h2 className="dash-panel__title">Top inadimplentes</h2>
               <div className="table-wrap">
@@ -80,7 +80,7 @@ export function DashboardPage(): JSX.Element {
                     </tr>
                   </thead>
                   <tbody>
-                    {q.data.top_clientes_inadimplentes.map((row) => (
+                    {(q.data?.top_clientes_inadimplentes ?? []).map((row) => (
                       <tr key={row.documento_mascarado + row.nome}>
                         <td>{row.nome}</td>
                         <td>{row.documento_mascarado}</td>
