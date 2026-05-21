@@ -5,6 +5,7 @@
 
 export type N8nPlatformEventType =
   | "charge.paid"
+  | "charge.emitted"
   | "charge.overdue"
   | "charge.cancelled"
   | "notification.regua_enqueued"

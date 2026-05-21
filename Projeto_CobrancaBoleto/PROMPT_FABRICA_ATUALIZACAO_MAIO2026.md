@@ -4,28 +4,28 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **main** (`6ef4c63`): Sprints B, C, D, E mergeados (PR #6–#10).
-- **Próxima entrega:** Sprint F — [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md)
-- **Testes:** `npm test` → 203+ · `npm run portal:test` → 29 · `npm run quality:gate`
+- **main** (`fcaae14`): Sprints B–F mergeados (PR #6–#11).
+- **Próxima entrega:** Sprint G — [DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md](./DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md)
+- **Testes:** `npm test` → 206+ · `npm run portal:test` → 33 · `npm run quality:gate`
 
 ## NÃO refazer
 
-- PATCH cobrança na API, inbox, n8n (5 eventos), `/configuracoes`, paginação, activate assinatura.
+- Portal editar cobrança, PATCH cobrança API, inbox, n8n (exceto `charge.emitted`), `/configuracoes`, paginação, activate.
 - NFS-e / `/internal/fiscal` fora de escopo.
 
-## Sprint F — ATUAL (portal editar cobrança)
+## Sprint G — ATUAL (`charge.emitted` + testes)
 
-1. `git pull main` → `feat/sprint-f-portal-editar-cobranca`
-2. UI `/cobrancas/:id/editar` + schema + links em detalhe/lista
-3. `portal:test` + `PORTAL_WEB.md`
+1. `git pull main` → `feat/sprint-g-charge-emitted-n8n`
+2. `emitN8nPlatformEvent` após emissão OK + `N8N_WEBHOOKS.md`
+3. Unit: `payment-emission-n8n.test.ts` · Funcional: bateria B6b
 4. PR + handoff TL — **sem merge**
 
-## Backlog (após F)
+## Backlog (após G)
 
 | Sprint | Tema |
 |--------|------|
-| G | `charge.emitted` n8n + runbook auth prod (FASE2 A) |
-| H | Homolog: `e2e:asaas:evidence` + checklist Sprint 1 preenchido |
+| H | Homolog: `e2e:asaas:evidence` + checklist Sprint 1 |
+| — | Runbook auth prod `ENABLE_MOCK_AUTH` / JWT (FASE2 A) |
 
 ## Regras e gates
 

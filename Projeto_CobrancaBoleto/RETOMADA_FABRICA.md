@@ -9,13 +9,12 @@
 
 | Marco | Commit / PR | Status |
 |-------|-------------|--------|
-| Sprints B–D | PR #6, #8, #9 | Concluído |
-| **Sprint E — n8n** | **`main`** `6ef4c63` (PR #10) | **Concluído** |
-| **Sprint F — editar cobrança** | — | **← ATUAL** |
+| Sprints B–F | PR #6–#11 | Concluído |
+| **Sprint G — `charge.emitted` n8n** | `feat/sprint-g-charge-emitted-n8n` | **← ATUAL (fábrica)** |
 
-**Testes:** `npm test` 203+ · `portal:test` 29 · CI `quality:gate`
+**Testes:** `npm test` 206+ · `portal:test` 33 · CI `quality:gate`
 
-**Branch fábrica:** `feat/sprint-f-portal-editar-cobranca` ← `main`
+**Branch fábrica:** `feat/sprint-g-charge-emitted-n8n` ← `main` (`fcaae14`)
 
 ---
 
@@ -33,26 +32,24 @@ Scripts: `validacao_fase_0.sh`, `validacao_sprint3.sh`, `validacao_sprint4.sh`
 
 ## 3. Implementado (não refazer)
 
-- API + portal: login, dashboard, cobranças/clientes/NFs, magic link, `/configuracoes`, activate, cursor, PATCH cliente (**UI** `/clientes/:id/editar`)
-- PATCH cobrança **API** + `patchPortalCobranca` em `api.ts` — falta só **tela** edição (Sprint F)
-- Inbox idempotência, n8n outbound (5 eventos), SaaS billing 024
+- API + portal: login, dashboard, cobranças/clientes/NFs, magic link, `/configuracoes`, activate, cursor, PATCH cliente/cobrança + **UI** edição cobrança (`/cobrancas/:id/editar`)
+- Inbox idempotência, n8n outbound (6 eventos com `charge.emitted`), SaaS billing 024
 
 ---
 
-## 4. Trabalho imediato — Sprint F
+## 4. Trabalho imediato — Sprint G
 
-**Pacote:** [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md)
+**Pacote:** [DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md](./DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md)
 
 | # | Item |
 |---|------|
-| F.1 | `cobrancaEditFormSchema` |
-| F.2 | `CobrancaEditPage` — `/cobrancas/:chargeId/editar` |
-| F.3 | Links em `BoletoDetalhePage` / `CobrancasPage` (ocultar se `paga`/`cancelada`) |
-| F.4 | Vitest `CobrancaEditPage.test.tsx` |
-| F.5 | `PORTAL_WEB.md` |
-| F.6 | PR + handoff TL |
+| G.1 | `charge.emitted` em `payment-emission-processor` |
+| G.2 | Testes unitários emissão + n8n |
+| G.3 | Bateria funcional B6b (PATCH 409 em `paga`) |
+| G.4 | `N8N_WEBHOOKS.md` |
+| G.5 | PR + handoff TL |
 
-### Histórico B–E
+### Histórico B–F
 
 | Sprint | PR |
 |--------|-----|
@@ -60,19 +57,20 @@ Scripts: `validacao_fase_0.sh`, `validacao_sprint3.sh`, `validacao_sprint4.sh`
 | C `/configuracoes` | #8 |
 | D inbox + deploy | #9 |
 | E n8n régua/ciclo | #10 |
+| F portal editar cobrança | #11 |
 
 ### Backlog
 
-- **G:** `charge.emitted` n8n; runbook `ENABLE_MOCK_AUTH` / JWT (FASE2 A)
 - **H:** `e2e:asaas:evidence` + checklist Sprint 1 (homolog PO)
+- Runbook `ENABLE_MOCK_AUTH` / JWT produção (FASE2 A)
 
 ---
 
 ## 5. Ordem de execução
 
 ```
-git pull main → feat/sprint-f-portal-editar-cobranca
-DEMANDA_SPRINT_F → quality:gate → PR → handoff (sem merge IA)
+git pull main → feat/sprint-g-charge-emitted-n8n
+DEMANDA_SPRINT_G → quality:gate → PR → handoff (sem merge IA)
 ```
 
 ---
@@ -87,7 +85,7 @@ Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · m
 
 | Doc | Uso |
 |-----|-----|
-| [DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md](./DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md) | **Atual** |
+| [DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md](./DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md) | **Atual** |
 | [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) | PR / merge |
 | [docs/N8N_WEBHOOKS.md](../docs/N8N_WEBHOOKS.md) | n8n |
 | [docs/FASE2_KICKOFF_QUALIDADE.md](../docs/FASE2_KICKOFF_QUALIDADE.md) | DoD |
@@ -97,23 +95,10 @@ Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · m
 ## 8. SYSTEM PROMPT (colar no Cursor)
 
 ```
-Repositório: cobranca-saas-api. main (6ef4c63) — Sprint E mergeada.
-
-PRÓXIMA: Sprint F — DEMANDA_SPRINT_F_PORTAL_EDITAR_COBRANCA.md
-Branch: feat/sprint-f-portal-editar-cobranca
-
-PATCH /v1/portal/cobrancas/:id já existe. Criar UI edição (espelhar ClienteEditPage).
-Bloquear edição se paga/cancelada. portal:test + PORTAL_WEB.md.
-
-Governança: IA abre PR; Tech Lead merge. Sem NFS-e.
+Repositório: cobranca-saas-api. main (fcaae14) — Sprint F mergeada.
+Sprint G ATUAL: charge.emitted n8n + testes unitários/funcionais.
+Branch: feat/sprint-g-charge-emitted-n8n
+Pacote: Projeto_CobrancaBoleto/DEMANDA_SPRINT_G_CHARGE_EMITTED_N8N.md
+Gate: npm test + portal:test + quality:gate
+Governança: IA abre PR; Tech Lead merge.
 ```
-
----
-
-## 9–10. Ritual PO / Governança
-
-IA: commit + PR + handoff. **Proibido:** merge `main`. TL: review + merge. PO: demo edição cobrança.
-
----
-
-*Atualizado após merge PR #10 (Sprint E).*
