@@ -3,7 +3,12 @@
  * No-op se `N8N_PLATFORM_WEBHOOK_URL` não estiver definida.
  */
 
-export type N8nPlatformEventType = "charge.paid" | "subscription.past_due";
+export type N8nPlatformEventType =
+  | "charge.paid"
+  | "charge.overdue"
+  | "charge.cancelled"
+  | "notification.regua_enqueued"
+  | "subscription.past_due";
 
 export type N8nPlatformEvent = {
   event: N8nPlatformEventType;
