@@ -1,6 +1,3 @@
-import { execSync } from "node:child_process";
-import { writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
 import pg from "pg";
 import { DEMO_PUBLIC_TENANT_UUID, runSeedPortalHappyPath } from "./seed-portal-happy-path";
 import { upsertEscritorioAsaasConfig } from "./upsert-escritorio-asaas-config";
@@ -12,44 +9,18 @@ import { withTenantTransaction } from "../platform/persistence/with-tenant-trans
 import { insertWebhookInbox } from "../modules/inbox/infrastructure/webhook-inbox-repository";
 import { processPendingWebhooksForTenant } from "../modules/inbox/application/process-webhook-inbox";
 import { countChargeEvents } from "../modules/billing-core/infrastructure/charge-events-repository";
+import {
+  applySprint1MetaAssertions,
+  assertSprint1,
+  buildAutomatedTestsNote,
+  gitField,
+  maskDbUrl,
+  type AsaasE2EEvidence,
+  writeAsaasE2EEvidenceReport
+} from "./asaas-e2e-evidence-utils";
 
-export type AsaasE2EEvidence = {
-  executedAt: string;
-  git: { branch: string; commit: string };
-  environment: {
-    nodeEnv: string;
-    asaasApiUrl: string;
-    databaseUrl: string;
-    hasAsaasApiKey: boolean;
-    hasEncryptionKey: boolean;
-    hasWebhookSecret: boolean;
-  };
-  tenantPublicId: string;
-  automacaoTenantId: string;
-  correlationId: string;
-  steps: Record<string, unknown>;
-  assertions: { name: string; ok: boolean; detail?: string }[];
-  automatedTestsNote: string;
-};
-
-function maskDbUrl(url: string): string {
-  return url.replace(/:([^:@/]+)@/, ":***@");
-}
-
-function gitField(cmd: string): string {
-  try {
-    return execSync(cmd, { encoding: "utf8" }).trim();
-  } catch {
-    return "unknown";
-  }
-}
-
-function assert(evidence: AsaasE2EEvidence, name: string, ok: boolean, detail?: string): void {
-  evidence.assertions.push({ name, ok, detail });
-  if (!ok) {
-    throw new Error(`Assertion failed: ${name}${detail ? ` — ${detail}` : ""}`);
-  }
-}
+export type { AsaasE2EEvidence };
+export { writeAsaasE2EEvidenceReport };
 
 export async function runAsaasSandboxE2E(connectionString: string): Promise<AsaasE2EEvidence> {
   const asaasKey = process.env.ASAAS_API_KEY?.trim();
@@ -61,6 +32,7 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
     throw new Error("ENCRYPTION_KEY obrigatoria para E2E.");
   }
 
+  const asaasApiUrl = process.env.ASAAS_API_URL?.trim() || "https://sandbox.asaas.com/api/v3";
   const correlationId = `e2e-${Date.now()}`;
   const evidence: AsaasE2EEvidence = {
     executedAt: new Date().toISOString(),
@@ -70,7 +42,7 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
     },
     environment: {
       nodeEnv: process.env.NODE_ENV ?? "development",
-      asaasApiUrl: process.env.ASAAS_API_URL?.trim() || "https://sandbox.asaas.com/api/v3",
+      asaasApiUrl,
       databaseUrl: maskDbUrl(connectionString),
       hasAsaasApiKey: true,
       hasEncryptionKey: true,
@@ -81,8 +53,15 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
     correlationId,
     steps: {},
     assertions: [],
-    automatedTestsNote: "Execute: npm test && npm run test:integration && npm run e2e:asaas:evidence (este runner)."
+    automatedTestsNote: buildAutomatedTestsNote()
   };
+
+  assertSprint1(
+    evidence,
+    "ambiente_asaas_sandbox",
+    asaasApiUrl.includes("sandbox.asaas.com") && asaasKey.length > 10,
+    `url=${asaasApiUrl}`
+  );
 
   const seed = await runSeedPortalHappyPath(connectionString);
   evidence.automacaoTenantId = seed.automacaoTenantId;
@@ -138,7 +117,12 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
       canonicalStatus: created.charge.canonicalStatus
     };
 
-    assert(evidence, "cobranca_interna_rascunho", created.charge.canonicalStatus === "rascunho");
+    assertSprint1(
+      evidence,
+      "identificador_externo",
+      idem.length >= 8 && ref.startsWith("e2e-asaas-"),
+      `idempotency_key=${idem}`
+    );
 
     await processPaymentEmission({ chargeId, tenantId: DEMO_PUBLIC_TENANT_UUID });
 
@@ -162,18 +146,34 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
     gatewayPaymentId = String(afterEmission.pt?.gateway_transaction_id ?? "");
     evidence.steps.afterEmission = afterEmission;
 
-    assert(evidence, "provider_charge_id_persistido", Boolean(afterEmission.ch?.provider_charge_id));
-    assert(evidence, "payment_transaction_com_raw", Boolean(afterEmission.pt?.has_raw));
-    assert(
+    assertSprint1(
+      evidence,
+      "vinculo_interno_asaas",
+      Boolean(afterEmission.ch?.provider_charge_id),
+      `provider_charge_id=${afterEmission.ch?.provider_charge_id ?? "null"}`
+    );
+    assertSprint1(
+      evidence,
+      "cobranca_criada_asaas",
+      gatewayPaymentId.length > 0,
+      `gateway_transaction_id=${gatewayPaymentId}`
+    );
+    assertSprint1(
+      evidence,
+      "payment_transaction_com_raw",
+      Boolean(afterEmission.pt?.has_raw),
+      "gateway_raw_response presente"
+    );
+    assertSprint1(
       evidence,
       "charge_event_emissao",
-      afterEmission.events.some((e) => e.event_type === "emissao_gateway")
+      afterEmission.events.some((e) => e.event_type === "emissao_gateway"),
+      "event_type emissao_gateway"
     );
 
     const adapter = createAsaasAdapterFromEnv();
     const snapshot = await adapter.getCharge(gatewayPaymentId);
-    evidence.steps.asaasGetCharge = snapshot;
-    assert(evidence, "consulta_asaas_sandbox", Boolean(snapshot.status));
+    evidence.steps.asaasGetCharge = { status: snapshot.status, id: gatewayPaymentId };
 
     const webhookPayload = {
       event: "PAYMENT_RECEIVED",
@@ -193,18 +193,26 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
         correlationId
       });
       evidence.steps.webhookFirstInsert = ins;
-      assert(evidence, "webhook_inbox_inserido", ins.inserted);
+      assertSprint1(evidence, "webhook_inbox_inserido", ins.inserted, extEventId);
     });
 
     const proc1 = await processPendingWebhooksForTenant(DEMO_PUBLIC_TENANT_UUID, 50);
     evidence.steps.webhookProcessFirst = proc1;
-    assert(evidence, "webhook_processado", proc1.updated >= 1);
 
     const eventsAfterWebhook = await withTenantTransaction(DEMO_PUBLIC_TENANT_UUID, async (c) =>
       countChargeEvents(c, chargeId, "webhook_asaas")
     );
     evidence.steps.webhookChargeEventsCount = eventsAfterWebhook;
-    assert(evidence, "charge_event_webhook", eventsAfterWebhook === 1);
+    assertSprint1(evidence, "charge_event_webhook", eventsAfterWebhook === 1, `count=${eventsAfterWebhook}`);
+
+    assertSprint1(
+      evidence,
+      "correlation_id_rastreavel",
+      evidence.correlationId === correlationId &&
+        correlationId.startsWith("e2e-") &&
+        (webhookPayload.payment as { externalReference: string }).externalReference === idem,
+      `correlationId=${correlationId}; externalReference=${idem}`
+    );
 
     await withTenantTransaction(DEMO_PUBLIC_TENANT_UUID, async (c) => {
       const dup = await insertWebhookInbox(c, {
@@ -214,7 +222,6 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
         correlationId
       });
       evidence.steps.webhookDuplicateInsert = dup;
-      assert(evidence, "webhook_dedup_inbox", dup.inserted === false);
     });
 
     const proc2 = await processPendingWebhooksForTenant(DEMO_PUBLIC_TENANT_UUID, 50);
@@ -223,26 +230,26 @@ export async function runAsaasSandboxE2E(connectionString: string): Promise<Asaa
     const eventsAfterDup = await withTenantTransaction(DEMO_PUBLIC_TENANT_UUID, async (c) =>
       countChargeEvents(c, chargeId, "webhook_asaas")
     );
-    assert(evidence, "webhook_idempotente_sem_evento_duplicado", eventsAfterDup === 1);
+    assertSprint1(
+      evidence,
+      "webhook_idempotente_sem_evento_duplicado",
+      eventsAfterDup === 1,
+      `webhook_asaas events=${eventsAfterDup}`
+    );
 
     const finalCharge = await withTenantTransaction(DEMO_PUBLIC_TENANT_UUID, async (c) => {
       const r = await c.query(`SELECT canonical_status FROM charges WHERE id = $1::uuid`, [chargeId]);
       return r.rows[0]?.canonical_status;
     });
     evidence.steps.finalCanonicalStatus = finalCharge;
-    assert(evidence, "status_final_paga", finalCharge === "paga");
+    if (finalCharge !== "paga") {
+      throw new Error(`Fluxo E2E esperava status paga, obteve ${String(finalCharge)}`);
+    }
 
+    applySprint1MetaAssertions(evidence);
     return evidence;
   } finally {
     client.release();
     await pool.end();
   }
-}
-
-export function writeAsaasE2EEvidenceReport(evidence: AsaasE2EEvidence, outDir?: string): string {
-  const dir = outDir ?? join(process.cwd(), "docs", "evidencias");
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, `asaas-e2e-${evidence.executedAt.replace(/[:.]/g, "-")}.json`);
-  writeFileSync(file, JSON.stringify(evidence, null, 2), "utf8");
-  return file;
 }

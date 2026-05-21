@@ -5,6 +5,14 @@ Atualizado na **Sprint D** (inbox idempotência + endurecimento produção).
 
 ---
 
+## Homolog Sprint 1 (antes de produção)
+
+- [ ] [SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_CHECKLIST.md) assinado pelo PO/Tech Lead
+- [ ] `npm run e2e:asaas:evidence` executado em sandbox (evidência anexada ao ticket, **não** no git)
+- [ ] `npm run quality:gate` verde na branch de release
+
+---
+
 ## Antes de subir
 
 ### Banco e migrations
@@ -83,7 +91,7 @@ Checklist: [evidencias/SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_
 npm run e2e:asaas:evidence
 ```
 
-Gera `docs/evidencias/asaas-e2e-*.json` (inclui assertion de idempotência webhook). Não commitar `.env` nem API keys.
+Gera `docs/evidencias/asaas-e2e-*.json` (gitignored). Ver [evidencias/README.md](./evidencias/README.md). Não commitar `.env` nem API keys.
 
 ---
 
