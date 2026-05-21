@@ -8,10 +8,18 @@ const hasDb = Boolean(process.env.DATABASE_URL?.trim());
 describe.skipIf(!hasDb)("Inbox webhook — idempotencia (integracao)", () => {
   const app = createApp();
   const webhookSecret = process.env.WEBHOOK_INBOX_SECRET?.trim();
+  let tokenDemo = "";
 
   beforeAll(async () => {
-    /* pool warm-up */
     await getPool().query("SELECT 1");
+    try {
+      const rDemo = await request(app).post("/v1/auth/token/mock").set("x-tenant-id", "demo");
+      if (rDemo.status === 200 && rDemo.body?.access_token) {
+        tokenDemo = rDemo.body.access_token as string;
+      }
+    } catch {
+      /* Postgres indisponivel */
+    }
   });
 
   afterAll(async () => {
@@ -67,42 +75,42 @@ describe.skipIf(!hasDb)("Inbox webhook — idempotencia (integracao)", () => {
     expect(await countInboxRows(evt)).toBe(1);
   });
 
-  it("apos process-pending, reenvio do mesmo evento marca already_processed", async () => {
-    const tokenRes = await request(app).post("/v1/auth/token/mock").set("x-tenant-id", "demo");
-    if (tokenRes.status !== 200 || !tokenRes.body?.access_token) {
-      return;
+  it("apos process-pending, reenvio do mesmo evento marca already_processed", async (ctx) => {
+    if (!tokenDemo) {
+      ctx.skip();
     }
-    const token = tokenRes.body.access_token as string;
 
     const ref = `idem-proc-${Date.now()}`;
     const evt = `evt-proc-${Date.now()}`;
 
     await request(app)
       .post("/v1/billing/charges")
-      .set("Authorization", `Bearer ${token}`)
+      .set("Authorization", `Bearer ${tokenDemo}`)
       .set("x-tenant-id", "demo")
       .send({
         reference: ref,
         idempotency_key: `idem-${ref}`,
-        amount_cents: 100,
-        canonical_status: "emitida"
+        amount: 15,
+        due_date: "2031-05-01"
       })
       .expect(201);
 
     await webhookReq()
       .set("x-external-event-id", evt)
-      .send({ canonical_status: "paga", reference: ref })
+      .send({ canonical_status: "pendente_pagamento", reference: ref })
       .expect(202);
 
-    await request(app)
+    const proc = await request(app)
       .post("/v1/inbox/webhooks/process-pending?limit=50")
-      .set("Authorization", `Bearer ${token}`)
+      .set("Authorization", `Bearer ${tokenDemo}`)
       .set("x-tenant-id", "demo")
       .expect(200);
 
+    expect(proc.body.updated).toBeGreaterThanOrEqual(1);
+
     const retry = await webhookReq()
       .set("x-external-event-id", evt)
-      .send({ canonical_status: "paga", reference: ref })
+      .send({ canonical_status: "pendente_pagamento", reference: ref })
       .expect(200);
 
     expect(retry.body.deduplicated).toBe(true);
