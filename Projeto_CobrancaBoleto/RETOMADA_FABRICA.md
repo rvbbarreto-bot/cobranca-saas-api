@@ -16,7 +16,7 @@
 | Sprint 4 — SaaS billing + MRR + n8n outbound | `main` (`409c69c`) | Concluído (PR #4) |
 | **Sprint 4.7 — Asaas Subscriptions** | **`main`** (`aa720d3`) | Concluído (PR #5) |
 | **Sprint B — portal activate + paginação** | **`main`** (`36f3a42`) | **Concluído** (PR #6) |
-| **Sprint C — `/configuracoes`** | **`feat/sprint-c-portal-configuracoes`** | **Em fila** — ver demanda |
+| **Sprint C — `/configuracoes`** | **`feat/sprint-c-portal-configuracoes`** | **PR aberto** — aguarda merge TL |
 
 **Testes unitários (local):** `185+` Vitest (`npm test`) + `24` portal (`npm run portal:test`).
 
@@ -98,16 +98,16 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 - [x] UI `POST .../assinatura/activate` + paginação `next_cursor`
 - [x] Merge PR #6
 
-### 4.3 Sprint C — Configurações escritório (**demanda ativa**)
+### 4.3 Sprint C — Configurações escritório (entregue na branch)
 
 **Pacote:** [DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md](./DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md)  
 **Branch:** `feat/sprint-c-portal-configuracoes`
 
-- [ ] C.1 — funções API no `apps/portal-web/src/lib/api.ts`
-- [ ] C.2 — página `/configuracoes` (gateway + régua + templates)
-- [ ] C.3 — testes Vitest portal
-- [ ] C.4 — `escritorio-config-router.test.ts` (+ regua mínimo)
-- [ ] C.5 — contrato HTTP + PR + handoff Tech Lead
+- [x] C.1 — funções API no `apps/portal-web/src/lib/api.ts`
+- [x] C.2 — página `/configuracoes` (gateway + régua + templates)
+- [x] C.3 — testes Vitest portal (`ConfiguracoesPage.test.tsx`)
+- [x] C.4 — `escritorio-config-router.test.ts` (5 casos)
+- [x] C.5 — contrato HTTP + PR + handoff Tech Lead
 
 ### 4.4 Sprint D — Qualidade / produção (contínuo)
 

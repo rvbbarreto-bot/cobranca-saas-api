@@ -6,6 +6,9 @@ import {
   fetchPortalCobrancaDetail,
   fetchPortalMe,
   activateEscritorioAssinatura,
+  fetchEscritorioConfig,
+  fetchChargingRules,
+  shouldPatchSecret,
   fetchClienteCobrancas,
   postPortalCobranca,
   patchPortalCliente,
@@ -288,6 +291,50 @@ describe("patchPortalCobranca", () => {
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/v1/portal/cobrancas/ch1");
     expect(init.method).toBe("PATCH");
+  });
+});
+
+describe("escritorio config/regua API", () => {
+  afterEach(() => {
+    clearSession();
+    vi.unstubAllGlobals();
+  });
+
+  it("fetchEscritorioConfig GET /config", async () => {
+    saveSession("tok", "tenant-99", "u@x.co");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () =>
+          JSON.stringify({
+            config: { tenant_id: "t1", gateway_provider: "asaas", gateway_api_key: "****abcd" }
+          })
+      })
+    );
+    const r = await fetchEscritorioConfig();
+    expect(r.config?.gateway_provider).toBe("asaas");
+  });
+
+  it("fetchChargingRules GET /regua", async () => {
+    saveSession("tok", "tenant-99", "u@x.co");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({ data: [{ id: "r1", days_offset: 0, channel: "email", is_active: true }] })
+      })
+    );
+    const r = await fetchChargingRules();
+    expect(r.data).toHaveLength(1);
+  });
+
+  it("shouldPatchSecret ignora vazio e valor mascarado", () => {
+    expect(shouldPatchSecret("", "****abcd")).toBe(false);
+    expect(shouldPatchSecret("****abcd", "****abcd")).toBe(false);
+    expect(shouldPatchSecret("nova_chave_longa", "****abcd")).toBe(true);
   });
 });
 

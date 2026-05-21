@@ -48,6 +48,7 @@ Ver `apps/portal-web/.env.example`.
 | `/escritorio` | Resumo tenant + estado do billing link (`GET` cobranças / `auth/me`). |
 | `/ajuda/provisionamento-core` | Texto de apoio ao `POST /v1/tenants/provision` (superfície core). |
 | `/clientes` | `GET /v1/portal/clientes` paginado (**Carregar mais**); `/clientes/novo` (POST); `/clientes/:id` (detalhe + cobranças). |
+| `/configuracoes` | **Sprint C** — abas Gateway, Régua de cobrança, Templates (`/v1/portal/escritorio/*`). Apenas `admin_escritorio`. |
 
 O layout autenticado (`AppShell`) chama `GET /v1/portal/auth/me` para nome e papel no cabeçalho (com fallback para dados da sessão).
 
