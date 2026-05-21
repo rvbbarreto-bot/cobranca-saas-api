@@ -4,7 +4,7 @@ Pacote extraído do repositório **Projeto_EmissaoNF** (desenvolvimento: portal 
 
 ## Retomada da fábrica (PO + Tech Lead)
 
-**Documento mestre:** [Projeto_CobrancaBoleto/RETOMADA_FABRICA.md](./Projeto_CobrancaBoleto/RETOMADA_FABRICA.md) — branch ativa, o que está feito, pendências Sprint 4 e gates de qualidade.
+**Documento mestre:** [Projeto_CobrancaBoleto/RETOMADA_FABRICA.md](./Projeto_CobrancaBoleto/RETOMADA_FABRICA.md) — snapshot, prioridades e gates. **Briefing fábrica (Maio 2026):** [PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md](./Projeto_CobrancaBoleto/PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md).
 
 ## Pré-requisitos
 

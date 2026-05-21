@@ -48,6 +48,8 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/portal/escritorio/assinatura` | Bearer portal + billing link; roles admin_escritorio / owner; `{ assinatura: { status, read_only, plano, uso, … } }` ou **404** sem assinatura |
 | POST | `/v1/portal/escritorio/assinatura/activate` | admin_escritorio; cria assinatura recorrente no Asaas (`gateway_subscription_id`); **503** se `ASAAS_PLATFORM_API_KEY` ausente; **409** se já ativada |
 
+**Portal web (Sprint B):** em `/escritorio`, admin vê botão que chama `POST …/assinatura/activate`. Listagens `/cobrancas`, `/clientes` e `/notas-fiscais` usam `limit` (50) + **Carregar mais** via `next_cursor`.
+
 **Metering (Sprint 4):** em `POST /v1/portal/cobrancas` e `POST /v1/portal/clientes`, o servidor pode responder:
 
 | HTTP | `error` (corpo) | Quando |

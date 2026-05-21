@@ -1,8 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { EscritorioPage } from "./EscritorioPage";
+
+const activateMock = vi.fn();
 
 vi.mock("../lib/api", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../lib/api")>();
@@ -31,12 +34,13 @@ vi.mock("../lib/api", async (importOriginal) => {
         },
         uso: { year_month: "2026-05", clientes: 2, cobrancas_criadas_mes: 5 }
       }
-    })
+    }),
+    activateEscritorioAssinatura: (...args: unknown[]) => activateMock(...args)
   };
 });
 
 function renderPage(): ReturnType<typeof render> {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <BrowserRouter>
@@ -49,6 +53,14 @@ function renderPage(): ReturnType<typeof render> {
 describe("EscritorioPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    activateMock.mockResolvedValue({
+      activation: {
+        gatewayCustomerId: "cus_test",
+        gatewaySubscriptionId: "sub_test",
+        status: "active",
+        nextDueDate: "2026-06-01"
+      }
+    });
   });
 
   it("exibe plano e uso da assinatura", async () => {
@@ -57,5 +69,14 @@ describe("EscritorioPage", () => {
     expect(await screen.findByText("profissional")).toBeTruthy();
     expect(await screen.findByText(/2 \/ 250/)).toBeTruthy();
     expect(await screen.findByText(/5 \/ 2000/)).toBeTruthy();
+  });
+
+  it("exibe botão de ativar cobrança recorrente e chama API", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const btn = await screen.findByRole("button", { name: /Ativar cobrança recorrente/i });
+    await user.click(btn);
+    await waitFor(() => expect(activateMock).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/sub_test/)).toBeTruthy();
   });
 });

@@ -1,24 +1,24 @@
 # Retomada da fábrica — SaaS Cobranças (PO + Tech Lead)
 
 **Emissão:** Maio 2026 · **Repositório:** `cobranca-saas-api`  
-**Leia isto primeiro.** Os pacotes `DEMANDA_SPRINT1/2/3` e `PROMPT_FABRICA_KICKOFF.md` permanecem como referência histórica e detalhe de tarefas; este arquivo é a **fonte da verdade operacional** para retomar o desenvolvimento.
+**Leia isto primeiro.** Pacotes históricos (`DEMANDA_SPRINT*`, `PROMPT_FABRICA_KICKOFF.md`) são referência; operação diária usa **este arquivo** + [PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md](./PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md).
 
 ---
 
 ## 1. Onde estamos (snapshot)
 
-| Marco | Branch de referência | Status |
-|-------|---------------------|--------|
-| Fase 0 — saneamento | `main` (via PR #1) | Concluído |
+| Marco | Branch / commit | Status |
+|-------|-----------------|--------|
+| Fase 0 — saneamento | `main` (PR #1) | Concluído |
 | Sprint 1 — gateway + emissão | `main` | Concluído |
-| Sprint 2 — notificações + régua + CRUD escritório | `main` (`b2dfd1e`) | Concluído |
+| Sprint 2 — notificações + régua + CRUD escritório (API) | `main` | Concluído |
 | Sprint 3 — portal cliente + relatórios | `main` (PR #2/#3) | Concluído |
-| **Sprint 4 — SaaS billing** | **`main`** (`409c69c`) | **Integrado em `main`** (PR #4; base original era `feat/sprint1` — corrigido) |
-| **Sprint 4.7 — Asaas Subscriptions** | **`feat/asaas-subscriptions`** | **PR #5** → base **`main`** |
+| Sprint 4 — SaaS billing + MRR + n8n outbound | `main` (`409c69c`) | Concluído (PR #4) |
+| **Sprint 4.7 — Asaas Subscriptions** | **`main`** (`aa720d3`) | **Concluído** (PR #5 mergeado) |
 
-**Testes na branch Sprint 4 (local):** `172` testes Vitest passando (`npm test`).
+**Testes unitários (local):** `185` Vitest (`npm test`) + `22` portal (`npm run portal:test`).
 
-**Base `main` atual:** `55ecb9d` — inclui portal cliente, dashboard, export CSV, E2E Sprint 3.
+**Branch de trabalho da fábrica:** `main` (após `git pull`). Sprint B/C em branches curtas `feat/*` se necessário.
 
 ---
 
@@ -26,15 +26,15 @@
 
 ```bash
 git fetch origin
-git checkout cursor/sprint4-saas-billing   # trabalho atual da fábrica
-# ou main, se Sprint 4 já tiver sido mergeado — confira com o PO
+git checkout main && git pull origin main
 
 npm ci
-cp .env.example .env                       # preencher DATABASE_URL, JWT_SECRET, etc.
+cp .env.example .env                       # DATABASE_URL, JWT_SECRET, ENCRYPTION_KEY, etc.
 npm run migrate
 npm run seed:dev                           # ambiente novo
 npm run build
-npm test                                   # meta: 172+ verdes
+npm test                                   # meta: 185+ verdes
+npm run portal:test                        # meta: 22+ verdes
 npm run quality:gate                       # requer DATABASE_URL + schema migrado
 ```
 
@@ -42,9 +42,9 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 
 | Script | Quando usar |
 |--------|-------------|
-| `bash Projeto_CobrancaBoleto/validacao_fase_0.sh` | Regressão de saneamento (secrets, Docker, audit) |
+| `bash Projeto_CobrancaBoleto/validacao_fase_0.sh` | Regressão de saneamento |
 | `bash Projeto_CobrancaBoleto/validacao_sprint3.sh` | Portal cliente + relatórios |
-| `bash Projeto_CobrancaBoleto/validacao_sprint4.sh` | SaaS billing (5 checks estruturais) |
+| `bash Projeto_CobrancaBoleto/validacao_sprint4.sh` | SaaS billing (6 checks) |
 
 **Demonstração E2E manual (Sprint 3):** [DEMO_SPRINT3_FLUXO_11_PASSOS.md](./DEMO_SPRINT3_FLUXO_11_PASSOS.md)
 
@@ -54,96 +54,92 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 
 ### Plataforma
 - Docker + `docker-compose.yml`, rate limit Redis, Sentry opcional, `audit_log`
-- Crypto AES-256-GCM (`src/platform/crypto/encrypt.ts`, `decrypt.ts`)
+- Crypto AES-256-GCM (`src/platform/crypto/`)
 - Filas BullMQ: `charges:emission`, `inbox:process`, `charges:sync`, `notifications:send`
 
-### Negócio
-- **payment-gateway:** `AsaasAdapter`, factory multi-provider, emissão assíncrona
-- **inbox:** dedup, 6 eventos Asaas, enfileiramento de régua e confirmação de pagamento
-- **notifications:** Resend + Z-API, `notification-send.worker`, scheduler régua (07h BRT)
-- **portal escritório:** CRUD config/regua/templates, dashboard, export CSV, PATCH cliente/cobrança, paginação cursor
-- **portal cliente:** magic link (`cliente_access_tokens`), `/v1/portal/cliente/*`
-- **Sprint 4 (branch atual):** `planos`, `assinaturas`, `tenant_usage_monthly`, metering em POST cobrança/cliente, trial no provisionamento
+### Negócio (API)
+- **payment-gateway:** `AsaasAdapter`, emissão assíncrona
+- **inbox:** dedup, 6 eventos Asaas, régua, confirmação de pagamento
+- **notifications:** Resend + Z-API, scheduler régua (07h BRT)
+- **portal escritório:** config/regua/templates, dashboard, export CSV, PATCH cliente/cobrança, paginação cursor
+- **portal cliente:** magic link, `/v1/portal/cliente/*`
+- **saas-billing:** planos, assinaturas, metering, trial, `GET /v1/saas/metrics`, outbound n8n
+- **Sprint 4.7:** `POST /v1/portal/escritorio/assinatura/activate`, migration `024`, webhooks subscription → `assinaturas`, `subscription.past_due`
 
-### Front
-- SPA `apps/portal-web` (Vite + React) — ver [docs/PORTAL_WEB.md](../docs/PORTAL_WEB.md)
+### Front (`apps/portal-web`)
+- Login, dashboard KPIs, cobranças/clientes/NFs, relatórios CSV, portal cliente, bloco plano/assinatura em `/escritorio`
+- **Pendente no front:** botão activate assinatura, paginação “Carregar mais”, tela `/configuracoes` real
 
-### Fora de escopo (não implementar neste repo)
+### Fora de escopo
 - NFS-e / nota fiscal → projeto separado
 - Motor fiscal `/internal/fiscal`
 
 ---
 
-## 4. Trabalho imediato — Sprint 4 (fechar fase 1 e abrir PR)
+## 4. Trabalho imediato (pós PR #5)
 
-**Branch:** `cursor/sprint4-saas-billing`  
-**Pacote detalhado:** [DEMANDA_SPRINT4.md](./DEMANDA_SPRINT4.md)
+**Briefing completo:** [PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md](./PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md)
 
-### 4.1 Entregue nesta branch (validar, não reimplementar)
-
-- [x] Migration `023_saas_billing_plans_subscriptions.sql`
-- [x] Módulo `src/modules/saas-billing/`
-- [x] `GET /v1/saas/plans` (JWT core `owner` / `admin`)
-- [x] `GET /v1/portal/escritorio/assinatura`
-- [x] `POST /v1/tenants/provision` com `plano_slug` / `planoSlug` + trial 14 dias
-- [x] Enforcement: `assertTenantCanMutate` em POST cobrança e POST cliente
-- [x] Testes unitários `assert-tenant-can-mutate` (4 casos)
-
-### 4.2 Checklist merge PR #4 (fase 1)
+### 4.1 Sprint A — Fechar aceite PR #5 (se ainda pendente no PO)
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | Contrato HTTP (`API_CONTRATO_E_SMOKE.md`) | ✅ |
-| 2 | Teste integração provision + trial | ✅ `tests/saas-billing/sprint4-billing.integration.test.ts` |
-| 3 | Testes GET assinatura / plans | ✅ integração + `escritorio-assinatura-router.test.ts` |
-| 4 | UI `/escritorio` — bloco assinatura | ✅ `EscritorioPage` + `fetchEscritorioAssinatura` |
-| 5 | `validacao_sprint4.sh` | ✅ **6/6** (Git Bash/WSL/CI) |
-| 6 | `npm run quality:gate` | Validar no CI antes do merge |
-| 7 | Review PO | Demo: provision → limites → `402`/`403` |
+| 1 | Merge PR #5 em `main` | ✅ `aa720d3` |
+| 2 | `npm test` + `npm run portal:test` | ✅ 185 + 22 (validar no CI) |
+| 3 | `validacao_sprint4.sh` 6/6 | Validar local/CI |
+| 4 | `npm run quality:gate` | Validar com `DATABASE_URL` |
+| 5 | Smoke sandbox Asaas (activate + GET assinatura) | PO / TL |
+| 6 | Demo PO: trial → activate → `gateway_subscription_id` | Pendente aceite |
 
-### 4.3 Sprint 4 fase 2 (em desenvolvimento na branch do PR)
+### 4.2 Sprint B — Portal (branch `feat/portal-assinatura-pagination`)
 
-- [x] **4.5** `GET /v1/saas/metrics` (MRR, tenants por status, inadimplência) — role **owner**
-- [x] **4.6** `docs/N8N_WEBHOOKS.md` + outbound `charge.paid` via `N8N_PLATFORM_WEBHOOK_URL`
-- [x] Cobrança recorrente Asaas Subscriptions (`POST .../assinatura/activate`, migration 024)
-- [x] Webhooks inbox → atualização `assinaturas` + outbound `subscription.past_due`
+- [x] UI `POST .../assinatura/activate` em `EscritorioPage` + testes Vitest
+- [x] “Carregar mais” (`next_cursor`) em cobranças, clientes, notas fiscais
+- [x] `API_CONTRATO_E_SMOKE.md` / `PORTAL_WEB.md` (Sprint B portal)
+- [ ] Merge PR + `npm run portal:test` no CI
 
----
+### 4.3 Sprint C — Configurações escritório (API já existe)
 
-## 5. Ordem de execução recomendada (próximas 2 semanas)
+- [ ] `/configuracoes`: gateway Asaas, CRUD régua, templates + preview
+- [ ] Testes router/integração config/regua
 
-```
-Semana A — Fechar Sprint 4 fase 1
-  1. Completar itens 4.2 (tabela acima)
-  2. Abrir PR → main; PO aceita com validacao_sprint4.sh + demo
-  3. Atualizar README e este doc (marcar Sprint 4 mergeado)
+### 4.4 Sprint D — Qualidade / produção (contínuo)
 
-Semana B — Sprint 4 fase 2 + preparação n8n
-  4. TAREFA 4.5 métricas SaaS (se priorizado pelo PO)
-  5. TAREFA 4.6 contrato n8n + testes de idempotência inbox (ver FASE2 P2)
-  6. Front: fluxo upgrade de plano (mock ou manual até gateway subscription)
-
-Contínuo — Qualidade
-  - Cada PR: DoD em docs/FASE2_KICKOFF_QUALIDADE.md
-  - PRs pequenos (< 400 linhas úteis quando possível)
-```
+- [ ] FASE2 P2: idempotência inbox (carga leve)
+- [ ] Evidências `SPRINT1_ACEITE_CHECKLIST.md` (`e2e:asaas:evidence`)
+- [ ] `DEPLOY_CHECKLIST.md` + mocks desligados em prod
 
 ---
 
-## 6. Regras absolutas (vigentes em todas as sprints)
+## 5. Ordem de execução (próximas 2 semanas)
 
-Copiar no contexto do agente de IA ou colar no briefing diário:
+```
+Semana 1 — Aceite + Sprint B
+  1. git pull main; quality:gate + validacao_sprint4.sh
+  2. Aceite PO PR #5 (smoke Asaas sandbox)
+  3. PR feat: portal activate + paginação cursor
 
-1. **Stack:** Node 20 + TS 5.7 + Express + `pg` raw + BullMQ — sem Nest/Prisma sem aprovação TL.
-2. **Multi-tenant:** `tenant_id` em tabelas novas; RLS / `SET LOCAL app.tenant_id`.
-3. **Secrets:** nunca no código nem no git; usar `.env.example` apenas com placeholders.
-4. **Webhooks:** inbox pattern — persistir → job → 202; dedup por `external_event_id`.
+Semana 2 — Sprint C (configurações)
+  4. Tela /configuracoes (config + régua + templates)
+  5. Testes mínimos + contrato HTTP
+
+Contínuo
+  - DoD: docs/FASE2_KICKOFF_QUALIDADE.md
+  - PRs pequenos (< 400 linhas úteis)
+```
+
+---
+
+## 6. Regras absolutas
+
+1. **Stack:** Node 20 + TS 5.7 + Express + `pg` raw + BullMQ.
+2. **Multi-tenant:** `tenant_id` + RLS / `SET LOCAL app.tenant_id`.
+3. **Secrets:** nunca no código nem no git.
+4. **Webhooks:** inbox pattern; dedup `external_event_id`.
 5. **Estados terminais:** `paga` e `cancelada` não retrocedem.
 6. **Migrations:** `db/migrations/NNN_descricao.sql`, idempotentes.
 7. **Audit:** `writeAuditLog` na mesma transação das mutações críticas.
-8. **Cobertura:** ≥ 82% linhas em `application/` e `domain/` (ver `vitest.config.ts`).
-
-Detalhe histórico e exemplos de código: [PROMPT_FABRICA_KICKOFF.md](./PROMPT_FABRICA_KICKOFF.md) (seções 2–5).
+8. **Cobertura:** ≥ 82% em `application/`/`domain/` (`vitest.config.ts`).
 
 ---
 
@@ -151,48 +147,51 @@ Detalhe histórico e exemplos de código: [PROMPT_FABRICA_KICKOFF.md](./PROMPT_F
 
 | Documento | Uso |
 |-----------|-----|
-| **Este arquivo** | Kickoff retomada, prioridades, gates |
-| [DEMANDA_SPRINT4.md](./DEMANDA_SPRINT4.md) | Tarefas Sprint 4 (detalhe) |
-| [DEMANDA_SPRINT3.md](./DEMANDA_SPRINT3.md) | Histórico Sprint 3 (concluído) |
-| [DEMANDA_SPRINT2.md](./DEMANDA_SPRINT2.md) | Histórico Sprint 2 (concluído) |
-| [docs/API_CONTRATO_E_SMOKE.md](../docs/API_CONTRATO_E_SMOKE.md) | Contrato HTTP + smoke |
+| **Este arquivo** | Snapshot, gates, prioridades |
+| [PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md](./PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md) | Briefing para colar no Cursor / fábrica |
+| [DEMANDA_SPRINT4_ASAAS_SUBSCRIPTIONS.md](./DEMANDA_SPRINT4_ASAAS_SUBSCRIPTIONS.md) | Detalhe Sprint 4.7 |
+| [docs/API_CONTRATO_E_SMOKE.md](../docs/API_CONTRATO_E_SMOKE.md) | Contrato HTTP |
 | [docs/FASE2_KICKOFF_QUALIDADE.md](../docs/FASE2_KICKOFF_QUALIDADE.md) | DoD por PR |
-| [docs/MVP_ESCOPO_CONGELADO.md](../docs/MVP_ESCOPO_CONGELADO.md) | Escopo produto |
-| [SETUP_POSTGRES_E_ENV.md](../SETUP_POSTGRES_E_ENV.md) | Banco e variáveis |
-| [docs/ASAAS_SANDBOX_E2E.md](../docs/ASAAS_SANDBOX_E2E.md) | E2E gateway sandbox |
+| [docs/N8N_WEBHOOKS.md](../docs/N8N_WEBHOOKS.md) | Outbound n8n |
+| [docs/ASAAS_SANDBOX_E2E.md](../docs/ASAAS_SANDBOX_E2E.md) | Smoke gateway |
 
 ---
 
 ## 8. SYSTEM PROMPT (colar no Cursor antes de codar)
 
 ```
-Você trabalha no repositório cobranca-saas-api (SaaS cobranças Boleto/PIX, multi-tenant BR).
+Repositório: cobranca-saas-api (SaaS cobranças Boleto/PIX, multi-tenant BR).
 
 ESTADO (Maio 2026):
-- main: Sprints 0–3 concluídos (gateway, notificações, portal escritório + cliente).
-- Branch ativa: cursor/sprint4-saas-billing — planos, assinaturas, metering, trial no provision.
-- 172+ testes Vitest; quality:gate exige DATABASE_URL migrado.
+- main (aa720d3): Sprints 0–4.7 concluídos — inclui activate assinatura Asaas (migration 024).
+- 185 testes API + 22 portal; quality:gate exige DATABASE_URL migrado.
 
 ANTES DE CODAR:
-1. Ler Projeto_CobrancaBoleto/RETOMADA_FABRICA.md
-2. Confirmar branch e sprint com o PO
-3. Não reimplementar itens marcados como concluídos na secção 3 do RETOMADA_FABRICA
+1. Ler Projeto_CobrancaBoleto/RETOMADA_FABRICA.md e PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md
+2. git checkout main && git pull
+3. Não reimplementar secção 3 do RETOMADA_FABRICA
 
-PRÓXIMA ENTREGA: fechar Sprint 4 fase 1 (contrato API, testes integração provision, UI assinatura, PR merge).
+PRÓXIMA ENTREGA: Sprint B — UI activate + paginação cursor no portal.
 
 Regras: multi-tenant, audit_log, inbox pattern, sem NFS-e, sem secrets no código.
-Stack imutável: Node 20, Express, pg, BullMQ.
+Stack: Node 20, Express, pg, BullMQ.
 ```
 
 ---
 
-## 9. Ritual PO + Tech Lead (30 min, início de sprint)
+## 9. Ritual PO + Tech Lead (30 min)
 
-1. Confirmar branch base (`main` vs `cursor/sprint4-saas-billing`).
-2. Validar gates: `npm test`, script de validação do sprint, CI no GitHub.
-3. Priorizar **uma** linha da tabela 4.2 ou backlog 4.3.
-4. Atualizar secção 4 deste documento com data e responsável.
+1. Confirmar `main` atualizado (`git pull`).
+2. Gates: `npm test`, `portal:test`, CI GitHub, `validacao_sprint4.sh`.
+3. Priorizar **uma** linha da tabela 4.2 (Sprint B ou C).
+4. Atualizar secção 4 com data e responsável.
+
+## 10. Autorização PO — commit e PR pela fábrica
+
+Entregas **P0/P1 importantes:** o PO autorizou Tech Lead + fábrica a fazer **commit + push + PR** para `main` quando o checklist G1–G7 estiver verde (ver [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md)).
+
+**Merge em `main`:** continua a ser decisão do PO após CI + review (a fábrica não faz merge sem pedido explícito).
 
 ---
 
-*Mantido por PO + Tech Lead. Atualizar após merge de cada sprint.*
+*Atualizado após merge PR #5 (Sprint 4.7). Próxima atualização: após Sprint B merge.*
