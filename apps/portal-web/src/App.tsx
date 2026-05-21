@@ -16,6 +16,7 @@ import { EscritorioPage } from "./pages/EscritorioPage";
 import { RelatoriosPage } from "./pages/RelatoriosPage";
 import { AjudaProvisionamentoCorePage } from "./pages/AjudaProvisionamentoCorePage";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
 import { ClienteEditPage } from "./pages/ClienteEditPage";
 import { BoletoDetalhePage } from "./pages/BoletoDetalhePage";
 import { ClienteAcessoPage } from "./pages/ClienteAcessoPage";
@@ -85,15 +86,7 @@ export function App(): JSX.Element {
                     />
                   }
                 />
-                <Route
-                  path="/configuracoes"
-                  element={
-                    <PlaceholderPage
-                      title="Configurações"
-                      description="Preferências do escritório, integrações e papéis de acesso."
-                    />
-                  }
-                />
+                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
               </Route>
             </Route>
             <Route path="/" element={<RootRedirect />} />

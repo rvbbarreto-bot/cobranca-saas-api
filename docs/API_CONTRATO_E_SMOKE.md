@@ -50,6 +50,20 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 
 **Portal web (Sprint B):** em `/escritorio`, admin vê botão que chama `POST …/assinatura/activate`. Listagens `/cobrancas`, `/clientes` e `/notas-fiscais` usam `limit` (50) + **Carregar mais** via `next_cursor`.
 
+**Escritório — configurações (Sprint C)** — prefixo `/v1/portal/escritorio`, **admin_escritorio** (403 outros papéis):
+
+| Método | Caminho | Notas |
+|--------|---------|--------|
+| GET | `/config` | `{ config }` credenciais mascaradas (`gateway_api_key`, `whatsapp_token`) |
+| PATCH | `/config` | Campos opcionais: fiscal, `gateway_provider`, `gateway_api_key`, `whatsapp_*` |
+| GET | `/regua` | `{ data: rules[] }` |
+| POST | `/regua` | `{ days_offset, channel, template_id? }` — **409** `duplicate_rule` |
+| PATCH | `/regua/:ruleId` | `{ is_active?, channel? }` |
+| DELETE | `/regua/:ruleId` | **204** |
+| GET | `/templates` | `{ data: templates[] }` |
+| PATCH | `/templates/:templateId` | `{ subject?, body_template }` — **422** `system_template_readonly` |
+| GET | `/templates/:templateId/preview` | Query `charge_id` (UUID) — `{ subject, body_rendered }` |
+
 **Metering (Sprint 4):** em `POST /v1/portal/cobrancas` e `POST /v1/portal/clientes`, o servidor pode responder:
 
 | HTTP | `error` (corpo) | Quando |

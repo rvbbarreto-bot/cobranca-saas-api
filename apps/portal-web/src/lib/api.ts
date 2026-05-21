@@ -603,6 +603,245 @@ export type EscritorioAssinaturaResponse = {
   };
 };
 
+export type EscritorioConfig = {
+  tenant_id: string;
+  cnpj_emissor: string | null;
+  razao_social: string | null;
+  inscricao_municipal: string | null;
+  regime_tributario: string | null;
+  codigo_municipio: string | null;
+  aliquota_iss: number | null;
+  gateway_provider: string | null;
+  gateway_api_key: string | null;
+  whatsapp_provider: string | null;
+  whatsapp_token: string | null;
+};
+
+export type PatchEscritorioConfigBody = {
+  cnpj_emissor?: string;
+  razao_social?: string;
+  inscricao_municipal?: string;
+  regime_tributario?: "simples" | "presumido" | "real";
+  codigo_municipio?: string;
+  aliquota_iss?: number;
+  gateway_provider?: "asaas" | "pagarme";
+  gateway_api_key?: string;
+  whatsapp_provider?: "zapi" | "twilio";
+  whatsapp_token?: string;
+};
+
+export type ChargingRuleRow = {
+  id: string;
+  days_offset: number;
+  channel: string;
+  is_active: boolean;
+  event_type?: string | null;
+  body_preview?: string | null;
+};
+
+export type NotificationTemplateRow = {
+  id: string;
+  tenant_id: string | null;
+  event_type: string;
+  channel: string;
+  subject: string | null;
+  body_template: string;
+  is_active: boolean;
+  updated_at?: string;
+};
+
+export type TemplatePreviewResponse = {
+  subject: string | null;
+  body_rendered: string;
+};
+
+function apiMessageFromJson(json: unknown, status: number): string {
+  if (typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string") {
+    return (json as { message: string }).message;
+  }
+  return `HTTP ${status}`;
+}
+
+export async function fetchEscritorioConfig(): Promise<{ config: EscritorioConfig | null }> {
+  const res = await apiFetch("/v1/portal/escritorio/config", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { config: EscritorioConfig | null };
+}
+
+export async function patchEscritorioConfig(body: PatchEscritorioConfigBody): Promise<{ config: EscritorioConfig | null }> {
+  const res = await apiFetch("/v1/portal/escritorio/config", {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { config: EscritorioConfig | null };
+}
+
+export async function fetchChargingRules(): Promise<{ data: ChargingRuleRow[] }> {
+  const res = await apiFetch("/v1/portal/escritorio/regua", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  const o = json as { data?: ChargingRuleRow[] };
+  return { data: Array.isArray(o.data) ? o.data : [] };
+}
+
+export async function postChargingRule(body: {
+  days_offset: number;
+  channel: "email" | "whatsapp" | "both";
+  template_id?: string;
+}): Promise<{ rule: ChargingRuleRow }> {
+  const res = await apiFetch("/v1/portal/escritorio/regua", {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { rule: ChargingRuleRow };
+}
+
+export async function patchChargingRule(
+  ruleId: string,
+  body: { is_active?: boolean; channel?: "email" | "whatsapp" | "both" }
+): Promise<{ rule: ChargingRuleRow }> {
+  const res = await apiFetch(`/v1/portal/escritorio/regua/${encodeURIComponent(ruleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { rule: ChargingRuleRow };
+}
+
+export async function deleteChargingRule(ruleId: string): Promise<void> {
+  const res = await apiFetch(`/v1/portal/escritorio/regua/${encodeURIComponent(ruleId)}`, { method: "DELETE" });
+  if (res.status === 204) {
+    return;
+  }
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+}
+
+export async function fetchNotificationTemplates(): Promise<{ data: NotificationTemplateRow[] }> {
+  const res = await apiFetch("/v1/portal/escritorio/templates", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  const o = json as { data?: NotificationTemplateRow[] };
+  return { data: Array.isArray(o.data) ? o.data : [] };
+}
+
+export async function patchNotificationTemplate(
+  templateId: string,
+  body: { subject?: string; body_template: string }
+): Promise<{ template: NotificationTemplateRow }> {
+  const res = await apiFetch(`/v1/portal/escritorio/templates/${encodeURIComponent(templateId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { template: NotificationTemplateRow };
+}
+
+export async function previewNotificationTemplate(
+  templateId: string,
+  chargeId: string
+): Promise<TemplatePreviewResponse> {
+  const sp = new URLSearchParams({ charge_id: chargeId });
+  const res = await apiFetch(
+    `/v1/portal/escritorio/templates/${encodeURIComponent(templateId)}/preview?${sp}`,
+    { method: "GET" }
+  );
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as TemplatePreviewResponse;
+}
+
+/** Nao reenvia segredo se vazio ou igual ao valor mascarado ja exibido. */
+export function shouldPatchSecret(input: string, masked: string | null | undefined): boolean {
+  const t = input.trim();
+  if (!t) {
+    return false;
+  }
+  if (masked && t === masked) {
+    return false;
+  }
+  return true;
+}
+
 export type ActivateEscritorioAssinaturaResponse = {
   activation: {
     gatewayCustomerId: string;
