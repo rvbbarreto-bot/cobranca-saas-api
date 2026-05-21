@@ -4,28 +4,28 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **Integração:** `feat/sprint1-payment-emission-portal` — Sprints B–H + FASE2 A em curso.
-- **Próxima entrega:** FASE2 A — [DEMANDA_FASE2_A_AUTH_PRODUCAO.md](./DEMANDA_FASE2_A_AUTH_PRODUCAO.md)
-- **Testes:** `npm test` → 211+ · `portal:test` → 33 · `quality:gate`
+- **Integração:** `feat/sprint1-payment-emission-portal` — Sprints B–H + FASE2 A (#15 mergeado).
+- **`main`:** defasado (Sprint F) até PR Sprint I.
+- **Próxima entrega:** Sprint I — [DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md](./DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md)
+- **Testes:** `npm test` → 220+ · `portal:test` → 33 · `quality:gate`
 
 ## NÃO refazer
 
-- Runner E2E Sprint H, n8n, portal, inbox (já na branch integração).
+- FASE2 A, Sprint H E2E, n8n G, portal B–F (já na branch integração).
 - Novo IdP/OAuth (fora de escopo).
 
-## FASE2 A — ATUAL (auth produção)
+## Sprint I — ATUAL (consolidar main)
 
-1. `feat/fase2-a-auth-producao` (após merge sprint1)
-2. Runbook `docs/RUNBOOK_AUTH_PRODUCAO.md` + testes JWT/mock
-3. PR + handoff TL — **sem merge**
+1. PR `feat/sprint1-payment-emission-portal` → `main`
+2. `docs/RELEASE_NOTES_INTEGRACAO_MAIN.md`
+3. Handoff TL — **sem merge IA**
 
-## Backlog (após FASE2 A)
+## Backlog (após Sprint I)
 
-| Item | Tema |
-|------|------|
-| Homolog PO | Checklist Asaas assinado |
-| CI opcional | Job manual Asaas E2E |
-| Release | `main` ← branch integração |
+| Item | Pacote |
+|------|--------|
+| Homolog PO | Checklist Asaas assinado (processo) |
+| CI manual Asaas | [DEMANDA_SPRINT_J_CI_ASAAS_E2E.md](./DEMANDA_SPRINT_J_CI_ASAAS_E2E.md) |
 
 ## Regras
 

@@ -12,18 +12,21 @@
 | Sprints B–F | #6–#11 | Concluído |
 | Sprint G — `charge.emitted` n8n | #12 | Concluído |
 | Sprint H — homolog Asaas E2E | #14 | Concluído |
-| **FASE2 A — auth produção** | #15 (em revisão) | **← ATUAL** |
+| FASE2 A — auth produção | #15 | Concluído |
+| **Sprint I — consolidar `main`** | (PR aberto) | **← ATUAL** |
 
-**Testes:** `npm test` 211+ · `portal:test` 33 · CI `quality:gate`
+**Testes:** `npm test` 220+ · `portal:test` 33 · CI `quality:gate`
 
-**Branch fábrica:** `feat/fase2-a-auth-producao` ← `feat/sprint1-payment-emission-portal` (integração)
+**Branch integração:** `feat/sprint1-payment-emission-portal` @ `ee4b8d8`  
+**`main`:** ainda em Sprint F até merge do PR Sprint I
 
 ---
 
 ## 2. Gate de entrada
 
 ```bash
-git fetch origin && git checkout main && git pull origin main
+git fetch origin
+git checkout feat/sprint1-payment-emission-portal && git pull origin feat/sprint1-payment-emission-portal
 npm ci && npm run migrate && npm run seed:dev
 npm run build && npm test && npm run portal:test && npm run quality:gate
 ```
@@ -34,24 +37,22 @@ npm run build && npm test && npm run portal:test && npm run quality:gate
 
 - API + portal completo (editar cobrança, configurações, paginação, SaaS billing)
 - Inbox idempotência, n8n outbound (**6 eventos**, incl. `charge.emitted`)
-- Runner E2E Asaas com assertions nomeadas (Sprint H) + runbook auth (FASE2 A)
+- Runner E2E Asaas + runbook auth (FASE2 A)
 
 ---
 
-## 4. Trabalho imediato — FASE2 A
+## 4. Trabalho imediato — Sprint I
 
-**Pacote:** [DEMANDA_FASE2_A_AUTH_PRODUCAO.md](./DEMANDA_FASE2_A_AUTH_PRODUCAO.md)
+**Pacote:** [DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md](./DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md)
 
 | # | Item |
 |---|------|
-| A.1 | `RUNBOOK_AUTH_PRODUCAO.md` |
-| A.2 | `check:prod-env` anti-placeholder |
-| A.3–A.4 | Testes unit + integração mocks 404 |
-| A.5 | Contrato + portal ajuda |
-| A.6 | CI check prod-env |
-| A.7 | PR + handoff TL |
+| I.1 | `docs/RELEASE_NOTES_INTEGRACAO_MAIN.md` |
+| I.2 | RETOMADA + PROMPT |
+| I.3 | PR `feat/sprint1-payment-emission-portal` → `main` |
+| I.4 | CI verde + handoff TL (**sem merge IA**) |
 
-### Histórico B–H
+### Histórico
 
 | Sprint | PR |
 |--------|-----|
@@ -62,20 +63,23 @@ npm run build && npm test && npm run portal:test && npm run quality:gate
 | F portal editar cobrança | #11 |
 | G `charge.emitted` n8n | #12 |
 | H homolog Asaas E2E | #14 |
+| FASE2 A auth produção | #15 |
 
-### Backlog pós–FASE2 A
+### Backlog pós–Sprint I
 
-- Aceite PO checklist sandbox (processo)
-- CI `workflow_dispatch` Asaas E2E
-- Consolidar `main` ← branch integração sprint1
+| Ordem | Item | Pacote |
+|-------|------|--------|
+| 1 | Homolog PO checklist sandbox | Processo (PO) |
+| 2 | CI `workflow_dispatch` Asaas E2E | [DEMANDA_SPRINT_J_CI_ASAAS_E2E.md](./DEMANDA_SPRINT_J_CI_ASAAS_E2E.md) |
 
 ---
 
 ## 5. Ordem de execução
 
 ```
-git pull → feat/fase2-a-auth-producao
-DEMANDA_FASE2_A → quality:gate → PR → handoff (sem merge IA)
+feat/sprint1-payment-emission-portal → PR main (Sprint I)
+TL merge → git pull main
+Sprint J (opcional CI Asaas)
 ```
 
 ---
@@ -90,8 +94,8 @@ Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · m
 
 | Doc | Uso |
 |-----|-----|
-| [DEMANDA_FASE2_A_AUTH_PRODUCAO.md](./DEMANDA_FASE2_A_AUTH_PRODUCAO.md) | **Atual** |
-| [docs/RUNBOOK_AUTH_PRODUCAO.md](../docs/RUNBOOK_AUTH_PRODUCAO.md) | Auth produção |
+| [DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md](./DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md) | **Atual** |
+| [docs/RELEASE_NOTES_INTEGRACAO_MAIN.md](../docs/RELEASE_NOTES_INTEGRACAO_MAIN.md) | Release |
 | [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) | PR / merge |
 
 ---
@@ -99,10 +103,10 @@ Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · m
 ## 8. SYSTEM PROMPT (colar no Cursor)
 
 ```
-Repositório: cobranca-saas-api. Sprints B–H mergeadas na branch integração.
-FASE2 A ATUAL: runbook auth produção + JWT/mock + testes.
-Branch: feat/fase2-a-auth-producao
-Pacote: Projeto_CobrancaBoleto/DEMANDA_FASE2_A_AUTH_PRODUCAO.md
+Repositório: cobranca-saas-api. Sprints B–H + FASE2 A mergeados na branch integração.
+Sprint I ATUAL: PR feat/sprint1-payment-emission-portal → main (release notes).
+Pacote: Projeto_CobrancaBoleto/DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md
 Gate: npm test + portal:test + quality:gate
 Governança: IA abre PR; Tech Lead merge.
+Próximo após I: DEMANDA_SPRINT_J_CI_ASAAS_E2E.md
 ```
