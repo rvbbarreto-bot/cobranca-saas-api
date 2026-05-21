@@ -19,6 +19,7 @@ import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
 import { ClienteEditPage } from "./pages/ClienteEditPage";
 import { BoletoDetalhePage } from "./pages/BoletoDetalhePage";
+import { CobrancaEditPage } from "./pages/CobrancaEditPage";
 import { ClienteAcessoPage } from "./pages/ClienteAcessoPage";
 import { ClienteCobrancasPage } from "./pages/ClienteCobrancasPage";
 import { ClienteCobrancaDetalhePage } from "./pages/ClienteCobrancaDetalhePage";
@@ -51,6 +52,7 @@ export function App(): JSX.Element {
                 <Route path="/notas-fiscais" element={<NotasFiscaisPage />} />
                 <Route path="/cobrancas" element={<CobrancasPage />} />
                 <Route path="/cobrancas/nova" element={<CobrancaFormPage />} />
+                <Route path="/cobrancas/:chargeId/editar" element={<CobrancaEditPage />} />
                 <Route path="/cobrancas/:chargeId" element={<BoletoDetalhePage />} />
                 <Route path="/relatorios" element={<RelatoriosPage />} />
                 <Route path="/escritorio" element={<EscritorioPage />} />

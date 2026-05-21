@@ -10,6 +10,7 @@ import {
   chargeStatusLabelPortal,
   chargeStatusPillClass,
   competenciaFromDue,
+  isChargeEditable,
   nossoNumeroDisplay
 } from "../lib/charge-status-ui";
 
@@ -50,6 +51,11 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
       Ver
     </Link>
   );
+  const editar = isChargeEditable(s) ? (
+    <Link to={`/cobrancas/${row.id}/editar`} className="link-inline">
+      Editar
+    </Link>
+  ) : null;
   const pdf = (
     <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Integração PDF em roadmap">
       Ver PDF
@@ -94,6 +100,12 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
   return (
     <div className="table-actions">
       {detail}
+      {editar ? (
+        <>
+          <span className="sep">|</span>
+          {editar}
+        </>
+      ) : null}
       {extra.map((el, i) => (
         <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}>
           <span className="sep">|</span>

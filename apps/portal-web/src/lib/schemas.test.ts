@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cobrancaFormSchema, loginFormSchema } from "./schemas";
+import { cobrancaEditFormSchema, cobrancaFormSchema, loginFormSchema } from "./schemas";
 
 describe("loginFormSchema", () => {
   it("aceita dados validos", () => {
@@ -59,6 +59,18 @@ describe("cobrancaFormSchema", () => {
       amount: 1,
       due_date: "15-01-2030"
     });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("cobrancaEditFormSchema", () => {
+  it("aceita valor e vencimento validos", () => {
+    const r = cobrancaEditFormSchema.safeParse({ amount: 99.9, due_date: "2030-12-01" });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejeita valor zero", () => {
+    const r = cobrancaEditFormSchema.safeParse({ amount: 0, due_date: "2030-12-01" });
     expect(r.success).toBe(false);
   });
 });
