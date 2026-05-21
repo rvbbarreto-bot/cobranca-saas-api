@@ -109,11 +109,12 @@ npm run quality:gate                       # requer DATABASE_URL + schema migrad
 - [x] C.4 — `escritorio-config-router.test.ts` (5 casos)
 - [x] C.5 — contrato HTTP + PR + handoff Tech Lead
 
-### 4.4 Sprint D — Qualidade / produção (contínuo)
+### 4.4 Sprint D — Qualidade / produção
 
-- [ ] FASE2 P2: idempotência inbox (carga leve)
-- [ ] Evidências `SPRINT1_ACEITE_CHECKLIST.md` (`e2e:asaas:evidence`)
-- [ ] `DEPLOY_CHECKLIST.md` + mocks desligados em prod
+- [x] D.1 — FASE2 P2: idempotência inbox (`docs/INBOX_WEBHOOK_IDEMPOTENCIA.md`, testes unit + integração, carga leve 8 POSTs)
+- [x] D.2 — `docs/evidencias/SPRINT1_ACEITE_CHECKLIST.md` + instruções `npm run e2e:asaas:evidence`
+- [x] D.3 — `docs/DEPLOY_CHECKLIST.md` (migration 024, `ENABLE_MOCK_AUTH=false`, `WEBHOOK_INBOX_SECRET`, `quality:gate`)
+- [ ] D.4 — PR `feat/sprint-d-inbox-qualidade` + handoff Tech Lead (merge pelo TL)
 
 ---
 
@@ -125,9 +126,12 @@ Semana 1 — Aceite + Sprint B
   2. Aceite PO PR #5 (smoke Asaas sandbox)
   3. PR feat: portal activate + paginação cursor
 
-Semana 2 — Sprint C (configurações) ← ATUAL
-  4. Executar DEMANDA_SPRINT_C_PORTAL_CONFIGURACOES.md
-  5. PR → handoff Tech Lead (não merge pela IA)
+Semana 2 — Sprint C (configurações) — concluída (PR #8)
+  4. ~~Executar DEMANDA_SPRINT_C~~
+  5. ~~PR → handoff Tech Lead~~
+
+Sprint D — inbox / qualidade ← ATUAL
+  6. PR feat/sprint-d-inbox-qualidade → handoff Tech Lead
 
 Contínuo
   - DoD: docs/FASE2_KICKOFF_QUALIDADE.md

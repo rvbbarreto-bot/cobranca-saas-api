@@ -92,6 +92,26 @@ Rotas: **GET** `/v1/portal/notas-fiscais`, `/v1/portal/cobrancas`, `/v1/portal/c
 
 **Migração:** listagem de notas com cursor requer **`012_portal_nf_resumo_id_pagination.sql`** (coluna `id` em `portal.vw_notas_fiscais_resumo`). Sem ela, `GET /v1/portal/notas-fiscais` falha no SQL até correr `npm run migrate`.
 
+### 2.2 Inbox — `POST /v1/inbox/webhooks` (idempotência, Sprint D)
+
+Detalhe completo: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md).
+
+| Header / campo | Obrigatório | Notas |
+|----------------|-------------|--------|
+| `x-tenant-id` | Sim | Slug tenant core |
+| `X-Webhook-Secret` | Se `WEBHOOK_INBOX_SECRET` definido | Em `production`, secret no servidor é obrigatório |
+| `X-External-Event-Id` | Recomendado para dedup | Alternativa: `body.external_event_id` |
+
+**Resposta** (sempre `accepted: true` em sucesso):
+
+| Caso | HTTP | `deduplicated` | `already_processed` |
+|------|------|----------------|---------------------|
+| Primeira gravação | **202** | `false` | `false` |
+| Reenvio (ainda na fila) | **200** | `true` | `false` |
+| Reenvio (já processado) | **200** | `true` | `true` |
+
+Corpo inclui `id` (UUID da linha em `webhook_inbox`). Unicidade: `(tenant_id, external_event_id)` — ver migration `001`.
+
 ---
 
 ## 3. Contratos de body (pontos que geravam confusao)

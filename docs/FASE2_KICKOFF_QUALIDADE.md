@@ -62,7 +62,7 @@ Ordem sugerida após análise do que já está no ar e do risco de produto. A PO
 |-------|------|--------|
 | **P0** | ~~PATCH cliente/cobrança~~ **Entregue:** `PATCH` API + helpers `patchPortalCliente` / `patchPortalCobranca` no SPA | Retificar sem duplicar; UI de edição pode seguir em PR pequeno. |
 | **P1** | ~~Paginação / cursor~~ **Entregue:** `limit` + `cursor` nos `GET` portal (cobranças, clientes, NFs, cobranças por cliente); contrato em [API_CONTRATO_E_SMOKE.md](./API_CONTRATO_E_SMOKE.md) secção 2.1; migração `012` para `id` na view de NFs | Evita listas lentas; próximo: botões “Carregar mais” no SPA. |
-| **P2** | **Inbox + job** — documentar e testar idempotência de webhook com casos de carga leve | Pré-requisito estável antes de n8n. |
+| **P2** | ~~**Inbox + job** — idempotência webhook~~ **Entregue (Sprint D):** [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md) + `tests/inbox/webhook-inbox-idempotency.integration.test.ts` | Pré-requisito estável antes de n8n. |
 | **P3** | **Orquestração n8n** (canais, régua) alinhada ao PRD de cobrança | Depois de P2 e contratos fechados com PO. |
 
 **Ritual sugerido (30 min):** PO traz 2–3 histórias priorizadas; engenharia estima e aponta dependências (BD, segurança, UX); saída = ordem P0–P3 atualizada nesta secção com data.

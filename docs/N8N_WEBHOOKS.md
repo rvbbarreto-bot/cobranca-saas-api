@@ -82,7 +82,7 @@ O n8n deve tratar `charge_id` + `event` como chave de deduplicação. A API pode
 
 | Direção | Rota | Uso |
 |---------|------|-----|
-| **Entrada** | `POST /v1/inbox/webhooks` | n8n / Asaas → API (já existente). |
+| **Entrada** | `POST /v1/inbox/webhooks` | n8n / Asaas → API (já existente). Idempotência: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md). |
 | **Saída** | `N8N_PLATFORM_WEBHOOK_URL` | API → n8n (este documento). |
 
 Não confundir com `WEBHOOK_INBOX_SECRET` (entrada). Use secret dedicado para outbound.
