@@ -3,6 +3,16 @@
  * Nao alterar assinaturas sem revisao de arquitetura — ver PROMPT_FABRICA_KICKOFF Sprint 1.
  */
 
+export interface CustomerAddressInput {
+  logradouro: string;
+  numero?: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
+}
+
 export interface CreateCustomerInput {
   name: string;
   cpfCnpj: string;
@@ -10,6 +20,8 @@ export interface CreateCustomerInput {
   phone?: string;
   /** portal_cliente_id ou outro id estavel no nosso dominio */
   externalReference: string;
+  /** Obrigatorio para alguns bancos (Inter, Cora, BB). */
+  endereco?: CustomerAddressInput;
 }
 
 export interface CreateBoletoInput {

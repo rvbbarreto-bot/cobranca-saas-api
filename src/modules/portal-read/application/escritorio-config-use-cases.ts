@@ -4,6 +4,8 @@ import type { AuditRequestContext } from "../../../platform/audit/audit-context"
 import { writeAuditLog } from "../../../platform/audit/audit.service";
 import { encryptAes256Gcm } from "../../../platform/crypto/symmetric-encryption";
 import { maskSecret } from "../../../platform/crypto/mask-secret";
+import { validateGatewayCredentials } from "../../../platform/payment-gateway/credential-schema";
+import { getProviderMeta } from "../../../platform/payment-gateway/provider-registry";
 import {
   getEscritorioConfig,
   upsertEscritorioConfigFields,
@@ -17,8 +19,9 @@ export const patchEscritorioConfigSchema = z.object({
   regime_tributario: z.enum(["simples", "presumido", "real"]).optional(),
   codigo_municipio: z.string().length(7).regex(/^\d+$/).optional(),
   aliquota_iss: z.number().min(0).max(10).optional(),
-  gateway_provider: z.enum(["asaas", "pagarme"]).optional(),
+  gateway_provider: z.enum(["asaas", "pagarme", "inter", "cora"]).optional(),
   gateway_api_key: z.string().min(10).optional(),
+  gateway_credentials: z.record(z.string(), z.string()).optional(),
   whatsapp_provider: z.enum(["zapi", "twilio"]).optional(),
   whatsapp_token: z.string().min(1).optional()
 });
@@ -37,6 +40,7 @@ export function mapEscritorioConfigPublic(row: EscritorioConfigRow | null) {
     aliquota_iss: row.aliquota_iss,
     gateway_provider: row.gateway_provider,
     gateway_api_key: maskSecret(row.gateway_api_key_encrypted),
+    gateway_credentials_configured: Boolean(row.gateway_credentials_encrypted?.trim()),
     whatsapp_provider: row.whatsapp_provider,
     whatsapp_token: maskSecret(row.whatsapp_token_encrypted)
   };
@@ -82,6 +86,18 @@ export async function patchEscritorioConfigUseCase(
     fields.gateway_api_key_encrypted = enc.ciphertext;
     iv = enc.iv;
     fields.encryption_iv = iv;
+  }
+  if (data.gateway_credentials) {
+    const provider = (data.gateway_provider ?? before?.gateway_provider ?? "asaas").trim().toLowerCase();
+    validateGatewayCredentials(provider, data.gateway_credentials);
+    const enc = encryptAes256Gcm(JSON.stringify(data.gateway_credentials));
+    fields.gateway_credentials_encrypted = enc.ciphertext;
+    iv = enc.iv;
+    fields.encryption_iv = iv;
+    if (getProviderMeta(provider).authType === "api_key" && data.gateway_credentials.api_key) {
+      const keyEnc = encryptAes256Gcm(data.gateway_credentials.api_key);
+      fields.gateway_api_key_encrypted = keyEnc.ciphertext;
+    }
   }
   if (data.whatsapp_token) {
     const enc = encryptAes256Gcm(data.whatsapp_token);
