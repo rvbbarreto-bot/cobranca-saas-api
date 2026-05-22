@@ -2,6 +2,17 @@
 
 Guia operacional para homologação **Sprint E**. Complementa [N8N_WEBHOOKS.md](./N8N_WEBHOOKS.md) (contrato outbound) e [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md) (entrada).
 
+## Workflows JSON (import no n8n)
+
+Arquivos versionados para QA — ver [n8n/README.md](./n8n/README.md):
+
+| Arquivo | Função |
+|---------|--------|
+| [n8n/workflows/cobranca-saas-events.workflow.json](./n8n/workflows/cobranca-saas-events.workflow.json) | **Outbound** — Webhook `cobranca-saas-events` + Switch dos 6 eventos |
+| [n8n/workflows/cobranca-saas-inbox-homolog.workflow.json](./n8n/workflows/cobranca-saas-inbox-homolog.workflow.json) | **Inbound** — teste manual dedup inbox |
+
+Smoke local após import: `npm run n8n:smoke:outbound`
+
 ## Pré-requisitos
 
 ```env

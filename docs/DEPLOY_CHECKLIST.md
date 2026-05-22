@@ -98,6 +98,6 @@ Gera `docs/evidencias/asaas-e2e-*.json` (gitignored). Ver [evidencias/README.md]
 ## Referências
 
 - Contrato inbox: [INBOX_WEBHOOK_IDEMPOTENCIA.md](./INBOX_WEBHOOK_IDEMPOTENCIA.md)
-- n8n outbound + workflow: [N8N_WEBHOOKS.md](./N8N_WEBHOOKS.md), [N8N_REGUA_WORKFLOW_EXEMPLO.md](./N8N_REGUA_WORKFLOW_EXEMPLO.md)
+- n8n outbound + workflow: [N8N_WEBHOOKS.md](./N8N_WEBHOOKS.md), [N8N_REGUA_WORKFLOW_EXEMPLO.md](./N8N_REGUA_WORKFLOW_EXEMPLO.md), JSON em [n8n/workflows/](./n8n/workflows/)
 - API geral: [API_CONTRATO_E_SMOKE.md](./API_CONTRATO_E_SMOKE.md)
 - DoD fase 2: [FASE2_KICKOFF_QUALIDADE.md](./FASE2_KICKOFF_QUALIDADE.md)
