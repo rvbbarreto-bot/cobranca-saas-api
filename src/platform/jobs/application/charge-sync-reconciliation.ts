@@ -1,7 +1,8 @@
 import type { Pool, PoolClient } from "pg";
-import { mapAsaasPaymentStatus } from "../../../modules/payment-gateway/domain/asaas-status-map";
+import { mapGatewayChargeStatus } from "../../../modules/payment-gateway/domain/gateway-status-map";
 import type { PaymentGatewayAdapter } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
-import { AsaasAdapter } from "../../../modules/payment-gateway/infrastructure/asaas/asaas-adapter";
+import { getGatewayForTenant } from "../../../modules/payment-gateway/application/get-gateway-for-tenant";
+import { isProductionNodeEnv } from "../../config/runtime-flags";
 import { evaluateChargeStatusTransition } from "../../../modules/billing-core/application/charge-status-transition";
 import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
 import { insertChargeEvent } from "../../../modules/billing-core/infrastructure/charge-events-repository";
@@ -39,6 +40,10 @@ export type ChargeSyncReconciliationDeps = {
   pool?: Pool;
   withTenant?: typeof withTenantTransaction;
   createAdapter?: (apiKey: string) => PaymentGatewayAdapter;
+  getGateway?: (
+    client: PoolClient,
+    tenantId: string
+  ) => Promise<PaymentGatewayAdapter>;
   decryptApiKey?: (ciphertext: string, iv: string) => string;
   logWarn?: (message: string) => void;
 };
@@ -87,6 +92,7 @@ export async function listChargeSyncCandidates(
      WHERE c.canonical_status IN ('emitida', 'enviada', 'pendente_pagamento')
        AND c.updated_at < now() - interval '24 hours'
        AND pt.gateway_transaction_id IS NOT NULL
+       AND (ec.gateway_api_key_encrypted IS NOT NULL OR ec.gateway_credentials_encrypted IS NOT NULL)
      ORDER BY c.updated_at ASC
      LIMIT 50`
   );
@@ -98,22 +104,30 @@ export async function reconcileOneCharge(
   deps: ChargeSyncReconciliationDeps = {}
 ): Promise<"updated" | "skipped" | "error"> {
   const withTenant = deps.withTenant ?? withTenantTransaction;
-  const decryptApiKey = deps.decryptApiKey ?? decrypt;
-  const createAdapter =
-    deps.createAdapter ??
-    ((apiKey: string) =>
-      new AsaasAdapter({
-        apiKey,
-        baseUrl: process.env.ASAAS_API_URL
-      }));
   const logWarn = deps.logWarn ?? (() => undefined);
+  const provider = String(row.gateway_provider || "asaas").trim().toLowerCase();
 
   try {
     const from = row.canonical_status as CanonicalChargeStatus;
-    const apiKey = decryptApiKey(row.gateway_api_key_encrypted, row.gateway_api_key_iv);
-    const adapter = createAdapter(apiKey);
+    let adapter: PaymentGatewayAdapter;
+    if (deps.getGateway) {
+      adapter = await withTenant(row.tenant_id, (client) =>
+        deps.getGateway!(client, row.tenant_id)
+      );
+    } else if (deps.createAdapter) {
+      const decryptApiKey = deps.decryptApiKey ?? decrypt;
+      const apiKey = decryptApiKey(row.gateway_api_key_encrypted, row.gateway_api_key_iv);
+      adapter = deps.createAdapter(apiKey);
+    } else {
+      adapter = await withTenant(row.tenant_id, (client) =>
+        getGatewayForTenant(client, row.tenant_id, {
+          decrypt: deps.decryptApiKey ?? decrypt,
+          sandbox: !isProductionNodeEnv()
+        })
+      );
+    }
     const gatewayCharge = await adapter.getCharge(row.gateway_transaction_id);
-    const newCanonical = mapAsaasPaymentStatus(gatewayCharge.status);
+    const newCanonical = mapGatewayChargeStatus(provider, gatewayCharge.status);
 
     if (!newCanonical) {
       return "skipped";

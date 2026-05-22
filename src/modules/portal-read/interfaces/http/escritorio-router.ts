@@ -10,6 +10,10 @@ import {
   patchEscritorioConfigUseCase
 } from "../../application/escritorio-config-use-cases";
 import {
+  getGatewayProviderSchemaUseCase,
+  listGatewayProvidersUseCase
+} from "../../application/gateway-providers-use-cases";
+import {
   createChargingRule,
   deleteChargingRule,
   listChargingRules,
@@ -92,6 +96,33 @@ export function createEscritorioRouter(): Router {
         getEscritorioConfigUseCase(client, tenantId)
       );
       res.json({ config });
+    })
+  );
+
+  router.get(
+    "/gateway/providers",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      res.json({ data: listGatewayProvidersUseCase() });
+    })
+  );
+
+  router.get(
+    "/gateway/providers/:provider/schema",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const provider = String(req.params.provider ?? "").trim().toLowerCase();
+      try {
+        res.json({ provider: getGatewayProviderSchemaUseCase(provider) });
+      } catch {
+        res.status(404).json({ error: "provider_not_found", message: `Provider ${provider} desconhecido.` });
+      }
     })
   );
 

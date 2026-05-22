@@ -2,8 +2,9 @@ import { UnrecoverableError } from "bullmq";
 import type { PoolClient } from "pg";
 import type { PaymentGatewayAdapter } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
 import type { BoletoResult, PixResult } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
-import { AsaasAdapter } from "../../../modules/payment-gateway/infrastructure/asaas/asaas-adapter";
+import { getGatewayForTenant } from "../../../modules/payment-gateway/application/get-gateway-for-tenant";
 import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
+import { isProductionNodeEnv } from "../../config/runtime-flags";
 import { decrypt } from "../../crypto/decrypt";
 import { insertChargeEvent } from "../../../modules/billing-core/infrastructure/charge-events-repository";
 import { writeAuditLog } from "../../audit/audit.service";
@@ -39,6 +40,10 @@ export type PortalClienteEmissionRow = {
 export type PaymentEmissionProcessorDeps = {
   withTenant?: typeof withTenantTransaction;
   createAdapter?: (apiKey: string) => PaymentGatewayAdapter;
+  getGateway?: (
+    client: PoolClient,
+    tenantId: string
+  ) => Promise<PaymentGatewayAdapter>;
   decryptApiKey?: (ciphertext: string, ivBase64: string) => string;
 };
 
@@ -79,18 +84,9 @@ async function loadCharge(
   return mapChargeRow(row);
 }
 
-type EscritorioConfigRow = {
-  gatewayProvider: string;
-  gatewayApiKeyEncrypted: string;
-  encryptionIv: string;
-};
-
-async function loadEscritorioConfig(
-  client: PoolClient,
-  tenantId: string
-): Promise<EscritorioConfigRow> {
+async function loadGatewayProvider(client: PoolClient, tenantId: string): Promise<string> {
   const r = await client.query<Record<string, unknown>>(
-    `SELECT gateway_provider, gateway_api_key_encrypted, encryption_iv
+    `SELECT gateway_provider
      FROM escritorio_config
      WHERE tenant_id = $1
      LIMIT 1`,
@@ -100,14 +96,7 @@ async function loadEscritorioConfig(
   if (!row) {
     throw new UnrecoverableError("escritorio_config_not_found");
   }
-  if (!row.gateway_api_key_encrypted || !row.encryption_iv) {
-    throw new UnrecoverableError("escritorio_config_not_found");
-  }
-  return {
-    gatewayProvider: String(row.gateway_provider || "asaas"),
-    gatewayApiKeyEncrypted: String(row.gateway_api_key_encrypted),
-    encryptionIv: String(row.encryption_iv)
-  };
+  return String(row.gateway_provider || "asaas");
 }
 
 async function loadPortalCliente(
@@ -186,10 +175,34 @@ async function insertPaymentTransaction(
   );
 }
 
-function defaultCreateAdapter(apiKey: string): PaymentGatewayAdapter {
-  return new AsaasAdapter({
-    apiKey,
-    baseUrl: process.env.ASAAS_API_URL
+async function resolveGatewayAdapter(
+  client: PoolClient,
+  tenantId: string,
+  deps: PaymentEmissionProcessorDeps
+): Promise<PaymentGatewayAdapter> {
+  if (deps.getGateway) {
+    return deps.getGateway(client, tenantId);
+  }
+  if (deps.createAdapter) {
+    const r = await client.query<Record<string, unknown>>(
+      `SELECT gateway_api_key_encrypted, encryption_iv
+       FROM escritorio_config WHERE tenant_id = $1 LIMIT 1`,
+      [tenantId]
+    );
+    const row = r.rows[0];
+    if (!row?.gateway_api_key_encrypted || !row.encryption_iv) {
+      throw new UnrecoverableError("escritorio_config_not_found");
+    }
+    const decryptKey = deps.decryptApiKey ?? decrypt;
+    const apiKey = decryptKey(
+      String(row.gateway_api_key_encrypted),
+      String(row.encryption_iv)
+    );
+    return deps.createAdapter(apiKey);
+  }
+  return getGatewayForTenant(client, tenantId, {
+    decrypt: deps.decryptApiKey ?? decrypt,
+    sandbox: !isProductionNodeEnv()
   });
 }
 
@@ -198,9 +211,6 @@ async function runEmission(
   data: PaymentEmissionJobData,
   deps: PaymentEmissionProcessorDeps
 ): Promise<void> {
-  const decryptKey = deps.decryptApiKey ?? decrypt;
-  const createAdapter = deps.createAdapter ?? defaultCreateAdapter;
-
   const charge = await loadCharge(client, data.chargeId, data.tenantId);
 
   if (charge.canonicalStatus !== "rascunho") {
@@ -209,13 +219,8 @@ async function runEmission(
 
   const oldStatus = charge.canonicalStatus;
 
-  const config = await loadEscritorioConfig(client, data.tenantId);
-  if (config.gatewayProvider !== "asaas") {
-    throw new Error(`Gateway ${config.gatewayProvider} ainda nao suportado no worker.`);
-  }
-
-  const apiKey = decryptKey(config.gatewayApiKeyEncrypted, config.encryptionIv);
-  const adapter = createAdapter(apiKey);
+  const gatewayProvider = await loadGatewayProvider(client, data.tenantId);
+  const adapter = await resolveGatewayAdapter(client, data.tenantId, deps);
 
   const portalClienteId = charge.metadata.portal_cliente_id;
   if (typeof portalClienteId !== "string" || !portalClienteId.trim()) {
@@ -272,7 +277,7 @@ async function runEmission(
   await insertPaymentTransaction(client, {
     tenantId: data.tenantId,
     chargeId: charge.id,
-    gateway: config.gatewayProvider,
+    gateway: gatewayProvider,
     gatewayTransactionId,
     type: charge.type,
     amount: charge.amount,
@@ -288,7 +293,7 @@ async function runEmission(
          provider_charge_id = $4,
          updated_at = now()
      WHERE id = $1::uuid AND tenant_id = $2::uuid`,
-    [charge.id, data.tenantId, config.gatewayProvider, gatewayTransactionId]
+    [charge.id, data.tenantId, gatewayProvider, gatewayTransactionId]
   );
 
   await insertChargeEvent(client, {
