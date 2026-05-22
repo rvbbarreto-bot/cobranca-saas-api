@@ -11,6 +11,14 @@ npm run seed:dev
 npm run e2e:asaas:evidence
 ```
 
+## Workflows n8n (homolog)
+
+JSON em `docs/n8n/workflows/` — guia [n8n/README.md](../n8n/README.md).
+
+```bash
+npm run n8n:smoke:outbound
+```
+
 ## Playwright E2E (portal + API)
 
 ```bash

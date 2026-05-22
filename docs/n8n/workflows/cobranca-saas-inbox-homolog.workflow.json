@@ -1,0 +1,184 @@
+{
+  "name": "Cobrança SaaS — inbox homolog (n8n → API)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2b20001-0001-4000-8000-000000000001",
+      "name": "Manual trigger homolog",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "m1",
+              "name": "external_event_id",
+              "value": "=n8n-homolog-{{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "m2",
+              "name": "tenant_header",
+              "value": "={{ $env.TENANT_ID_HEADER || 'demo' }}",
+              "type": "string"
+            },
+            {
+              "id": "m3",
+              "name": "reference",
+              "value": "SEED-PAG-QA-0001",
+              "type": "string"
+            },
+            {
+              "id": "m4",
+              "name": "canonical_status",
+              "value": "pendente_pagamento",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2b20002-0002-4000-8000-000000000002",
+      "name": "Payload homolog inbox",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.API_BASE_URL || 'http://host.docker.internal:3333') + '/v1/inbox/webhooks' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Tenant-Id", "value": "={{ $json.tenant_header }}" },
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_INBOX_SECRET }}" },
+            { "name": "X-External-Event-Id", "value": "={{ $json.external_event_id }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"canonical_status\": \"{{ $json.canonical_status }}\",\n  \"reference\": \"{{ $json.reference }}\"\n}",
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "b2b20003-0003-4000-8000-000000000003",
+      "name": "POST inbox 1a vez",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "first_status",
+              "value": "={{ $json.statusCode }}",
+              "type": "number"
+            },
+            {
+              "id": "r2",
+              "name": "first_body",
+              "value": "={{ $json.body }}",
+              "type": "object"
+            },
+            {
+              "id": "r3",
+              "name": "external_event_id",
+              "value": "={{ $('Payload homolog inbox').item.json.external_event_id }}",
+              "type": "string"
+            },
+            {
+              "id": "r4",
+              "name": "tenant_header",
+              "value": "={{ $('Payload homolog inbox').item.json.tenant_header }}",
+              "type": "string"
+            },
+            {
+              "id": "r5",
+              "name": "reference",
+              "value": "={{ $('Payload homolog inbox').item.json.reference }}",
+              "type": "string"
+            },
+            {
+              "id": "r6",
+              "name": "canonical_status",
+              "value": "={{ $('Payload homolog inbox').item.json.canonical_status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2b20004-0004-4000-8000-000000000004",
+      "name": "Guardar 1a resposta",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.API_BASE_URL || 'http://host.docker.internal:3333') + '/v1/inbox/webhooks' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Tenant-Id", "value": "={{ $json.tenant_header }}" },
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_INBOX_SECRET }}" },
+            { "name": "X-External-Event-Id", "value": "={{ $json.external_event_id }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"canonical_status\": \"{{ $json.canonical_status }}\",\n  \"reference\": \"{{ $json.reference }}\"\n}",
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "b2b20005-0005-4000-8000-000000000005",
+      "name": "POST inbox dedup",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const first = $('Guardar 1a resposta').first().json;\nconst second = $input.first().json;\nconst body2 = second.body || {};\nreturn [{\n  json: {\n    homolog_inbox: true,\n    first_status: first.first_status,\n    second_status: second.statusCode,\n    deduplicated: body2.deduplicated === true,\n    accepted: body2.accepted === true,\n    ok: (first.first_status === 202 || first.first_status === 200) && second.statusCode === 200 && body2.deduplicated === true\n  }\n}];"
+      },
+      "id": "b2b20006-0006-4000-8000-000000000006",
+      "name": "Resultado homolog dedup",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1240, 300]
+    }
+  ],
+  "connections": {
+    "Manual trigger homolog": {
+      "main": [[{ "node": "Payload homolog inbox", "type": "main", "index": 0 }]]
+    },
+    "Payload homolog inbox": {
+      "main": [[{ "node": "POST inbox 1a vez", "type": "main", "index": 0 }]]
+    },
+    "POST inbox 1a vez": {
+      "main": [[{ "node": "Guardar 1a resposta", "type": "main", "index": 0 }]]
+    },
+    "Guardar 1a resposta": {
+      "main": [[{ "node": "POST inbox dedup", "type": "main", "index": 0 }]]
+    },
+    "POST inbox dedup": {
+      "main": [[{ "node": "Resultado homolog dedup", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "cobranca-saas" }, { "name": "homolog" }, { "name": "inbox" }],
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cobranca-saas-factory-inbox"
+  }
+}
