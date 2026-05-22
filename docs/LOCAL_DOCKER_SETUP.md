@@ -19,15 +19,31 @@
 
 **Não usar:** `evo_postgres`, `barbearia-postgres`, `projeto_emissaonf-postgres-1`.
 
-## Subir stack
+## Subir stack (recomendado)
 
 ```powershell
 cd "...\Projeto\cobranca-saas-api"
+powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1
+npm run portal:dev   # outro terminal — http://localhost:5173
+```
+
+Ou manualmente:
+
+```powershell
 docker compose config          # deve passar sem erro
 docker compose up -d postgres redis
-docker compose run --rm migrate   # ver nota abaixo
+docker compose run --rm migrate
 docker compose up -d api
+npm run seed:dev
 ```
+
+### Problema comum: ambiente “não sobe”
+
+| Sintoma | Causa | Correção |
+|---------|--------|----------|
+| Containers `Exited (255)` após reiniciar o PC | Docker parado / stack não religada | `docker compose up -d postgres redis` e `scripts/dev-up.ps1` |
+| `ECONNREFUSED` em migrate/seed no host | `DATABASE_URL` com porta **5432** | Use **5434** (`POSTGRES_HOST_PORT` no compose): `postgres://app:<DB_PASSWORD>@localhost:5434/cobranca_saas` |
+| API não responde em 3333 | Serviço `api` parado | `docker compose up -d api` e `docker compose ps` → **healthy** |
 
 O script `npm run migrate` usa a tabela `public.schema_migrations` (idempotente). Bancos legados recebem bootstrap automático.
 
