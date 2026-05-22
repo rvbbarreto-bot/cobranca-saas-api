@@ -24,6 +24,20 @@ npm run quality:gate
 
 ---
 
+## Decisões PO (Maio 2026) — vigentes
+
+| Pergunta | Decisão |
+|----------|---------|
+| Credenciais sandbox **BB** | **Outra sprint** (pacote futuro `DEMANDA_SPRINT_O_BB` ou similar) — **não** bloquear merge de M |
+| **C6 Bank** | **Implementar** nesta sprint (`GATEWAY_C6_ENABLED` default **true** em dev; homolog quando houver credenciais) |
+| Troca de gateway com cobranças já **emitidas** | **Permitir**, com `gateway_change_log` + `writeAuditLog` (não bloquear por cobranças antigas) |
+
+**Escopo M ajustado:** C6 + portal dinâmico + troca com log. **BB fora** deste PR.
+
+**Inter (Sprint L):** ver secção [Auditoria Inter pós-L](#auditoria-inter-pós-l) — gaps opcionais M.9.
+
+---
+
 ## Contexto — o que já existe (Sprint L)
 
 | Item | Caminho | Estado |
@@ -41,12 +55,11 @@ npm run quality:gate
 
 ## Objetivo Sprint M (PO)
 
-1. **Banco do Brasil** em sandbox: tenant com `gateway_provider=bb` emite boleto via worker.  
-2. **C6 Bank:** adapter implementável quando PO entregar credenciais/doc oficial; até lá, código atrás de `GATEWAY_C6_ENABLED=false` + testes mock.  
-3. **Portal:** formulário de credenciais **dinâmico** a partir de `GATEWAY_REGISTRY` (Inter, Cora, BB, Asaas).  
-4. **Troca de gateway** com trilha de auditoria (`gateway_change_log`) — sem quebrar cobranças já emitidas.
+1. **C6 Bank:** adapter + registry + factory loader + testes mock (URLs conforme ESTUDO §4; ajustar quando doc oficial divergir).  
+2. **Portal:** formulário de credenciais **dinâmico** (`GATEWAY_REGISTRY`) — Asaas, Inter, Cora, C6 (BB só no registry `enabled: false` até sprint BB).  
+3. **Troca de gateway** permitida com `gateway_change_log` + audit (cobranças já emitidas **não** impedem troca).
 
-**Fora de escopo Sprint M:** estorno `estornada` (Sprint N), contratos recorrentes, Pagarme adapter, webhooks normalizados multi-banco (Sprint N).
+**Fora de escopo Sprint M:** adapter **BB** sandbox (outra sprint); estorno `estornada` (Sprint N); webhooks normalizados (Sprint N).
 
 ---
 
@@ -57,7 +70,7 @@ npm run quality:gate
 | Provider | `authType` (corrigir) | `enabled` | Campos obrigatórios (JSON) |
 |----------|----------------------|-----------|----------------------------|
 | `bb` | `oauth_basic` (sem mTLS no token) | `GATEWAY_BB_ENABLED` | `client_id`, `client_secret`, `gw_app_key`, `numero_convenio`, `numero_carteira`, `numero_variacao_carteira` |
-| `c6` | `oauth_client_secret` (sem mTLS OAuth; ver ESTUDO §4) | `GATEWAY_C6_ENABLED` (default **false**) | `client_id`, `client_secret`, `codigo_cedente` (+ campos que PO confirmar) |
+| `c6` | `oauth_basic` (sem mTLS no token; ver ESTUDO §4) | `GATEWAY_C6_ENABLED` (default **true**) | `client_id`, `client_secret`, `codigo_cedente`, `agencia`, `conta`, `modalidade` |
 
 - Corrigir `authType` de BB/C6: **não** usar `mtls_oauth` se o ESTUDO indicar OAuth sem mTLS no token.
 - Expor `authType` na API `GET .../providers` para o portal renderizar UX (textarea PEM vs inputs texto).
@@ -67,8 +80,8 @@ npm run quality:gate
 **Modificar:** `get-gateway-for-tenant.ts`
 
 ```typescript
-ADAPTER_LOADERS.bb = (ctx) => new BbAdapter(ctx);
 ADAPTER_LOADERS.c6 = (ctx) => new C6BankAdapter(ctx);
+// BB: sprint futura (PO) — não registar loader neste PR
 ```
 
 ---
@@ -105,9 +118,11 @@ ALTER TABLE payment_transactions
 
 ---
 
-## M.2 — Adapter Banco do Brasil
+## M.2 — Adapter Banco do Brasil — **ADIADO (outra sprint)**
 
-**Pasta:** `src/modules/payment-gateway/infrastructure/bb/`
+> PO: credenciais sandbox BB ficam para sprint dedicada. Manter apenas metadata `bb` no registry (`enabled: false`).
+
+**Pasta (futura):** `src/modules/payment-gateway/infrastructure/bb/`
 
 | Arquivo | Função |
 |---------|--------|
@@ -125,16 +140,19 @@ ALTER TABLE payment_transactions
 
 ---
 
-## M.3 — Adapter C6 Bank
+## M.3 — Adapter C6 Bank (**obrigatório nesta sprint**)
 
 **Pasta:** `src/modules/payment-gateway/infrastructure/c6/`
 
-| Situação | Ação fábrica |
-|----------|----------------|
-| PO **sem** credenciais/doc oficial | Implementar estrutura + `C6BankAdapter` que falha com `GatewayProviderError('pending_official_docs')` se `GATEWAY_C6_ENABLED` não estiver ativo; testes mock do contrato |
-| PO **com** credenciais sandbox | Completar OAuth + emissão conforme doc oficial (substituir skeleton do ESTUDO §4) |
+| Item | Ação |
+|------|------|
+| OAuth | `Authorization: Basic` + `grant_type=client_credentials` (ESTUDO §4.2) — **sem** mTLS no token |
+| HTTP | `fetch` padrão (não `mtls-fetch`) para token e API |
+| Emissão | Implementar contra URLs inferidas no ESTUDO; documentar incerteza no PR |
+| Testes | `c6-adapter.test.ts` mock HTTP |
+| Smoke | `npm run gateway:smoke:c6` (`RUN_CORA_SANDBOX=1` já existe para Cora; criar `RUN_C6_SANDBOX=1`) |
 
-**Não bloquear** merge de M se C6 ficar desabilitado por flag — BB + portal são critérios mínimos de aceite.
+PO autorizou implementar mesmo sem portal developers fechado — homologação real quando credenciais existirem.
 
 ---
 
@@ -148,7 +166,7 @@ ALTER TABLE payment_transactions
 | Validação | `validateGatewayCredentials` antes de gravar |
 | Efeito | `UPDATE escritorio_config.gateway_provider` + credenciais cifradas |
 | Auditoria | `INSERT gateway_change_log` + `writeAuditLog` |
-| Bloqueio | Opcional: recusar troca se existir cobrança `rascunho` em fila de emissão (documentar decisão no PR) |
+| Bloqueio | **Não bloquear** por cobranças já `emitida` / `paga` — apenas registrar log (decisão PO) |
 
 **Rotas:**
 
@@ -170,7 +188,7 @@ Manter `PATCH /config` compatível (legado).
 | Select provider | `GET /v1/portal/escritorio/gateway/providers` |
 | Campos dinâmicos | `GET .../providers/:id/schema` → render por `credentialFields` (`secret` → password/textarea) |
 | Gravar | `PATCH /config` ou `PATCH /gateway` com `gateway_credentials: Record<string,string>` |
-| Providers | asaas, inter, cora, bb (c6 só se enabled na API) |
+| Providers | asaas, inter, cora, c6 (bb oculto até sprint BB) |
 
 **Testes:** atualizar `ConfiguracoesPage.test.tsx` — mock providers schema, submit com credentials.
 
@@ -192,14 +210,14 @@ npm run quality:gate
 | Provider | Unit adapter | Factory loader | Sandbox E2E (opt-in) |
 |----------|--------------|----------------|----------------------|
 | Asaas/Inter/Cora | regressão verde | — | — |
-| **BB** | `bb-adapter.test.ts` | `provider=bb` | `RUN_BB_SANDBOX=1` |
-| **C6** | mock ou sandbox | flag off default | quando PO liberar |
+| **C6** | `c6-adapter.test.ts` | `provider=c6` | `RUN_C6_SANDBOX=1` |
+| **BB** | — | — | sprint futura |
 
 ### Critérios de aceite (PO)
 
-- [ ] Admin escolhe BB no portal, preenche campos do registry, salva credenciais cifradas.
-- [ ] Cobrança `rascunho` → `emitida` com `gateway_provider=bb` (sandbox).
-- [ ] Troca Asaas → Inter grava linha em `gateway_change_log` + audit.
+- [ ] Admin escolhe C6 (ou Inter/Cora) no portal dinâmico e salva credenciais cifradas.
+- [ ] Troca Asaas → Inter **permitida** com linha em `gateway_change_log` + audit (cobranças emitidas permanecem no gateway antigo).
+- [ ] `gateway_provider=c6` emite em mock/sandbox quando credenciais configuradas.
 - [ ] Inter/Cora/Asaas regressão sem alteração de `.env` de produção.
 - [ ] Credenciais/certificados nunca em log claro.
 
@@ -222,13 +240,27 @@ npm run quality:gate
 
 ---
 
-## Perguntas para o PO (bloquear C6 completo se ausente)
+## M.9 — Gaps Inter (opcional, não bloquear M)
 
-1. Credenciais sandbox **BB** (`client_id`, `client_secret`, `gw_app_key`, convênio/carteira)?  
-2. Acesso ao portal **developers.c6bank.com.br** — quando?  
-3. Troca de gateway com cobranças `emitida` pendentes — permitir ou exigir zerar fila?
+| Gap | Prioridade | Ação sugerida |
+|-----|------------|----------------|
+| URL PDF real (`GET .../pdf`) | P2 | Buscar PDF e gravar URL assinada ou proxy interno |
+| Portal UI Inter/Cora | **M.5** | Formulário dinâmico cobre |
+| `endereco` do `portal.cliente` no worker | P2 | Passar metadata/endereço em `createCustomer` |
+| Smoke Inter real | P2 | Evoluir `gateway-smoke-inter-sandbox.ts` |
+| Webhook Inter → inbox | Sprint N | Normalização multi-banco |
 
-**Defaults:** BB mock + sandbox manual; C6 desligado por flag; troca permitida com log.
+---
+
+## Auditoria Inter pós-L
+
+Ver tabela em [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md) secção Inter — resumo: **emissão core OK** via API/worker; **homologação portal + PDF + E2E** incompletos.
+
+---
+
+## Perguntas PO — respondidas
+
+Ver secção **Decisões PO** no topo.
 
 ---
 

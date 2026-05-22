@@ -10,11 +10,11 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Sprint M — ATUAL
 
-1. Adapter **Banco do Brasil** + registry/factory
-2. Migration `026_gateway_change_log` + API troca gateway
-3. Portal **ConfiguracoesPage** — campos dinâmicos via `GATEWAY_REGISTRY`
-4. C6 atrás de `GATEWAY_C6_ENABLED` (PO credenciais)
-5. PR — TL homologa sandbox BB
+1. Adapter **C6** + registry/factory (PO: implementar)
+2. Migration `026_gateway_change_log` + troca gateway **permitida com log**
+3. Portal **ConfiguracoesPage** — credenciais dinâmicas (Asaas/Inter/Cora/C6)
+4. **BB:** sprint futura (credenciais sandbox PO)
+5. Inter L: emissão OK; PDF/smoke opcional P2
 
 ## Backlog
 

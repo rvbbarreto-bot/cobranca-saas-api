@@ -53,11 +53,30 @@ npm run quality:gate
 |---|------|
 | M.0 | Registry BB/C6 + loaders na factory |
 | M.1 | Migration `026_gateway_change_log.sql` |
-| M.2 | Adapter **Banco do Brasil** (sandbox) |
-| M.3 | Adapter **C6** (flag off ou sandbox se PO liberar) |
+| M.2 | ~~BB~~ → **sprint futura** (credenciais sandbox PO) |
+| M.3 | Adapter **C6** (PO: implementar agora) |
 | M.4 | API troca gateway + histórico |
 | M.5 | Portal — formulário dinâmico de credenciais |
 | M.6 | Testes + smoke BB |
+
+### Inter (Sprint L #21) — auditoria rápida
+
+| Área | Status |
+|------|--------|
+| Adapter mTLS + OAuth + `POST/GET /cobrancas/v2` | ✅ |
+| Factory + worker + charge-sync | ✅ |
+| API portal `gateway_credentials` + providers | ✅ |
+| PIX dedicado | ✅ `not_supported` (esperado) |
+| URL boleto/PDF | ⚠️ placeholder `inter://...` (sem `GET /pdf`) |
+| Portal UI credenciais Inter | ⚠️ só API — **M.5** resolve |
+| Smoke E2E Inter | ⚠️ script stub |
+| Webhooks Inter | ❌ Sprint N |
+
+**Conclusão:** Inter **implementado para emissão técnica** (credenciais via PATCH + worker). Falta polish portal/PDF/homolog sandbox.
+
+### Decisões PO (Sprint M)
+
+- **BB:** outra sprint · **C6:** implementar · **Troca gateway:** permitir com log
 
 ### Backlog pós–Sprint M (Sprint N)
 
@@ -93,8 +112,8 @@ Multi-tenant · RLS · credenciais cifradas · **nunca** commitar PEM/API keys �
 
 ```
 Repositório: cobranca-saas-api. main atualizado (Sprint L #20 + #21).
-Sprint M ATUAL: BB adapter + portal credenciais dinâmicas + gateway_change_log.
-Branch: feat/sprint-m-gateway-fase2
+Sprint M ATUAL: C6 adapter + portal dinâmico + gateway_change_log (troca permitida com log).
+BB: OUTRA SPRINT. Branch: feat/sprint-m-gateway-fase2
 Pacote: Projeto_CobrancaBoleto/DEMANDA_SPRINT_M_GATEWAY_FASE2.md
-Governança: IA abre PR; Tech Lead merge. C6 desligado por flag até credenciais PO.
+Inter: emissão OK (#21); portal/PDF/smoke = M.5 ou P2.
 ```
