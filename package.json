@@ -32,7 +32,11 @@
     "portal:dev": "npm --prefix apps/portal-web run dev",
     "portal:build": "npm --prefix apps/portal-web run build",
     "portal:test": "npm --prefix apps/portal-web run test",
-    "portal:preview": "npm --prefix apps/portal-web run preview"
+    "portal:preview": "npm --prefix apps/portal-web run preview",
+    "dev:up": "powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1",
+    "e2e:playwright": "playwright test -c e2e/playwright.config.cjs",
+    "e2e:playwright:ui": "playwright test -c e2e/playwright.config.cjs --ui",
+    "e2e:playwright:install": "playwright install chromium"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -48,6 +52,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.8",

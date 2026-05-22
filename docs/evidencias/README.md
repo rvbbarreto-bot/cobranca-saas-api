@@ -11,6 +11,16 @@ npm run seed:dev
 npm run e2e:asaas:evidence
 ```
 
+## Playwright E2E (portal + API)
+
+```bash
+npm run e2e:playwright:install   # primeira vez
+npm run e2e:playwright
+```
+
+Relatórios: `cenarios_testes.md`, `asaas-e2e-result.json` (atualizados pelo reporter em `e2e/reporters/`).
+O `seed:dev` garante ≥ 55 cobranças no tenant demo para o cenário «Carregar mais».
+
 Saída: `asaas-e2e-<timestamp>.json` (caminho impresso no terminal).
 
 ## O que commitar no Git
@@ -50,5 +60,6 @@ Variáveis de CI (Postgres/Redis, `ENCRYPTION_KEY`, `WEBHOOK_INBOX_SECRET`, etc.
 
 ## Referências
 
+- [QA_GUIA_TESTES_BDD.md](../QA_GUIA_TESTES_BDD.md) — guia PO/TL para time QA (URLs, workflow, cenários BDD)
 - [ASAAS_SANDBOX_E2E.md](../ASAAS_SANDBOX_E2E.md)
 - [INBOX_WEBHOOK_IDEMPOTENCIA.md](../INBOX_WEBHOOK_IDEMPOTENCIA.md)

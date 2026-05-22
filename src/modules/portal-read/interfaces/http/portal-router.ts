@@ -48,6 +48,7 @@ import { createEscritorioRouter } from "./escritorio-router";
 import { createClientePortalRouter } from "./cliente-portal-router";
 import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
 import { assertTenantCanMutate } from "../../../saas-billing/application/assert-tenant-can-mutate";
+import { resolveAutomacaoTenantId } from "../../../../platform/tenancy/resolve-automacao-tenant-id";
 
 /**
  * Login portal com senha (Sprint A). Disponivel em producao — nao passa por mockAuthRoutesGate.
@@ -65,6 +66,15 @@ async function portalLoginWithPassword(req: Request, res: Response): Promise<voi
     return;
   }
 
+  const automacaoTenantId = await resolveAutomacaoTenantId(tenantId);
+  if (!automacaoTenantId) {
+    res.status(403).json({
+      error: "portal_auth_forbidden",
+      message: "Email, tenant ou senha invalidos."
+    });
+    return;
+  }
+
   const pool = getPool();
   const q = await pool.query<{ app_user_id: string; tenant_id: string; password_hash: string | null }>(
     `SELECT u.id::text AS app_user_id, m.tenant_id, u.password_hash
@@ -72,7 +82,7 @@ async function portalLoginWithPassword(req: Request, res: Response): Promise<voi
      INNER JOIN portal.membership m ON m.app_user_id = u.id
      WHERE lower(u.email) = lower($1) AND m.tenant_id = $2
      LIMIT 1`,
-    [email, tenantId]
+    [email, automacaoTenantId]
   );
 
   const row = q.rows[0];
