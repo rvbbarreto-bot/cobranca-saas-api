@@ -36,7 +36,8 @@
     "dev:up": "powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1",
     "e2e:playwright": "playwright test -c e2e/playwright.config.cjs",
     "e2e:playwright:ui": "playwright test -c e2e/playwright.config.cjs --ui",
-    "e2e:playwright:install": "playwright install chromium"
+    "e2e:playwright:install": "playwright install chromium",
+    "n8n:smoke:outbound": "node scripts/n8n-smoke-outbound.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

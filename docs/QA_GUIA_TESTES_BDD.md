@@ -153,7 +153,20 @@ npm run e2e:asaas:evidence
 
 Checklist PO: [evidencias/SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEITE_CHECKLIST.md).
 
-### 3.5 Automação Playwright E2E (BDD no repositório)
+### 3.5 Workflows n8n (import JSON — Sprint E homolog)
+
+| Arquivo | Caminho no repositório |
+|---------|------------------------|
+| Outbound (API → n8n) | `docs/n8n/workflows/cobranca-saas-events.workflow.json` |
+| Inbound homolog (n8n → API) | `docs/n8n/workflows/cobranca-saas-inbox-homolog.workflow.json` |
+| Guia completo | [docs/n8n/README.md](./n8n/README.md) |
+
+1. Importar no n8n → **Activate** o workflow outbound.
+2. Copiar URL de produção do webhook → `N8N_PLATFORM_WEBHOOK_URL` no `.env` da API.
+3. Alinhar secrets (`N8N_PLATFORM_WEBHOOK_SECRET`, `WEBHOOK_INBOX_SECRET`) na API e variáveis do n8n.
+4. `npm run n8n:smoke:outbound` — envia os 6 eventos de teste.
+
+### 3.6 Automação Playwright E2E (BDD no repositório)
 
 Suíte em `e2e/tests/` — cobre os cenários Gherkin da secção 6 com monitorização de rede (status HTTP) e consola.
 
@@ -176,7 +189,7 @@ Suíte em `e2e/tests/` — cobre os cenários Gherkin da secção 6 com monitori
 
 **Asaas script completo no Playwright:** só corre com `RUN_ASAAS_E2E=1` e `ASAAS_API_KEY` sandbox no `.env`.
 
-### 3.6 Cenários Playwright que podem ficar **Ignorados** (skip)
+### 3.7 Cenários Playwright que podem ficar **Ignorados** (skip)
 
 | Cenário BDD | Motivo do skip | Como fazer passar |
 | ----------- | -------------- | ----------------- |
