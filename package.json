@@ -39,7 +39,8 @@
     "e2e:playwright:install": "playwright install chromium",
     "n8n:smoke:outbound": "node scripts/n8n-smoke-outbound.mjs",
     "gateway:smoke:inter": "tsx scripts/gateway-smoke-inter-sandbox.ts",
-    "gateway:smoke:cora": "tsx scripts/gateway-smoke-cora-sandbox.ts"
+    "gateway:smoke:cora": "tsx scripts/gateway-smoke-cora-sandbox.ts",
+    "gateway:smoke:c6": "tsx scripts/gateway-smoke-c6-sandbox.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

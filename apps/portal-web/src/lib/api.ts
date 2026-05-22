@@ -613,8 +613,24 @@ export type EscritorioConfig = {
   aliquota_iss: number | null;
   gateway_provider: string | null;
   gateway_api_key: string | null;
+  gateway_credentials_configured?: boolean;
   whatsapp_provider: string | null;
   whatsapp_token: string | null;
+};
+
+export type GatewayProviderMeta = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  authType: "api_key" | "mtls_oauth" | "oauth_basic";
+  credentialFields: Array<{
+    key: string;
+    label: string;
+    secret: boolean;
+    required: boolean;
+  }>;
+  supportsBoleto: boolean;
+  supportsPix: boolean;
 };
 
 export type PatchEscritorioConfigBody = {
@@ -624,10 +640,25 @@ export type PatchEscritorioConfigBody = {
   regime_tributario?: "simples" | "presumido" | "real";
   codigo_municipio?: string;
   aliquota_iss?: number;
-  gateway_provider?: "asaas" | "pagarme";
+  gateway_provider?: string;
   gateway_api_key?: string;
+  gateway_credentials?: Record<string, string>;
   whatsapp_provider?: "zapi" | "twilio";
   whatsapp_token?: string;
+};
+
+export type PatchGatewayProviderBody = {
+  gateway_provider: string;
+  gateway_api_key?: string;
+  gateway_credentials?: Record<string, string>;
+};
+
+export type GatewayChangeLogEntry = {
+  id: string;
+  old_provider: string | null;
+  new_provider: string;
+  changed_at: string;
+  changed_by_user_id: string | null;
 };
 
 export type ChargingRuleRow = {
@@ -675,6 +706,78 @@ export async function fetchEscritorioConfig(): Promise<{ config: EscritorioConfi
     throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
   }
   return json as { config: EscritorioConfig | null };
+}
+
+export async function fetchGatewayProviders(): Promise<{ data: GatewayProviderMeta[] }> {
+  const res = await apiFetch("/v1/portal/escritorio/gateway/providers", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  const o = json as { data?: GatewayProviderMeta[] };
+  return { data: Array.isArray(o.data) ? o.data : [] };
+}
+
+export async function fetchGatewayProviderSchema(
+  provider: string
+): Promise<{ provider: GatewayProviderMeta }> {
+  const res = await apiFetch(
+    `/v1/portal/escritorio/gateway/providers/${encodeURIComponent(provider)}/schema`,
+    { method: "GET" }
+  );
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { provider: GatewayProviderMeta };
+}
+
+export async function patchGatewayProvider(
+  body: PatchGatewayProviderBody
+): Promise<{ config: EscritorioConfig | null }> {
+  const res = await apiFetch("/v1/portal/escritorio/gateway", {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { config: EscritorioConfig | null };
+}
+
+export async function fetchGatewayChangeHistory(): Promise<{ data: GatewayChangeLogEntry[] }> {
+  const res = await apiFetch("/v1/portal/escritorio/gateway/history?limit=10", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  const o = json as { data?: GatewayChangeLogEntry[] };
+  return { data: Array.isArray(o.data) ? o.data : [] };
 }
 
 export async function patchEscritorioConfig(body: PatchEscritorioConfigBody): Promise<{ config: EscritorioConfig | null }> {

@@ -11,6 +11,7 @@ import {
   upsertEscritorioConfigFields,
   type EscritorioConfigRow
 } from "../infrastructure/escritorio-config-repository";
+import { insertGatewayChangeLog } from "../infrastructure/gateway-change-log-repository";
 
 export const patchEscritorioConfigSchema = z.object({
   cnpj_emissor: z.string().length(14).regex(/^\d+$/).optional(),
@@ -19,7 +20,7 @@ export const patchEscritorioConfigSchema = z.object({
   regime_tributario: z.enum(["simples", "presumido", "real"]).optional(),
   codigo_municipio: z.string().length(7).regex(/^\d+$/).optional(),
   aliquota_iss: z.number().min(0).max(10).optional(),
-  gateway_provider: z.enum(["asaas", "pagarme", "inter", "cora"]).optional(),
+  gateway_provider: z.enum(["asaas", "pagarme", "inter", "cora", "c6"]).optional(),
   gateway_api_key: z.string().min(10).optional(),
   gateway_credentials: z.record(z.string(), z.string()).optional(),
   whatsapp_provider: z.enum(["zapi", "twilio"]).optional(),
@@ -108,6 +109,17 @@ export async function patchEscritorioConfigUseCase(
   }
 
   const row = await upsertEscritorioConfigFields(client, tenantId, fields);
+
+  const newProvider = row.gateway_provider;
+  if (data.gateway_provider !== undefined && before?.gateway_provider !== newProvider) {
+    await insertGatewayChangeLog(client, {
+      tenantId,
+      oldProvider: before?.gateway_provider ?? null,
+      newProvider: String(newProvider),
+      changedByUserId: audit?.userId ?? null,
+      metadata: { source: "patch_config" }
+    });
+  }
 
   if (audit) {
     await writeAuditLog(

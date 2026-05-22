@@ -10,6 +10,15 @@ const INTER_STATUS_TO_CANONICAL: Record<string, CanonicalChargeStatus> = {
   EXPIRADO: "vencida"
 };
 
+const C6_STATUS_TO_CANONICAL: Record<string, CanonicalChargeStatus> = {
+  PENDENTE: "pendente_pagamento",
+  EMITIDO: "emitida",
+  PAGO: "paga",
+  LIQUIDADO: "paga",
+  CANCELADO: "cancelada",
+  VENCIDO: "vencida"
+};
+
 const CORA_STATUS_TO_CANONICAL: Record<string, CanonicalChargeStatus> = {
   PENDING: "pendente_pagamento",
   PAID: "paga",
@@ -27,6 +36,10 @@ export function mapCoraChargeStatus(status: string): CanonicalChargeStatus | und
   return CORA_STATUS_TO_CANONICAL[status.trim().toUpperCase()];
 }
 
+export function mapC6ChargeStatus(status: string): CanonicalChargeStatus | undefined {
+  return C6_STATUS_TO_CANONICAL[status.trim().toUpperCase()];
+}
+
 export function mapGatewayChargeStatus(
   provider: string,
   gatewayStatus: string
@@ -37,6 +50,9 @@ export function mapGatewayChargeStatus(
   }
   if (p === "cora") {
     return mapCoraChargeStatus(gatewayStatus);
+  }
+  if (p === "c6") {
+    return mapC6ChargeStatus(gatewayStatus);
   }
   return mapAsaasPaymentStatus(gatewayStatus);
 }

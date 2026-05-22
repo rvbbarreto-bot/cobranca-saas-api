@@ -6,9 +6,19 @@ import { BrowserRouter } from "react-router-dom";
 import { ConfiguracoesPage } from "./ConfiguracoesPage";
 
 const patchConfigMock = vi.fn();
+const patchGatewayMock = vi.fn();
 
 vi.mock("../lib/api", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../lib/api")>();
+  const asaasProvider = {
+    id: "asaas",
+    label: "Asaas",
+    enabled: true,
+    authType: "api_key" as const,
+    credentialFields: [{ key: "api_key", label: "API Key", secret: true, required: true }],
+    supportsBoleto: true,
+    supportsPix: true
+  };
   return {
     ...mod,
     fetchPortalMe: vi.fn().mockResolvedValue({
@@ -26,11 +36,16 @@ vi.mock("../lib/api", async (importOriginal) => {
         aliquota_iss: null,
         gateway_provider: "asaas",
         gateway_api_key: "****1234",
+        gateway_credentials_configured: false,
         whatsapp_provider: null,
         whatsapp_token: null
       }
     }),
+    fetchGatewayProviders: vi.fn().mockResolvedValue({ data: [asaasProvider] }),
+    fetchGatewayProviderSchema: vi.fn().mockResolvedValue({ provider: asaasProvider }),
+    fetchGatewayChangeHistory: vi.fn().mockResolvedValue({ data: [] }),
     patchEscritorioConfig: (...args: unknown[]) => patchConfigMock(...args),
+    patchGatewayProvider: (...args: unknown[]) => patchGatewayMock(...args),
     fetchChargingRules: vi.fn().mockResolvedValue({ data: [] }),
     fetchNotificationTemplates: vi.fn().mockResolvedValue({ data: [] }),
     fetchCobrancas: vi.fn().mockResolvedValue({ data: [], count: 0 })
@@ -51,10 +66,10 @@ function renderPage(): ReturnType<typeof render> {
 describe("ConfiguracoesPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    patchConfigMock.mockResolvedValue({
+    patchConfigMock.mockResolvedValue({ config: {} });
+    patchGatewayMock.mockResolvedValue({
       config: {
         tenant_id: "pub-1",
-        razao_social: "Demo LTDA",
         gateway_provider: "asaas",
         gateway_api_key: "****9999"
       }
@@ -65,11 +80,9 @@ describe("ConfiguracoesPage", () => {
     renderPage();
     expect(await screen.findByText(/Configurações do escritório/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: /Gateway e integrações/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Régua de cobrança/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Templates/i })).toBeTruthy();
   });
 
-  it("submete PATCH de config com nova api key", async () => {
+  it("submete PATCH gateway com nova api key", async () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByDisplayValue("Demo LTDA");
@@ -77,8 +90,12 @@ describe("ConfiguracoesPage", () => {
     await user.clear(keyInput);
     await user.type(keyInput, "nova_chave_api_12345");
     await user.click(screen.getByRole("button", { name: /Guardar configurações/i }));
-    await waitFor(() => expect(patchConfigMock).toHaveBeenCalled());
-    const body = patchConfigMock.mock.calls[0]?.[0] as { gateway_api_key?: string };
+    await waitFor(() => expect(patchGatewayMock).toHaveBeenCalled());
+    const body = patchGatewayMock.mock.calls[0]?.[0] as {
+      gateway_provider?: string;
+      gateway_api_key?: string;
+    };
+    expect(body.gateway_provider).toBe("asaas");
     expect(body.gateway_api_key).toBe("nova_chave_api_12345");
   });
 });

@@ -9,7 +9,7 @@ export type GatewayProviderMeta = {
   id: string;
   label: string;
   enabled: boolean;
-  authType: "api_key" | "mtls_oauth";
+  authType: "api_key" | "mtls_oauth" | "oauth_basic";
   credentialFields: GatewayCredentialField[];
   supportsBoleto: boolean;
   supportsPix: boolean;
@@ -62,18 +62,32 @@ export const GATEWAY_REGISTRY: Record<string, GatewayProviderMeta> = {
   bb: {
     id: "bb",
     label: "Banco do Brasil",
-    enabled: false,
-    authType: "mtls_oauth",
-    credentialFields: [],
+    enabled: envEnabled("GATEWAY_BB_ENABLED", false),
+    authType: "oauth_basic",
+    credentialFields: [
+      { key: "client_id", label: "Client ID", secret: false, required: true },
+      { key: "client_secret", label: "Client Secret", secret: true, required: true },
+      { key: "gw_app_key", label: "gw-app-key", secret: true, required: true },
+      { key: "numero_convenio", label: "Número convênio", secret: false, required: true },
+      { key: "numero_carteira", label: "Carteira", secret: false, required: true },
+      { key: "numero_variacao_carteira", label: "Variação carteira", secret: false, required: true }
+    ],
     supportsBoleto: true,
     supportsPix: false
   },
   c6: {
     id: "c6",
     label: "C6 Bank",
-    enabled: false,
-    authType: "mtls_oauth",
-    credentialFields: [],
+    enabled: envEnabled("GATEWAY_C6_ENABLED", true),
+    authType: "oauth_basic",
+    credentialFields: [
+      { key: "client_id", label: "Client ID", secret: false, required: true },
+      { key: "client_secret", label: "Client Secret", secret: true, required: true },
+      { key: "codigo_cedente", label: "Código cedente", secret: false, required: true },
+      { key: "agencia", label: "Agência", secret: false, required: true },
+      { key: "conta", label: "Conta", secret: false, required: true },
+      { key: "modalidade", label: "Modalidade", secret: false, required: true }
+    ],
     supportsBoleto: true,
     supportsPix: false
   }
