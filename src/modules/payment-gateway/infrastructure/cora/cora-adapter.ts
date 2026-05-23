@@ -148,7 +148,14 @@ export class CoraAdapter implements PaymentGatewayAdapter {
   }
 
   async createBoleto(input: CreateBoletoInput): Promise<BoletoResult> {
-    const cliente = parseCoraGatewayCustomerId(input.gatewayCustomerId);
+    const fromId = parseCoraGatewayCustomerId(input.gatewayCustomerId);
+    const cliente: CreateCustomerInput = input.payer
+      ? {
+          ...fromId,
+          ...input.payer,
+          endereco: input.payer.endereco ?? fromId.endereco
+        }
+      : fromId;
     const payload = buildInvoicePayload(cliente, input, ["BANK_SLIP"]);
     const data = await this.http.requestJson<CoraInvoiceResponse>(
       "POST",
@@ -160,7 +167,14 @@ export class CoraAdapter implements PaymentGatewayAdapter {
   }
 
   async createPix(input: CreatePixInput): Promise<PixResult> {
-    const cliente = parseCoraGatewayCustomerId(input.gatewayCustomerId);
+    const fromId = parseCoraGatewayCustomerId(input.gatewayCustomerId);
+    const cliente: CreateCustomerInput = input.payer
+      ? {
+          ...fromId,
+          ...input.payer,
+          endereco: input.payer.endereco ?? fromId.endereco
+        }
+      : fromId;
     const payload = buildInvoicePayload(cliente, input, ["PIX"]);
     const data = await this.http.requestJson<CoraInvoiceResponse>(
       "POST",

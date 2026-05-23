@@ -80,7 +80,14 @@ export class C6BankAdapter implements PaymentGatewayAdapter {
   }
 
   async createBoleto(input: CreateBoletoInput): Promise<BoletoResult> {
-    const cliente = parseC6CustomerId(input.gatewayCustomerId);
+    const fromId = parseC6CustomerId(input.gatewayCustomerId);
+    const cliente: CreateCustomerInput = input.payer
+      ? {
+          ...fromId,
+          ...input.payer,
+          endereco: input.payer.endereco ?? fromId.endereco
+        }
+      : fromId;
     const doc = digitsOnly(cliente.cpfCnpj);
     const addr: NonNullable<CreateCustomerInput["endereco"]> = cliente.endereco ?? DEFAULT_ADDRESS!;
 

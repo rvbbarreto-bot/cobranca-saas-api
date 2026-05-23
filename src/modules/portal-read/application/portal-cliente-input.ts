@@ -1,4 +1,8 @@
 import { isValidBrTaxIdDigits } from "./br-cpf-cnpj";
+import {
+  parsePortalClienteEnderecoBody,
+  type PortalClienteEnderecoInput
+} from "./portal-cliente-address";
 
 export type PortalClienteCreateInput = {
   documento: string;
@@ -6,6 +10,7 @@ export type PortalClienteCreateInput = {
   email: string;
   telefone: string | null;
   whatsappOptIn: boolean;
+  endereco?: PortalClienteEnderecoInput | null;
 };
 
 /** Atualização parcial (PATCH): não altera documento nesta versão. */
@@ -14,6 +19,7 @@ export type PortalClientePatchInput = {
   email?: string | null;
   telefone?: string | null;
   whatsappOptIn?: boolean;
+  endereco?: PortalClienteEnderecoInput | null;
 };
 
 export type PortalClienteValidationIssue = { path: string; message: string };
@@ -138,6 +144,20 @@ export function parsePortalClienteCreateBody(body: unknown): {
 
   const telefone = parseTelefoneField(b, whatsappOptIn, issues);
 
+  let endereco: PortalClienteEnderecoInput | null | undefined;
+  if (b.endereco !== undefined) {
+    if (b.endereco === null) {
+      endereco = null;
+    } else {
+      const parsedAddr = parsePortalClienteEnderecoBody(b.endereco);
+      if (!parsedAddr.ok) {
+        issues.push({ path: "endereco", message: parsedAddr.message });
+      } else {
+        endereco = parsedAddr.value;
+      }
+    }
+  }
+
   if (issues.length > 0) {
     return { ok: false, issues };
   }
@@ -149,7 +169,8 @@ export function parsePortalClienteCreateBody(body: unknown): {
       nome: nomeRaw,
       email,
       telefone,
-      whatsappOptIn
+      whatsappOptIn,
+      endereco
     }
   };
 }
@@ -231,6 +252,19 @@ export function parsePortalClientePatchBody(body: unknown): {
     }
   }
 
+  if (b.endereco !== undefined) {
+    if (b.endereco === null) {
+      patch.endereco = null;
+    } else {
+      const parsedAddr = parsePortalClienteEnderecoBody(b.endereco);
+      if (!parsedAddr.ok) {
+        issues.push({ path: "endereco", message: parsedAddr.message });
+      } else {
+        patch.endereco = parsedAddr.value;
+      }
+    }
+  }
+
   if (issues.length > 0) {
     return { ok: false, issues };
   }
@@ -239,11 +273,18 @@ export function parsePortalClientePatchBody(body: unknown): {
     patch.nome === undefined &&
     patch.email === undefined &&
     patch.telefone === undefined &&
-    patch.whatsappOptIn === undefined
+    patch.whatsappOptIn === undefined &&
+    patch.endereco === undefined
   ) {
     return {
       ok: false,
-      issues: [{ path: "body", message: "Informe ao menos um campo: nome, email, telefone ou whatsapp_opt_in." }]
+      issues: [
+        {
+          path: "body",
+          message:
+            "Informe ao menos um campo: nome, email, telefone, whatsapp_opt_in ou endereco."
+        }
+      ]
     };
   }
 

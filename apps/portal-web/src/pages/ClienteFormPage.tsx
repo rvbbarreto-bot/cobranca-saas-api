@@ -145,8 +145,40 @@ export function ClienteFormPage(): JSX.Element {
       setFieldErrors(fe);
       return;
     }
+    const cepDigits = onlyDigits(cep);
+    const hasAddr =
+      cepDigits.length > 0 ||
+      logradouro.trim().length > 0 ||
+      bairro.trim().length > 0 ||
+      cidade.trim().length > 0 ||
+      uf.trim().length > 0;
+    let enderecoPayload: ReturnType<typeof normalizeClientePayload>["endereco"];
+    if (hasAddr) {
+      if (
+        cepDigits.length !== 8 ||
+        !logradouro.trim() ||
+        !bairro.trim() ||
+        !cidade.trim() ||
+        uf.trim().length !== 2
+      ) {
+        setFieldErrors({
+          cep: cepDigits.length !== 8 ? "CEP com 8 digitos." : "",
+          endereco: "Preencha logradouro, bairro, cidade e UF para salvar o endereco."
+        });
+        return;
+      }
+      enderecoPayload = {
+        cep: cepDigits,
+        logradouro: logradouro.trim(),
+        numero: numero.trim() || null,
+        complemento: complemento.trim() || null,
+        bairro: bairro.trim(),
+        cidade: cidade.trim(),
+        uf: uf.trim().toUpperCase()
+      };
+    }
     setFieldErrors({});
-    m.mutate(normalizeClientePayload(parsed.data));
+    m.mutate(normalizeClientePayload(parsed.data, enderecoPayload));
   }
 
   const nomeLabel = tipo === "PF" ? "Nome completo" : tipo === "PJ" ? "Razao social" : "Nome / razao social";
@@ -160,8 +192,7 @@ export function ClienteFormPage(): JSX.Element {
           <h2 className="shell-page__title">Cadastro do cliente</h2>
           <p className="shell-page__desc" style={{ marginBottom: 0 }}>
             Identificacao e contato sao gravados na API (<code style={{ fontSize: "0.85em" }}>POST /v1/portal/clientes</code>
-            ). Endereco e regra de cobranca recorrente estao em <strong>Em breve</strong> — preenchimento local apenas para
-            validacao de UX.
+            ). Endereco e gravado na API quando CEP, logradouro, bairro, cidade e UF estiverem completos.
           </p>
         </div>
         <Link to="/clientes" className="btn-secondary">

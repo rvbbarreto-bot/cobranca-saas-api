@@ -112,7 +112,14 @@ export class InterAdapter implements PaymentGatewayAdapter {
   }
 
   async createBoleto(input: CreateBoletoInput): Promise<BoletoResult> {
-    const cliente = parseInterGatewayCustomerId(input.gatewayCustomerId);
+    const fromId = parseInterGatewayCustomerId(input.gatewayCustomerId);
+    const cliente: CreateCustomerInput = input.payer
+      ? {
+          ...fromId,
+          ...input.payer,
+          endereco: input.payer.endereco ?? fromId.endereco
+        }
+      : fromId;
     const payload: InterEmitBoletoPayload = {
       seuNumero: seuNumeroFromExternalReference(input.externalReference),
       valorNominal: input.value,
