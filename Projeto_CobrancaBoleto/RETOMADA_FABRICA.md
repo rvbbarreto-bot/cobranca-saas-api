@@ -17,11 +17,12 @@
 | Sprint L — factory + Inter/Cora | #20–#21 | Concluído |
 | **Sprint M — C6 + portal dinâmico** | [#22](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/22) | Concluído |
 | **P2 Inter + portal + hardening** | [#24](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/24) | Concluído (`3ad069e`) |
-| **Portal UI P0 — tokens / a11y** | [#25](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/25) | Concluído em `main` (`85c5d34`) |
+| **Portal UI P0 — tokens / a11y** | [#25](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/25) | Concluído (`85c5d34`) |
+| **Sprint N Onda A (parcial)** | [#26](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/26) | Concluído (`4e69efa`) |
 
-**Testes:** `npm test` · `portal:test` · `quality:gate` verde no último merge portal
+**Testes:** `npm test` · `portal:test` · `quality:gate` no CI de cada PR
 
-**Branch fábrica:** `main` — **Sprint N ATUAL** (ver secção 4)
+**Branch fábrica:** `main` — **Sprint N Fase 2** (Ondas B + 0 + D)
 
 ---
 
@@ -47,19 +48,19 @@ npm run quality:gate
 
 ---
 
-## 4. Trabalho imediato — Sprint N (ENTREGA DE PRODUTO)
+## 4. Trabalho imediato — Sprint N Fase 2
 
-**Pacote:** [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md)  
-**Kickoff PR:** [PR_SPRINT_N_KICKOFF_BODY.md](./PR_SPRINT_N_KICKOFF_BODY.md)  
-**Coordenação P2 (referência):** [COORDENACAO_ENTREGA_P2.md](./COORDENACAO_ENTREGA_P2.md)
+**Pacote atual:** [DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md](./DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md)  
+**Pacote mãe:** [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md)  
+**Coordenação P2:** [COORDENACAO_ENTREGA_P2.md](./COORDENACAO_ENTREGA_P2.md)
 
-| Onda | Itens | Prioridade |
-|------|-------|------------|
-| **0** | Homolog QA + evidências (`QA_P2`, `QA_PORTAL_UI`, relatório Sprint N) | P0 |
-| **A** | Portal polish: detalhe boleto, telas P1, BrDatePicker edição, a11y | P1 |
-| **B** | PDF Inter real + Ver PDF (mock se cert bloqueado) | P1 |
-| **C** | Relatórios filtros data + rotas roadmap | P2 |
-| **D** | Webhook Inter, charge-sync, estorno `estornada` | P1/P2 |
+| Onda | Status | Próximo |
+|------|--------|---------|
+| **A** | ✅ Parcial (#26) | Opcional: Clientes/Config/Login |
+| **0** | 🔴 Pendente QA | Checklists + relatório homolog |
+| **B** | 🔵 **AGORA** | `feat/p2-inter-pdf` + mock HTTP |
+| **C** | ⏸ Após B | Relatórios filtros data |
+| **D** | 🔵 **AGORA** | `feat/sprint-n-inter-webhook` |
 
 ### Decisões PO (Sprint N)
 
@@ -82,10 +83,11 @@ npm run quality:gate
 ## 5. Ordem de execução
 
 ```text
-feat/sprint-n-entrega-produto
-  ├── (paralelo) Onda 0 QA + Onda A portal + spike Onda D
-  ├── Onda B feat/p2-inter-pdf (quando mock pronto)
-  └── PRs ≤ ~400 linhas → quality:gate → merge Tech Lead
+main (4e69efa)
+  ├── (paralelo) Onda 0 QA humano
+  ├── Onda B: feat/p2-inter-pdf
+  ├── Onda D: feat/sprint-n-inter-webhook
+  └── Opcional: feat/sprint-n-portal-polish (Onda A restante)
 ```
 
 ---
@@ -100,7 +102,8 @@ Multi-tenant · RLS · credenciais cifradas · **nunca** commitar PEM/API keys �
 
 | Doc | Uso |
 |-----|-----|
-| [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md) | **ATUAL — pacote completo** |
+| [DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md](./DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md) | **ATUAL — próxima entrega** |
+| [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md) | Pacote mãe Sprint N |
 | [docs/QA_P2_POS_MERGE_CHECKLIST.md](../docs/QA_P2_POS_MERGE_CHECKLIST.md) | Homolog Onda 0 |
 | [docs/QA_PORTAL_UI_TOKENS_P0.md](../docs/QA_PORTAL_UI_TOKENS_P0.md) | UI Onda 0 |
 | [docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO_TEMPLATE.md](../docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO_TEMPLATE.md) | Relatório QA |
@@ -112,14 +115,13 @@ Multi-tenant · RLS · credenciais cifradas · **nunca** commitar PEM/API keys �
 ## 8. SYSTEM PROMPT (colar no Cursor)
 
 ```
-Repositório: cobranca-saas-api. main ≥ 85c5d34 (P2 #24 + portal UI P0 #25).
+Repositório: cobranca-saas-api. main @ 4e69efa (Sprint N Onda A #26 mergeado).
 
-SPRINT N ATUAL — Entrega de produto:
-  Projeto_CobrancaBoleto/DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md
+SPRINT N FASE 2 — Ondas B + 0 + D em paralelo:
+  Projeto_CobrancaBoleto/DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md
 
-Branch: feat/sprint-n-entrega-produto (sub-branches por onda).
-Ondas 0+A em paralelo; Onda B com mock se Inter bloqueado.
-Não reimplementar P2.2, PEM, tokens P0, Onda C MVP.
+Branches: feat/p2-inter-pdf | feat/sprint-n-inter-webhook
+Não refazer PR #26. PDF Inter: mock HTTP obrigatório.
 
-Gates: quality:gate (build + test + portal:test + test:integration).
+Gates: quality:gate por PR.
 ```

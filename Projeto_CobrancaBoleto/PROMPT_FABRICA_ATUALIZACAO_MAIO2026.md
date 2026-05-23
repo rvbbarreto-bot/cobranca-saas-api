@@ -4,23 +4,23 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **`main`:** Sprint M (#22), P2 (#24), portal UI P0 (#25) — `85c5d34`
-- **Próxima entrega:** **Sprint N** — [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md)
-- **Branch:** `feat/sprint-n-entrega-produto`
+- **`main`:** até `4e69efa` (Sprint N Onda A #26 mergeado)
+- **Próxima entrega:** [DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md](./DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md)
+- **Branches:** `feat/p2-inter-pdf` · `feat/sprint-n-inter-webhook`
 
-## Sprint N — ATUAL (4 ondas)
+## Sprint N Fase 2 — ATUAL
 
-| Onda | Foco |
-|------|------|
-| **0** | Homolog QA + evidências (`QA_P2`, UI tokens, relatório Sprint N) |
-| **A** | Portal polish (detalhe boleto, P1, BrDatePicker edição, a11y) |
-| **B** | PDF Inter + Ver PDF real (mock OK) |
-| **C** | Relatórios filtros data |
-| **D** | Webhook Inter + estorno |
+| Onda | Foco | Status |
+|------|------|--------|
+| **A** | Detalhe boleto + edição | ✅ #26 |
+| **0** | Homolog QA + evidências | Pendente |
+| **B** | PDF Inter (mock) | **AGORA** |
+| **D** | Webhook + charge-sync | **AGORA** |
+| **C** | Relatórios filtros | Após B |
 
 ## Autorização PO (colar no chat)
 
-Ver secção 2 de `DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md` (bloco AUTORIZAÇÃO PO + TECH LEAD).
+Ver secção 3 de `DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md`.
 
 ## Backlog pós–Sprint N
 
