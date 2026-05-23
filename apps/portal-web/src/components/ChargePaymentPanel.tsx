@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PortalChargePayment } from "../lib/api";
-import { isUsableHttpUrl } from "../lib/charge-payment-ui";
+import { fetchPortalChargeBoletoPdfBlob } from "../lib/api";
+import { isUsableHttpUrl, openPortalChargeBoletoPdf } from "../lib/charge-payment-ui";
 
 function pixQrSrc(base64: string): string {
   const raw = base64.trim();
@@ -111,6 +112,7 @@ export function ChargePaymentPanel({
 
   const boletoUrl = isUsableHttpUrl(payment.boleto_url) ? payment.boleto_url : null;
   const pdfUrl = isUsableHttpUrl(payment.boleto_pdf_url) ? payment.boleto_pdf_url : null;
+  const pdfIsPortalProxy = Boolean(pdfUrl?.includes("/boleto.pdf"));
 
   return (
     <div id="pagamento" className="payment-panel">
@@ -121,12 +123,22 @@ export function ChargePaymentPanel({
         </p>
       ) : null}
       <div className="form-actions" style={{ marginTop: "0.75rem", flexWrap: "wrap" }}>
-        {boletoUrl ? (
+        {boletoUrl && !pdfIsPortalProxy ? (
           <a href={boletoUrl} target="_blank" rel="noreferrer" className="btn-cyan">
             Abrir boleto
           </a>
         ) : null}
-        {pdfUrl ? (
+        {pdfUrl && pdfIsPortalProxy ? (
+          <button
+            type="button"
+            className="btn-secondary"
+            aria-label="Abrir PDF do boleto"
+            onClick={() => void openPortalChargeBoletoPdf(pdfUrl, fetchPortalChargeBoletoPdfBlob)}
+          >
+            PDF do boleto
+          </button>
+        ) : null}
+        {pdfUrl && !pdfIsPortalProxy ? (
           <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-secondary">
             PDF do boleto
           </a>

@@ -20,6 +20,8 @@ import {
 import { getPublicTenantIdForAutomacao } from "../../infrastructure/billing-tenant-link-repository";
 import { createPortalChargeUseCase } from "../../application/create-portal-charge";
 import { getPortalChargeDetailUseCase } from "../../application/get-portal-charge-detail";
+import { mapChargePaymentForPortal } from "../../application/portal-charge-payment-view";
+import { streamPortalChargeBoletoPdfUseCase } from "../../application/stream-portal-charge-boleto-pdf";
 import { patchPortalChargeUseCase } from "../../application/patch-portal-charge";
 import { parsePortalClienteCreateBody, parsePortalClientePatchBody } from "../../application/portal-cliente-input";
 import {
@@ -377,9 +379,50 @@ async function getPortalCobrancaHttp(req: Request, res: Response): Promise<void>
 
   res.json({
     charge: detail.charge,
-    payment: detail.payment,
+    payment: mapChargePaymentForPortal(detail.payment, chargeId),
     events: detail.events
   });
+}
+
+async function getPortalCobrancaBoletoPdfHttp(req: Request, res: Response): Promise<void> {
+  const automacaoTenantId = req.tenantContext?.tenantId;
+  const chargeId = typeof req.params.chargeId === "string" ? req.params.chargeId.trim() : "";
+  if (!automacaoTenantId || !chargeId || !isUuid(chargeId)) {
+    res.status(400).json({ error: "invalid_request", message: "tenant ou charge_id invalido." });
+    return;
+  }
+
+  const publicTenantId = await getPublicTenantIdForAutomacao(automacaoTenantId);
+  if (!publicTenantId) {
+    res.status(409).json({
+      error: "billing_link_missing",
+      message: "Configure portal.billing_tenant_link antes de consultar cobranca."
+    });
+    return;
+  }
+
+  const result = await withTenantTransaction(publicTenantId, (client) =>
+    streamPortalChargeBoletoPdfUseCase(client, chargeId, publicTenantId)
+  );
+
+  if (!result.ok) {
+    const status =
+      result.reason === "not_found"
+        ? 404
+        : result.reason === "not_inter"
+          ? 409
+          : 422;
+    res.status(status).json({
+      error: "boleto_pdf_unavailable",
+      message: "PDF do boleto indisponivel para esta cobranca.",
+      reason: result.reason
+    });
+    return;
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="${result.filename}"`);
+  res.send(result.buffer);
 }
 
 async function createPortalChargeHttp(req: Request, res: Response): Promise<void> {
@@ -812,6 +855,7 @@ export function createPortalRouter(): Router {
   protectedRoutes.get("/notas-fiscais", asyncHandler(listNotasFiscais));
   protectedRoutes.get("/cobrancas", asyncHandler(listCobrancas));
   protectedRoutes.get("/cobrancas/:chargeId", asyncHandler(getPortalCobrancaHttp));
+  protectedRoutes.get("/cobrancas/:chargeId/boleto.pdf", asyncHandler(getPortalCobrancaBoletoPdfHttp));
   protectedRoutes.post("/cobrancas", asyncHandler(createPortalChargeHttp));
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
   protectedRoutes.post(

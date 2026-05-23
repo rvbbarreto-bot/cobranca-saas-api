@@ -4,13 +4,14 @@ import {
   type PlatformSubscriptionWebhookContext
 } from "../../saas-billing/application/parse-asaas-platform-subscription-webhook";
 import { parseAsaasWebhookContext, type AsaasWebhookContext } from "./parse-asaas-webhook-context";
+import { isLikelyInterWebhook, parseInterWebhook } from "./parse-inter-webhook";
 import { parseWebhookChargePayload, type WebhookChargeInstruction } from "./parse-webhook-charge-payload";
 
 export type ParsedWebhookChargeResult =
   | {
       ok: true;
       value: WebhookChargeInstruction;
-      format: "asaas" | "canonical" | "platform_subscription";
+      format: "inter" | "asaas" | "canonical" | "platform_subscription";
       asaasContext?: AsaasWebhookContext;
       platformSubscriptionContext?: PlatformSubscriptionWebhookContext;
     }
@@ -20,6 +21,13 @@ export type ParsedWebhookChargeResult =
  * Tenta parser Asaas (webhook nativo) e depois o contrato canonico documentado.
  */
 export function parseWebhookChargeInstruction(payload: unknown): ParsedWebhookChargeResult {
+  if (isLikelyInterWebhook(payload)) {
+    const inter = parseInterWebhook(payload);
+    if (inter.ok) {
+      return { ok: true, value: inter.value, format: "inter" };
+    }
+  }
+
   if (isLikelyPlatformSubscriptionWebhook(payload)) {
     const platform = parseAsaasPlatformSubscriptionWebhook(payload);
     if (platform.ok) {

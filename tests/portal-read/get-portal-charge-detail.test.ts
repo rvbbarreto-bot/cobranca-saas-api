@@ -27,6 +27,8 @@ describe("getPortalChargeDetailUseCase", () => {
             updated_at: new Date("2026-01-01T00:00:00.000Z"),
             payment_type: "pix",
             payment_status: "pending",
+            payment_gateway: "asaas",
+            gateway_transaction_id: "pay_1",
             boleto_url: null,
             boleto_pdf_url: null,
             boleto_barcode: null,
@@ -51,7 +53,9 @@ describe("getPortalChargeDetailUseCase", () => {
       pix_qrcode_base64: "base64img",
       pix_emv: "00020126",
       pix_link: "https://pix",
-      expires_at: "2030-12-01T23:59:59.000Z"
+      expires_at: "2030-12-01T23:59:59.000Z",
+      gateway: "asaas",
+      gateway_transaction_id: "pay_1"
     });
   });
 

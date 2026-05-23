@@ -175,7 +175,11 @@ function mapPaymentRow(row: Record<string, unknown>): ChargePaymentView | null {
     pix_qrcode_base64: row.pix_qrcode_base64 ? String(row.pix_qrcode_base64) : null,
     pix_emv: row.pix_emv ? String(row.pix_emv) : null,
     pix_link: row.pix_link ? String(row.pix_link) : null,
-    expires_at: expires
+    expires_at: expires,
+    gateway: row.payment_gateway ? String(row.payment_gateway) : null,
+    gateway_transaction_id: row.gateway_transaction_id
+      ? String(row.gateway_transaction_id)
+      : null
   };
 }
 
@@ -193,6 +197,8 @@ export async function getChargeWithLatestPayment(
        c.*,
        pt.type            AS payment_type,
        pt.status          AS payment_status,
+       pt.gateway         AS payment_gateway,
+       pt.gateway_transaction_id,
        pt.boleto_url,
        pt.boleto_pdf_url,
        pt.boleto_barcode,

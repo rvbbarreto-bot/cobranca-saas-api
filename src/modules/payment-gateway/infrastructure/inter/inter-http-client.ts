@@ -1,7 +1,7 @@
 import type https from "node:https";
 import { GatewayProviderError } from "../../domain/payment-gateway-error";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
-import { mtlsFetch } from "../../../../platform/payment-gateway/mtls-fetch";
+import { mtlsFetch, mtlsFetchBuffer } from "../../../../platform/payment-gateway/mtls-fetch";
 import { getInterAccessToken, interBaseUrl } from "./inter-oauth";
 
 export class InterHttpClient {
@@ -47,5 +47,42 @@ export class InterHttpClient {
     }
 
     return parsed as T;
+  }
+
+  async requestPdf(path: string): Promise<Buffer> {
+    const base = interBaseUrl(this.ctx.sandbox);
+    const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
+    const headers = await this.authHeaders();
+    const res = await mtlsFetchBuffer(url, {
+      method: "GET",
+      agent: this.agent,
+      headers: {
+        ...headers,
+        Accept: "application/pdf"
+      }
+    });
+
+    if (res.status < 200 || res.status >= 300) {
+      let providerBody: unknown = null;
+      try {
+        providerBody = JSON.parse(res.body.toString("utf8")) as unknown;
+      } catch {
+        providerBody = res.body.toString("utf8").slice(0, 500);
+      }
+      throw new GatewayProviderError("inter", `Inter PDF HTTP ${res.status}`, {
+        httpStatus: res.status,
+        providerBody
+      });
+    }
+
+    const contentType = res.headers["content-type"] ?? "";
+    if (!contentType.includes("pdf") && res.body.length < 4) {
+      throw new GatewayProviderError("inter", "Resposta PDF vazia ou invalida.", {
+        httpStatus: res.status,
+        providerBody: { contentType, length: res.body.length }
+      });
+    }
+
+    return res.body;
   }
 }

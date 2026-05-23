@@ -593,6 +593,22 @@ export type PatchPortalCobrancaBody = {
   metadata?: Record<string, unknown>;
 };
 
+export async function fetchPortalChargeBoletoPdfBlob(pdfPath: string): Promise<Blob> {
+  const path = pdfPath.startsWith("/") ? pdfPath : `/${pdfPath}`;
+  const res = await apiFetch(path, { method: "GET" });
+  if (!res.ok) {
+    const text = await res.text();
+    let json: unknown = text;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      /* keep text */
+    }
+    throw new ApiError("Nao foi possivel obter o PDF do boleto.", res.status, json);
+  }
+  return res.blob();
+}
+
 export async function fetchPortalCobrancaDetail(chargeId: string): Promise<PortalCobrancaDetailResponse> {
   const res = await apiFetch(`/v1/portal/cobrancas/${encodeURIComponent(chargeId)}`, { method: "GET" });
   const text = await res.text();

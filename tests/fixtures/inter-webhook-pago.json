@@ -1,0 +1,9 @@
+{
+  "source": "inter",
+  "codigoSolicitacao": "2ccdf47c-0000-4000-8000-000000000001",
+  "seuNumero": "REF-HOMOLOG-001",
+  "situacao": "PAGO",
+  "valorNominal": 250.0,
+  "valorPago": 250.0,
+  "dataPagamento": "2026-06-15"
+}
