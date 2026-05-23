@@ -184,7 +184,7 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
   });
 
   it("B4 POST /v1/portal/cobrancas (fase 2 — criar charge)", async () => {
-    const ref = `f2-bat-${Date.now()}`;
+    const ref = `f2bat${Date.now()}`;
     const idem = `idem-f2-${Date.now()}`;
     const r = await request(app)
       .post("/v1/portal/cobrancas")
@@ -201,6 +201,7 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
     expect(r.body?.idempotent).toBe(false);
   });
 
+  // PATCH com whatsapp_opt_in=true exige telefone no mesmo corpo (portal-cliente-input).
   it("B5 PATCH /v1/portal/clientes/:id (P0 — correcao sem duplicar)", async () => {
     const documento = uniqueTestCnpj(Date.now() + 88_000, 902);
     const cr = await request(app)
@@ -210,7 +211,7 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
       .send({
         documento,
         nome: "Cliente bat antes",
-        email: null,
+        email: `bat+${documento.slice(-6)}@test.local`,
         whatsapp_opt_in: false
       })
       .expect(201);
@@ -220,10 +221,15 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
       .patch(`/v1/portal/clientes/${id}`)
       .set("Authorization", `Bearer ${tokenPortal}`)
       .set("x-tenant-id", SEED_AUTOMACAO_SLUG)
-      .send({ nome: "Cliente bat depois", whatsapp_opt_in: true })
+      .send({
+        nome: "Cliente bat depois",
+        whatsapp_opt_in: true,
+        telefone: "11987654321"
+      })
       .expect(200);
     expect(pr.body?.cliente?.nome).toBe("Cliente bat depois");
     expect(pr.body?.cliente?.whatsapp_opt_in).toBe(true);
+    expect(pr.body?.cliente?.telefone).toBe("11987654321");
   });
 
   it("B6 PATCH /v1/portal/cobrancas/:id (P0 — retificar valor e vencimento)", async () => {

@@ -1,0 +1,381 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Banco Inter — Sandbox (cobranca-saas-api)",
+    "description": "# Banco Inter — API de Cobrança (Sandbox)\n\n**Projeto:** cobranca-saas-api · Exeq Tecnologia\n\n## Como usar esta collection\n\n1. **Importe o environment** `Inter_Sandbox.postman_environment.json` primeiro.\n2. Selecione o environment `Inter Sandbox` no dropdown superior direito.\n3. Preencha as variáveis marcadas como `⚠️ PREENCHER` no environment.\n4. Configure o certificado mTLS em **Settings → Certificates** (veja Request 1 para detalhes).\n5. Execute os requests **na ordem numérica** — cada um depende do anterior.\n\n## Pré-requisitos\n\n- Credenciais sandbox do Banco Inter (Client ID + Client Secret)\n- Arquivos de certificado baixados do portal Inter:\n  - `Inter_API_Certificado.crt`\n  - `Inter_API_Chave.key`\n- Postman versão 10 ou superior\n\n## Contato\n\nEm caso de dúvida, acione o Tech Lead ou consulte `ESTUDO_APIS_BANCARIAS.md` seção 2.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Script global de pré-request",
+          "// Verifica se o environment está selecionado",
+          "if (!pm.environment.get('inter_client_id')) {",
+          "    console.warn('⚠️ ATENÇÃO: Environment \"Inter Sandbox\" não está selecionado ou variáveis não preenchidas.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 — Obter Token (OAuth2 + mTLS)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// ============================================================",
+              "// Script automático — salva o token no environment",
+              "// O QA NÃO precisa copiar o token manualmente",
+              "// ============================================================",
+              "",
+              "pm.test('Status HTTP deve ser 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Resposta deve conter access_token', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('access_token');",
+              "    pm.expect(json.access_token).to.not.be.empty;",
+              "});",
+              "",
+              "// Salva o token automaticamente para os próximos requests",
+              "if (pm.response.code === 200) {",
+              "    const json = pm.response.json();",
+              "    pm.environment.set('inter_token', json.access_token);",
+              "    pm.environment.set('inter_token_expira_em', json.expires_in);",
+              "    console.log('✅ Token salvo no environment. Válido por ' + json.expires_in + ' segundos (1 hora).');",
+              "} else {",
+              "    console.error('❌ Falha ao obter token. Verifique Client ID, Client Secret e certificado mTLS.');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded",
+            "description": "Obrigatório — o body é form-urlencoded, não JSON"
+          }
+        ],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "description": "⚠️ NÃO ALTERAR — valor fixo do protocolo OAuth2",
+              "type": "text"
+            },
+            {
+              "key": "client_id",
+              "value": "{{inter_client_id}}",
+              "description": "⚠️ Preenchido automaticamente pelo environment. Preencha a variável inter_client_id.",
+              "type": "text"
+            },
+            {
+              "key": "client_secret",
+              "value": "{{inter_client_secret}}",
+              "description": "⚠️ Preenchido automaticamente pelo environment. Preencha a variável inter_client_secret.",
+              "type": "text"
+            },
+            {
+              "key": "scope",
+              "value": "boleto-cobranca.write boleto-cobranca.read",
+              "description": "⚠️ NÃO ALTERAR — escopos necessários para emissão e consulta de boletos",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{inter_base_url}}/oauth/v2/token",
+          "host": ["{{inter_base_url}}"],
+          "path": ["oauth", "v2", "token"]
+        },
+        "description": "# 01 — Obter Token de Acesso\n\n## O que faz\nAutentica no Banco Inter usando OAuth2 com Client Credentials e retorna um token Bearer de acesso.\n\n## Pré-requisito OBRIGATÓRIO — Certificado mTLS\nAntes de executar este request, você deve configurar o certificado mTLS no Postman:\n\n1. Abra **Settings** (ícone de engrenagem ⚙️ no canto superior direito)\n2. Clique na aba **Certificates**\n3. Clique em **Add Certificate**\n4. Preencha:\n   - **Host:** `cdpj-sandbox.partners.uatinter.co`\n   - **Port:** `443`\n   - **CRT file:** selecione o arquivo `Inter_API_Certificado.crt` baixado do portal Inter\n   - **KEY file:** selecione o arquivo `Inter_API_Chave.key` baixado do portal Inter\n   - **PFX file:** deixar vazio\n   - **Passphrase:** deixar vazio (a menos que sua chave tenha senha)\n5. Clique em **Add**\n\n⚠️ **Sem o certificado configurado, este request retornará erro SSL mesmo com credenciais corretas.**\n\n## Campos do Body\n| Campo | Valor | Alterar? |\n|---|---|---|\n| `grant_type` | `client_credentials` | ❌ NÃO |\n| `client_id` | `{{inter_client_id}}` | Preencha no environment |\n| `client_secret` | `{{inter_client_secret}}` | Preencha no environment |\n| `scope` | `boleto-cobranca.write boleto-cobranca.read` | ❌ NÃO |\n\n## Resultado esperado\n```json\n{\n  \"access_token\": \"eyJhbGci...\",\n  \"token_type\": \"Bearer\",\n  \"expires_in\": 3600\n}\n```\nO script de Test salva o `access_token` automaticamente na variável `{{inter_token}}`.\n\n## Erros comuns\n| Erro | Causa | Solução |\n|---|---|---|\n| `SSL certificate problem` | Certificado mTLS não configurado | Siga o pré-requisito acima |\n| `401 Unauthorized` | Client ID ou Secret errado | Verifique no environment |\n| `400 invalid_scope` | Escopo inválido | Não altere o campo scope |"
+      },
+      "response": []
+    },
+    {
+      "name": "02 — Emitir Boleto",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Verifica se o token está disponível",
+              "if (!pm.environment.get('inter_token')) {",
+              "    throw new Error('❌ Token não encontrado. Execute primeiro o request \"01 — Obter Token\".');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status HTTP deve ser 200 ou 201', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              "",
+              "pm.test('Resposta deve conter codigoSolicitacao', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('codigoSolicitacao');",
+              "    pm.expect(json.codigoSolicitacao).to.not.be.empty;",
+              "});",
+              "",
+              "pm.test('Resposta deve conter linhaDigitavel', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('linhaDigitavel');",
+              "});",
+              "",
+              "// Salva o codigoSolicitacao para os próximos requests",
+              "if (pm.response.code === 200 || pm.response.code === 201) {",
+              "    const json = pm.response.json();",
+              "    pm.environment.set('inter_codigo_solicitacao', json.codigoSolicitacao);",
+              "    console.log('✅ codigoSolicitacao salvo: ' + json.codigoSolicitacao);",
+              "    console.log('📋 situacao: ' + json.situacao);",
+              "    if (json.situacao === 'EM_PROCESSAMENTO') {",
+              "        console.warn('⏳ Boleto em processamento. Aguarde 30-60 segundos e execute o request 03 para verificar o status.');",
+              "    }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{inter_token}}",
+            "description": "Preenchido automaticamente após executar o request 01"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "description": "Obrigatório"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seuNumero\": \"{{inter_seu_numero}}\",\n  \"valorNominal\": {{inter_valor}},\n  \"dataVencimento\": \"{{inter_data_vencimento}}\",\n  \"numDiasAgenda\": 60,\n  \"pagador\": {\n    \"cpfCnpj\": \"{{inter_pagador_cpfcnpj}}\",\n    \"tipoPessoa\": \"{{inter_pagador_tipo}}\",\n    \"nome\": \"{{inter_pagador_nome}}\",\n    \"endereco\": \"{{inter_pagador_endereco}}\",\n    \"bairro\": \"{{inter_pagador_bairro}}\",\n    \"cidade\": \"{{inter_pagador_cidade}}\",\n    \"uf\": \"{{inter_pagador_uf}}\",\n    \"cep\": \"{{inter_pagador_cep}}\",\n    \"email\": \"{{inter_pagador_email}}\",\n    \"ddd\": \"{{inter_pagador_ddd}}\",\n    \"telefone\": \"{{inter_pagador_telefone}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{inter_base_url}}/cobrancas/v2",
+          "host": ["{{inter_base_url}}"],
+          "path": ["cobrancas", "v2"]
+        },
+        "description": "# 02 — Emitir Boleto\n\n## O que faz\nRegistra um novo boleto no Banco Inter e retorna os dados para apresentar ao pagador (linha digitável, código de barras).\n\n## Campos do Body — o que preencher\n\n| Campo | Environment var | Descrição | Exemplo |\n|---|---|---|---|\n| `seuNumero` | `inter_seu_numero` | Seu identificador interno. **Máx. 15 caracteres.** Deve ser único por emissão. | `QA-TEST-001` |\n| `valorNominal` | `inter_valor` | Valor do boleto em Reais. **Usar ponto como decimal, não vírgula.** | `10.00` |\n| `dataVencimento` | `inter_data_vencimento` | Data de vencimento no formato **AAAA-MM-DD**. Deve ser data futura. | `2026-07-31` |\n| `numDiasAgenda` | fixo `60` | Quantos dias após o vencimento o boleto ainda pode ser pago. Máx. 60. | `60` |\n| `pagador.cpfCnpj` | `inter_pagador_cpfcnpj` | CPF (11 dígitos) ou CNPJ (14 dígitos), **só números, sem pontuação**. | `11122233344` |\n| `pagador.tipoPessoa` | `inter_pagador_tipo` | `FISICA` para CPF, `JURIDICA` para CNPJ | `FISICA` |\n| `pagador.nome` | `inter_pagador_nome` | Nome completo ou razão social | `QA Teste Pagador` |\n| `pagador.endereco` | `inter_pagador_endereco` | Endereço com rua e número | `Rua de Teste, 123` |\n| `pagador.bairro` | `inter_pagador_bairro` | Bairro | `Centro` |\n| `pagador.cidade` | `inter_pagador_cidade` | Cidade | `Belo Horizonte` |\n| `pagador.uf` | `inter_pagador_uf` | UF com **2 letras maiúsculas** | `MG` |\n| `pagador.cep` | `inter_pagador_cep` | CEP **sem hífen**, só números | `30140071` |\n| `pagador.email` | `inter_pagador_email` | E-mail do pagador (opcional mas recomendado) | `qa@teste.com` |\n| `pagador.ddd` | `inter_pagador_ddd` | DDD do telefone, **2 dígitos** | `31` |\n| `pagador.telefone` | `inter_pagador_telefone` | Telefone **sem DDD e sem formatação** | `991234567` |\n\n## Resultado esperado\n```json\n{\n  \"codigoSolicitacao\": \"uuid-aqui\",\n  \"situacao\": \"EM_ABERTO\",\n  \"nossoNumero\": \"...\",\n  \"codigoBarras\": \"...\",\n  \"linhaDigitavel\": \"...\"\n}\n```\nO script de Test salva o `codigoSolicitacao` automaticamente na variável `{{inter_codigo_solicitacao}}`.\n\n## ⚠️ Atenção\nSe `situacao` retornar `EM_PROCESSAMENTO`, aguarde 30–60 segundos e execute o request 03 para confirmar o status. Não considere como erro."
+      },
+      "response": []
+    },
+    {
+      "name": "03 — Consultar Status do Boleto",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('inter_codigo_solicitacao')) {",
+              "    throw new Error('❌ codigoSolicitacao não encontrado. Execute primeiro o request \"02 — Emitir Boleto\".');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status HTTP deve ser 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Resposta deve conter situacao', function () {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('situacao');",
+              "});",
+              "",
+              "const json = pm.response.json();",
+              "const situacoesValidas = ['EM_ABERTO', 'EM_PROCESSAMENTO', 'PAGO', 'CANCELADO', 'VENCIDO', 'EXPIRADO'];",
+              "",
+              "pm.test('situacao deve ser um valor válido do Inter', function () {",
+              "    pm.expect(situacoesValidas).to.include(json.situacao);",
+              "});",
+              "",
+              "// Mapeamento para o status interno do SaaS",
+              "const mapaStatus = {",
+              "    'EM_ABERTO': 'pendente_pagamento',",
+              "    'EM_PROCESSAMENTO': 'emitida',",
+              "    'PAGO': 'paga',",
+              "    'CANCELADO': 'cancelada',",
+              "    'VENCIDO': 'vencida',",
+              "    'EXPIRADO': 'vencida'",
+              "};",
+              "console.log('📋 situacao Inter: ' + json.situacao);",
+              "console.log('🔄 canonical_status SaaS: ' + mapaStatus[json.situacao]);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{inter_token}}",
+            "description": "Preenchido automaticamente pelo request 01"
+          }
+        ],
+        "url": {
+          "raw": "{{inter_base_url}}/cobrancas/v2/{{inter_codigo_solicitacao}}",
+          "host": ["{{inter_base_url}}"],
+          "path": ["cobrancas", "v2", "{{inter_codigo_solicitacao}}"]
+        },
+        "description": "# 03 — Consultar Status do Boleto\n\n## O que faz\nConsulta o status atual de um boleto já emitido. Necessário especialmente quando o boleto retornou `EM_PROCESSAMENTO` na emissão.\n\n## Variáveis utilizadas\n| Variável | Origem |\n|---|---|\n| `{{inter_token}}` | Salva automaticamente pelo request 01 |\n| `{{inter_codigo_solicitacao}}` | Salva automaticamente pelo request 02 |\n\n**Não é necessário preencher nada manualmente.**\n\n## Situações possíveis na resposta\n| `situacao` (Inter) | `canonical_status` (SaaS) | Significado |\n|---|---|---|\n| `EM_ABERTO` | `pendente_pagamento` | Boleto emitido, aguardando pagamento |\n| `EM_PROCESSAMENTO` | `emitida` | Inter ainda processando — aguarde e consulte novamente |\n| `PAGO` | `paga` | Boleto pago com sucesso |\n| `CANCELADO` | `cancelada` | Boleto cancelado |\n| `VENCIDO` | `vencida` | Boleto vencido sem pagamento |\n| `EXPIRADO` | `vencida` | Prazo de agenda expirado |\n\n## Resultado esperado\nHTTP 200 com o mesmo schema da emissão + campo `situacao` atualizado."
+      },
+      "response": []
+    },
+    {
+      "name": "04 — Cancelar Boleto",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('inter_codigo_solicitacao')) {",
+              "    throw new Error('❌ codigoSolicitacao não encontrado. Execute primeiro o request \"02 — Emitir Boleto\".');",
+              "}",
+              "console.warn('⚠️ Este request vai CANCELAR o boleto. Operação irreversível no banco.');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status HTTP deve ser 204 (sem body = sucesso)', function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "",
+              "if (pm.response.code === 204) {",
+              "    console.log('✅ Boleto cancelado com sucesso.');",
+              "    console.log('ℹ️ Execute o request 03 para confirmar que situacao mudou para CANCELADO.');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{inter_token}}",
+            "description": "Preenchido automaticamente pelo request 01"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"motivoCancelamento\": \"ACERTOS\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{inter_base_url}}/cobrancas/v2/{{inter_codigo_solicitacao}}/cancelar",
+          "host": ["{{inter_base_url}}"],
+          "path": ["cobrancas", "v2", "{{inter_codigo_solicitacao}}", "cancelar"]
+        },
+        "description": "# 04 — Cancelar Boleto\n\n## O que faz\nCancela um boleto ativo no Banco Inter. **Operação irreversível.**\n\n## Variáveis utilizadas\n| Variável | Origem |\n|---|---|\n| `{{inter_token}}` | Salva automaticamente pelo request 01 |\n| `{{inter_codigo_solicitacao}}` | Salva automaticamente pelo request 02 |\n\n## Campo do Body\n| Campo | Valores possíveis | Quando usar |\n|---|---|---|\n| `motivoCancelamento` | `ACERTOS` | Cancelamento por acerto / erro |\n| `motivoCancelamento` | `PAGODIRETOAOFORNECEDOR` | Cliente pagou diretamente, sem usar o boleto |\n| `motivoCancelamento` | `SUBSTITUICAO` | Este boleto será substituído por outro |\n\nPara testes de QA, use sempre `ACERTOS`.\n\n## Resultado esperado\n**HTTP 204 No Content** — sem body na resposta. Isso é sucesso. Se retornar qualquer body, é erro.\n\n## Pós-cancelamento\nApós este request, execute o **03 — Consultar Status** para confirmar que `situacao` mudou para `CANCELADO`."
+      },
+      "response": []
+    },
+    {
+      "name": "05 — Baixar PDF do Boleto",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('inter_codigo_solicitacao')) {",
+              "    throw new Error('❌ codigoSolicitacao não encontrado. Execute primeiro o request \"02 — Emitir Boleto\".');",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status HTTP deve ser 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Content-Type deve ser application/pdf', function () {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+              "});",
+              "",
+              "pm.test('Resposta deve ter conteúdo (PDF não vazio)', function () {",
+              "    pm.expect(pm.response.responseSize).to.be.greaterThan(1000);",
+              "});",
+              "",
+              "console.log('📄 PDF recebido. Tamanho: ' + pm.response.responseSize + ' bytes');",
+              "console.log('ℹ️ Para salvar o arquivo: clique em \"Save Response\" → \"Save to a file\" no botão Send.');"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{inter_token}}",
+            "description": "Preenchido automaticamente pelo request 01"
+          },
+          {
+            "key": "Accept",
+            "value": "application/pdf",
+            "description": "Obrigatório — indica ao banco que queremos o PDF"
+          }
+        ],
+        "url": {
+          "raw": "{{inter_base_url}}/cobrancas/v2/{{inter_codigo_solicitacao}}/pdf",
+          "host": ["{{inter_base_url}}"],
+          "path": ["cobrancas", "v2", "{{inter_codigo_solicitacao}}", "pdf"]
+        },
+        "description": "# 05 — Baixar PDF do Boleto\n\n## O que faz\nBaixa o PDF do boleto emitido para visualização e validação visual.\n\n## Como salvar o PDF no Postman\n1. Clique na **seta ao lado do botão Send** (▼)\n2. Selecione **\"Send and Download\"**\n3. Escolha onde salvar o arquivo\n4. Abra o PDF e valide visualmente:\n   - Nome do pagador correto\n   - Valor correto\n   - Data de vencimento correta\n   - Código de barras/linha digitável presente\n\n## Resultado esperado\n- HTTP 200\n- `Content-Type: application/pdf`\n- Body: arquivo PDF binário\n\n## ⚠️ Atenção\nNão tente visualizar o body como texto no Postman — ele é binário (PDF). Use sempre \"Send and Download\"."
+      },
+      "response": []
+    }
+  ]
+}

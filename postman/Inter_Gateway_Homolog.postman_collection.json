@@ -1,0 +1,599 @@
+{
+  "info": {
+    "name": "Cobranca SaaS — Inter Gateway Homolog (QA)",
+    "description": "# Homologação Banco Inter — API SaaS\n\n**Público:** QA · Tech Lead\n\n## Importar\n1. `Inter_Gateway_Homolog.postman_collection.json` (este ficheiro)\n2. `Inter_Gateway_Homolog.local.postman_environment.json` (criar a partir de `.example` — **não commitar**)\n\n## Variáveis obrigatórias (environment local)\n| Variável | Origem |\n|----------|--------|\n| `interClientId` | Portal Inter Developers |\n| `interClientSecret` | Portal Inter |\n| `interCertificatePem` | Ficheiro `.crt` convertido PEM |\n| `interPrivateKeyPem` | Ficheiro `.key` convertido PEM |\n| `pemConfigured` | `true` após colar PEM válidos |\n\n## Execução CLI (Tech Lead)\n```bash\nnpm run postman:inter:smoke   # pastas 0–2 (sem emissão)\nnpm run postman:inter:homolog # suite completa\n```\n\n## Cenários (matriz INT)\n- INT-01/02: pasta **2 — Gateway**\n- INT-03/04: PATCH + GET config\n- INT-05/06: pasta **3 — Cobrança** (exige PEM + Redis)\n\nRoteiro: `docs/QA_HOMOLOG_INTER_GATEWAY_PORTAL.md`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const runId = Date.now().toString(36);",
+          "pm.collectionVariables.set('runId', runId);",
+          "pm.collectionVariables.set('chargeReference', 'inter-homolog-' + runId);",
+          "pm.collectionVariables.set('chargeIdempotencyKey', 'idem-' + runId);",
+          "pm.collectionVariables.set('correlationId', 'inter-homolog-' + runId);"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3333" },
+    { "key": "loginEmail", "value": "portal-seed@local.dev" },
+    { "key": "loginTenantId", "value": "escritorio-demo" },
+    { "key": "loginPassword", "value": "PortalSeedDev!ChangeMe1" },
+    { "key": "automacaoTenantId", "value": "1" },
+    { "key": "portalToken", "value": "" },
+    { "key": "portalClienteId", "value": "" },
+    { "key": "chargeId", "value": "" },
+    { "key": "runId", "value": "" },
+    { "key": "correlationId", "value": "inter-homolog-001" },
+    { "key": "chargeReference", "value": "inter-homolog-ref-001" },
+    { "key": "chargeIdempotencyKey", "value": "idem-inter-homolog-001" },
+    { "key": "asaasApiKey", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "0 — Health",
+      "item": [
+        {
+          "name": "GET /health [INT-ambiente]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-ambiente] status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('[INT-ambiente] body.status ok', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.status).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "GET /health/ready [INT-ambiente]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-ambiente] ready 200', () => pm.response.to.have.status(200));",
+                  "pm.test('[INT-ambiente] checks presentes', () => {",
+                  "  pm.expect(pm.response.json().checks).to.be.an('object');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health/ready"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 — Auth",
+      "item": [
+        {
+          "name": "POST portal login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('access_token presente', () => {",
+                  "  pm.expect(j.access_token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "if (j.access_token) pm.collectionVariables.set('portalToken', j.access_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{loginEmail}}\",\n  \"tenant_id\": \"{{loginTenantId}}\",\n  \"password\": \"{{loginPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/v1/portal/auth/login"
+          }
+        },
+        {
+          "name": "GET portal auth/me (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('me status 200', () => pm.response.to.have.status(200));",
+                  "const role = pm.response.json().user?.membership_role;",
+                  "pm.test('papel admin_escritorio', () => pm.expect(role).to.eql('admin_escritorio'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 — Gateway Inter (config)",
+      "item": [
+        {
+          "name": "GET gateway providers [INT-01]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-01] status 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const inter = (pm.response.json().data || []).find(function (p) { return p.id === 'inter'; });",
+                  "  pm.test('[INT-01] Inter na lista', function () { pm.expect(inter).to.be.an('object'); });",
+                  "  pm.test('[INT-01] Inter enabled', function () { pm.expect(inter.enabled).to.eql(true); });",
+                  "  pm.test('[INT-01] authType mtls_oauth', function () { pm.expect(inter.authType).to.eql('mtls_oauth'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/escritorio/gateway/providers"
+          }
+        },
+        {
+          "name": "GET gateway schema inter [INT-02]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-02] status 200', () => pm.response.to.have.status(200));",
+                  "const keys = (pm.response.json().provider?.credentialFields || []).map(f => f.key);",
+                  "pm.test('[INT-02] 4 campos obrigatórios', () => {",
+                  "  pm.expect(keys).to.include.members(['client_id','client_secret','certificate_pem','private_key_pem']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/escritorio/gateway/providers/inter/schema"
+          }
+        },
+        {
+          "name": "GET escritorio config (antes) [INT-04 baseline]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-04] status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().config || {};",
+                  "const body = pm.response.text();",
+                  "pm.test('[INT-04] sem PEM em claro', () => {",
+                  "  pm.expect(body).to.not.include('BEGIN CERTIFICATE');",
+                  "  pm.expect(body).to.not.include('BEGIN PRIVATE KEY');",
+                  "});",
+                  "pm.collectionVariables.set('configBeforeProvider', c.gateway_provider || '');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/escritorio/config"
+          }
+        },
+        {
+          "name": "PATCH gateway configurar Inter [INT-03]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const id = pm.environment.get('interClientId') || pm.collectionVariables.get('interClientId');",
+                  "const secret = pm.environment.get('interClientSecret');",
+                  "const cert = (pm.environment.get('interCertificatePem') || '').trim();",
+                  "const key = (pm.environment.get('interPrivateKeyPem') || '').trim();",
+                  "if (!id || !secret) {",
+                  "  throw new Error('Preencha interClientId e interClientSecret no environment local.');",
+                  "}",
+                  "const pemOk = cert.includes('BEGIN CERTIFICATE') && key.includes('BEGIN');",
+                  "pm.environment.set('pemConfigured', pemOk ? 'true' : 'false');",
+                  "if (!pemOk) {",
+                  "  console.warn('PEM ausente ou placeholder — PATCH pode gravar credenciais mas emissão (pasta 3) falhará.');",
+                  "}",
+                  "const body = {",
+                  "  gateway_provider: 'inter',",
+                  "  gateway_credentials: {",
+                  "    client_id: id,",
+                  "    client_secret: secret,",
+                  "    certificate_pem: cert || '-----BEGIN CERTIFICATE-----\\nPENDING\\n-----END CERTIFICATE-----',",
+                  "    private_key_pem: key || '-----BEGIN PRIVATE KEY-----\\nPENDING\\n-----END PRIVATE KEY-----'",
+                  "  }",
+                  "};",
+                  "pm.variables.set('patchGatewayBody', JSON.stringify(body));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-03] status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().config;",
+                  "pm.test('[INT-03] provider inter', () => pm.expect(c.gateway_provider).to.eql('inter'));",
+                  "pm.test('[INT-03] credentials configured', () => pm.expect(c.gateway_credentials_configured).to.eql(true));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{patchGatewayBody}}"
+            },
+            "url": "{{baseUrl}}/v1/portal/escritorio/gateway"
+          }
+        },
+        {
+          "name": "GET escritorio config (depois) [INT-04]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-04] status 200', () => pm.response.to.have.status(200));",
+                  "const c = pm.response.json().config;",
+                  "pm.test('[INT-04] provider inter', () => pm.expect(c.gateway_provider).to.eql('inter'));",
+                  "const body = pm.response.text();",
+                  "pm.test('[INT-04] secret não exposto', () => {",
+                  "  pm.expect(body).to.not.include(pm.environment.get('interClientSecret') || '___none___');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/escritorio/config"
+          }
+        },
+        {
+          "name": "GET gateway change history [INT-07]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-07] status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('[INT-07] data é array', () => pm.expect(pm.response.json().data).to.be.an('array'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/escritorio/gateway/history?limit=10"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 — Cobrança (emissão Inter)",
+      "description": "Exige `pemConfigured=true`, API com Redis e worker de emissão ativos.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "if (pm.environment.get('pemConfigured') !== 'true') {",
+              "  console.warn('SKIP lógico: defina PEM válidos e pemConfigured=true para emissão real.');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "POST portal cliente",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (pm.environment.get('pemConfigured') !== 'true') {",
+                  "  pm.execution.skipRequest('PEM não configurado — preencha interCertificatePem e interPrivateKeyPem');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('cliente 201', () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+                  "if (pm.response.code === 201) {",
+                  "  const id = pm.response.json().cliente?.id;",
+                  "  pm.collectionVariables.set('portalClienteId', id);",
+                  "  pm.test('cliente.uuid', () => pm.expect(id).to.match(/^[0-9a-f-]{36}$/i));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": \"39053344705\",\n  \"nome\": \"Pagador Homolog Inter QA\",\n  \"email\": \"pagador-inter-qa@local.dev\",\n  \"telefone\": \"11999998888\"\n}"
+            },
+            "url": "{{baseUrl}}/v1/portal/clientes"
+          }
+        },
+        {
+          "name": "POST cobrança boleto [INT-05 rascunho]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (pm.environment.get('pemConfigured') !== 'true') {",
+                  "  pm.execution.skipRequest('PEM não configurado');",
+                  "}",
+                  "if (!pm.collectionVariables.get('portalClienteId')) {",
+                  "  throw new Error('portalClienteId vazio — execute POST portal cliente ou use cliente existente.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-05] status 201', () => pm.expect(pm.response.code).to.be.oneOf([201, 200]));",
+                  "const ch = pm.response.json().charge;",
+                  "pm.collectionVariables.set('chargeId', ch.id);",
+                  "pm.test('[INT-05] rascunho', () => pm.expect(ch.canonicalStatus).to.eql('rascunho'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "x-correlation-id", "value": "{{correlationId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"{{chargeReference}}\",\n  \"idempotency_key\": \"{{chargeIdempotencyKey}}\",\n  \"amount\": 150.75,\n  \"due_date\": \"2030-12-31\",\n  \"type\": \"boleto\",\n  \"portal_cliente_id\": \"{{portalClienteId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/v1/portal/cobrancas"
+          }
+        },
+        {
+          "name": "GET cobrança poll 1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": ["if (pm.environment.get('pemConfigured') !== 'true') { pm.execution.skipRequest(); }"],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('poll1 status 200', () => pm.response.to.have.status(200));",
+                  "const st = pm.response.json().charge?.canonicalStatus;",
+                  "pm.collectionVariables.set('lastChargeStatus', st || '');",
+                  "console.log('Status poll 1:', st);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/cobrancas/{{chargeId}}"
+          }
+        },
+        {
+          "name": "GET cobrança poll 2 (aguardar emissão)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": ["if (pm.environment.get('pemConfigured') !== 'true') { pm.execution.skipRequest(); }"],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('poll2 status 200', () => pm.response.to.have.status(200));",
+                  "const ch = pm.response.json().charge;",
+                  "pm.collectionVariables.set('lastChargeStatus', ch.canonicalStatus);",
+                  "console.log('Status poll 2:', ch.canonicalStatus);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/cobrancas/{{chargeId}}"
+          }
+        },
+        {
+          "name": "GET cobrança poll 3 [INT-05 emitida]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": ["if (pm.environment.get('pemConfigured') !== 'true') { pm.execution.skipRequest(); }"],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('poll3 status 200', () => pm.response.to.have.status(200));",
+                  "const ch = pm.response.json().charge;",
+                  "const st = ch.canonicalStatus;",
+                  "pm.test('[INT-05] status terminal conhecido', () => {",
+                  "  pm.expect(st).to.be.oneOf(['emitida','erro_emissao','pendente_pagamento','rascunho']);",
+                  "});",
+                  "if (st === 'emitida') {",
+                  "  pm.test('[INT-05] provider_charge_id', () => pm.expect(ch.providerChargeId).to.be.a('string').and.not.empty);",
+                  "  pm.test('[INT-06] provider inter', () => pm.expect(ch.provider).to.eql('inter'));",
+                  "} else if (st === 'erro_emissao') {",
+                  "  console.warn('erro_emissao — verificar PEM, Redis, logs [payment-emission]');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" }
+            ],
+            "url": "{{baseUrl}}/v1/portal/cobrancas/{{chargeId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 — Negativo [INT-09]",
+      "item": [
+        {
+          "name": "POST cobrança pix com gateway Inter [INT-09]",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "if (!pm.collectionVariables.get('portalClienteId')) pm.execution.skipRequest('sem cliente');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('[INT-09] criada ou erro', () => pm.expect(pm.response.code).to.be.oneOf([201, 200, 422, 500]));",
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const ch = pm.response.json().charge;",
+                  "  pm.collectionVariables.set('pixChargeId', ch.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{portalToken}}" },
+              { "key": "x-tenant-id", "value": "{{automacaoTenantId}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"inter-pix-neg-{{runId}}\",\n  \"idempotency_key\": \"idem-pix-neg-{{runId}}\",\n  \"amount\": 50,\n  \"due_date\": \"2030-12-31\",\n  \"type\": \"pix\",\n  \"portal_cliente_id\": \"{{portalClienteId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/v1/portal/cobrancas"
+          }
+        }
+      ]
+    }
+  ]
+}

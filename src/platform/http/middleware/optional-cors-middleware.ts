@@ -34,7 +34,7 @@ export function optionalPortalCorsMiddleware(req: Request, res: Response, next: 
 
   if (allow) {
     res.setHeader("Access-Control-Allow-Origin", allow);
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization, x-tenant-id, x-correlation-id"

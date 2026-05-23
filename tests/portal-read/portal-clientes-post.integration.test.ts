@@ -43,7 +43,7 @@ describe.skipIf(!hasDb)("POST /v1/portal/clientes — integracao, validacao e ca
       .send({
         documento,
         nome: `Cliente integracao ${documento.slice(-6)}`,
-        email: null,
+        email: `integracao+${documento.slice(-6)}@test.local`,
         whatsapp_opt_in: false
       })
       .expect(201);
@@ -57,7 +57,8 @@ describe.skipIf(!hasDb)("POST /v1/portal/clientes — integracao, validacao e ca
     const body = {
       documento,
       nome: "Duplicado teste",
-      email: null,
+      email: `dup+${documento.slice(-6)}@test.local`,
+      telefone: "11987654321",
       whatsapp_opt_in: true
     };
     await request(app).post("/v1/portal/clientes").set(portalAuthHeaders(tokenPortal)).send(body).expect(201);
@@ -72,6 +73,7 @@ describe.skipIf(!hasDb)("POST /v1/portal/clientes — integracao, validacao e ca
       .send({
         documento: "12345678901234",
         nome: "X",
+        email: "x@test.local",
         whatsapp_opt_in: false
       })
       .expect(422);
@@ -152,7 +154,7 @@ describe.skipIf(!hasDb)("POST /v1/portal/clientes — integracao, validacao e ca
           .send({
             documento,
             nome: `Stress ${b}-${i}`,
-            email: null,
+            email: `stress+${documento.slice(-6)}@test.local`,
             whatsapp_opt_in: false
           })
           .then((res) => {

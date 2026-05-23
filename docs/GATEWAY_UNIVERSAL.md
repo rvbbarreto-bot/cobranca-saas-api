@@ -35,11 +35,19 @@ sequenceDiagram
 - **Asaas (legado):** `gateway_api_key_encrypted` ou JSON `{ "api_key": "..." }`.
 - **Inter / Cora:** `gateway_credentials_encrypted` (JSON cifrado) — ver migration `025_gateway_credentials_universal.sql`.
 
+## Sprint M (fase 2)
+
+- Adapter **C6 Bank** (`oauth_basic`, sem mTLS no token).
+- Tabela `gateway_change_log` + `PATCH /v1/portal/escritorio/gateway` (troca permitida com log).
+- Portal: credenciais dinâmicas via `GATEWAY_REGISTRY`.
+- **BB:** sprint futura (credenciais sandbox PO).
+
 ## Homolog sandbox (opt-in)
 
 ```bash
 RUN_INTER_SANDBOX=1 npm run gateway:smoke:inter
 RUN_CORA_SANDBOX=1 npm run gateway:smoke:cora
+RUN_C6_SANDBOX=1 npm run gateway:smoke:c6
 ```
 
 Referencia de payloads HTTP: `Projeto_CobrancaBoleto/ESTUDO_APIS_BANCARIAS.md`.  

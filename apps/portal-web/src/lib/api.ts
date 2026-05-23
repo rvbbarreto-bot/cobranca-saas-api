@@ -6,13 +6,56 @@ import {
   STORAGE_TENANT_ID
 } from "./storageKeys";
 
-/** Base sem barra final. Vazio = URLs relativas `/v1/...` (proxy Vite em dev). */
+/** Base sem barra final. Vazio = URLs relativas `/v1/...` (proxy Vite em dev -> :3333). */
 export function getApiBase(): string {
   const raw = import.meta.env.VITE_API_BASE_URL?.trim();
   if (!raw) {
     return "";
   }
-  return raw.replace(/\/$/, "");
+  const base = raw.replace(/\/$/, "");
+  if (import.meta.env.DEV && /localhost:3334\b/i.test(base)) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[portal] VITE_API_BASE_URL aponta para :3334 — requer `npm run dev` na raiz com PORT=3334. " +
+            "Com Docker (`npm run dev:up`), deixe VITE_API_BASE_URL vazio (proxy :3333)."
+        );
+  }
+  return base;
+}
+
+/** Mensagem acionavel quando fetch falha por rede (API parada ou porta errada). */
+export function formatPortalNetworkError(url: string, cause: unknown): ApiError {
+  const base = getApiBase();
+  const target = base || "(proxy Vite /v1 -> http://localhost:3333)";
+  const hint =
+    base.includes(":3334")
+      ? "Inicie a API no host: `$env:PORT=\"3334\"; npm run dev` ou troque .env.local para o modo Docker (veja .env.local.docker.example)."
+      : "Suba a API: `npm run dev:up` (Docker :3333) e reinicie `npm run portal:dev` apos alterar .env.local.";
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  return new ApiError(
+    `Nao foi possivel contactar a API (${target}). ${hint} Detalhe: ${detail}`,
+    0,
+    { url, cause: detail }
+  );
+}
+
+function isNetworkFetchFailure(error: unknown): boolean {
+  if (!(error instanceof TypeError)) {
+    return false;
+  }
+  const msg = error.message.toLowerCase();
+  return msg.includes("fetch") || msg.includes("network") || msg.includes("failed");
+}
+
+async function portalFetch(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (error) {
+    if (isNetworkFetchFailure(error)) {
+      throw formatPortalNetworkError(url, error);
+    }
+    throw error;
+  }
 }
 
 export function apiUrl(path: string): string {
@@ -51,9 +94,18 @@ export type PortalChargePayment = {
   expires_at: string | null;
 };
 
+export type PortalChargeEvent = {
+  event_type: string;
+  old_status: string | null;
+  new_status: string | null;
+  created_at: string;
+  payload_json?: Record<string, unknown> | null;
+};
+
 export type PortalCobrancaDetailResponse = {
   charge: ChargeRow & Record<string, unknown>;
   payment: PortalChargePayment | null;
+  events: PortalChargeEvent[];
 };
 
 export type PortalListQuery = {
@@ -61,6 +113,8 @@ export type PortalListQuery = {
   limit?: number;
   /** Cursor opaco devolvido em `next_cursor` da página anterior */
   cursor?: string | null;
+  /** Busca textual (clientes: nome ou documento) */
+  search?: string;
 };
 
 export type CobrancasListResponse = {
@@ -110,7 +164,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   if (init.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
-  const res = await fetch(url, { ...init, headers });
+  const res = await portalFetch(url, { ...init, headers });
   if (res.status === 401) {
     clearSession();
     window.dispatchEvent(new Event("portal:unauthorized"));
@@ -135,7 +189,7 @@ export function hasSession(): boolean {
 }
 
 export async function portalLogin(body: { email: string; tenant_id: string; password: string }): Promise<PortalLoginResponse> {
-  const res = await fetch(apiUrl("/v1/portal/auth/login"), {
+  const res = await portalFetch(apiUrl("/v1/portal/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body)
@@ -230,7 +284,7 @@ export type NotasFiscaisResponse = {
 };
 
 function portalListSearch(q?: PortalListQuery): string {
-  if (!q?.limit && !q?.cursor) {
+  if (!q?.limit && !q?.cursor && !q?.search?.trim()) {
     return "";
   }
   const sp = new URLSearchParams();
@@ -239,6 +293,9 @@ function portalListSearch(q?: PortalListQuery): string {
   }
   if (q.cursor) {
     sp.set("cursor", q.cursor);
+  }
+  if (q.search?.trim()) {
+    sp.set("search", q.search.trim());
   }
   const s = sp.toString();
   return s ? `?${s}` : "";
@@ -278,6 +335,7 @@ export type ClienteRow = {
   documento: string;
   nome: string;
   email: string | null;
+  telefone?: string | null;
   whatsapp_opt_in: boolean;
   created_at: string;
   updated_at: string;
@@ -318,10 +376,34 @@ export async function fetchClientes(q?: PortalListQuery): Promise<ClientesListRe
   };
 }
 
+export async function fetchClienteById(clienteId: string): Promise<ClienteRow | null> {
+  const res = await apiFetch(`/v1/portal/clientes/${encodeURIComponent(clienteId)}`, { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { cliente?: ClienteRow };
+  return o.cliente ?? null;
+}
+
 export type CreateClienteBody = {
   documento: string;
   nome: string;
-  email?: string | null;
+  email: string;
+  telefone?: string | null;
   whatsapp_opt_in: boolean;
 };
 
@@ -331,7 +413,8 @@ export async function postCliente(body: CreateClienteBody): Promise<{ cliente: C
     body: JSON.stringify({
       documento: body.documento,
       nome: body.nome,
-      email: body.email ?? null,
+      email: body.email,
+      telefone: body.telefone ?? null,
       whatsapp_opt_in: body.whatsapp_opt_in
     })
   });
@@ -442,7 +525,8 @@ export async function postPortalCobranca(body: CreatePortalCobrancaBody): Promis
 
 export type PatchPortalClienteBody = {
   nome?: string;
-  email?: string | null;
+  email?: string;
+  telefone?: string | null;
   whatsapp_opt_in?: boolean;
 };
 
@@ -456,6 +540,9 @@ export async function patchPortalCliente(
   }
   if (body.email !== undefined) {
     payload.email = body.email;
+  }
+  if (body.telefone !== undefined) {
+    payload.telefone = body.telefone;
   }
   if (body.whatsapp_opt_in !== undefined) {
     payload.whatsapp_opt_in = body.whatsapp_opt_in;
@@ -511,9 +598,46 @@ export async function fetchPortalCobrancaDetail(chargeId: string): Promise<Porta
   if (!o.charge || typeof o.charge !== "object") {
     throw new ApiError("Resposta sem charge", res.status, json);
   }
+  const rawEvents = (json as { events?: unknown }).events;
+  const events = Array.isArray(rawEvents)
+    ? (rawEvents as PortalChargeEvent[])
+    : [];
+
   return {
     charge: o.charge as ChargeRow & Record<string, unknown>,
-    payment: o.payment === null || o.payment === undefined ? null : (o.payment as PortalChargePayment)
+    payment: o.payment === null || o.payment === undefined ? null : (o.payment as PortalChargePayment),
+    events
+  };
+}
+
+export async function reprocessPortalCobrancaEmission(
+  chargeId: string
+): Promise<{ charge: ChargeRow & Record<string, unknown>; job_scheduled: boolean }> {
+  const res = await apiFetch(
+    `/v1/portal/cobrancas/${encodeURIComponent(chargeId)}/reprocess-emission`,
+    { method: "POST" }
+  );
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { charge?: ChargeRow; job_scheduled?: boolean };
+  if (!o.charge) {
+    throw new ApiError("Resposta sem charge", res.status, json);
+  }
+  return {
+    charge: o.charge as ChargeRow & Record<string, unknown>,
+    job_scheduled: o.job_scheduled === true
   };
 }
 
@@ -613,8 +737,24 @@ export type EscritorioConfig = {
   aliquota_iss: number | null;
   gateway_provider: string | null;
   gateway_api_key: string | null;
+  gateway_credentials_configured?: boolean;
   whatsapp_provider: string | null;
   whatsapp_token: string | null;
+};
+
+export type GatewayProviderMeta = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  authType: "api_key" | "mtls_oauth" | "oauth_basic";
+  credentialFields: Array<{
+    key: string;
+    label: string;
+    secret: boolean;
+    required: boolean;
+  }>;
+  supportsBoleto: boolean;
+  supportsPix: boolean;
 };
 
 export type PatchEscritorioConfigBody = {
@@ -624,10 +764,25 @@ export type PatchEscritorioConfigBody = {
   regime_tributario?: "simples" | "presumido" | "real";
   codigo_municipio?: string;
   aliquota_iss?: number;
-  gateway_provider?: "asaas" | "pagarme";
+  gateway_provider?: string;
   gateway_api_key?: string;
+  gateway_credentials?: Record<string, string>;
   whatsapp_provider?: "zapi" | "twilio";
   whatsapp_token?: string;
+};
+
+export type PatchGatewayProviderBody = {
+  gateway_provider: string;
+  gateway_api_key?: string;
+  gateway_credentials?: Record<string, string>;
+};
+
+export type GatewayChangeLogEntry = {
+  id: string;
+  old_provider: string | null;
+  new_provider: string;
+  changed_at: string;
+  changed_by_user_id: string | null;
 };
 
 export type ChargingRuleRow = {
@@ -675,6 +830,78 @@ export async function fetchEscritorioConfig(): Promise<{ config: EscritorioConfi
     throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
   }
   return json as { config: EscritorioConfig | null };
+}
+
+export async function fetchGatewayProviders(): Promise<{ data: GatewayProviderMeta[] }> {
+  const res = await apiFetch("/v1/portal/escritorio/gateway/providers", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  const o = json as { data?: GatewayProviderMeta[] };
+  return { data: Array.isArray(o.data) ? o.data : [] };
+}
+
+export async function fetchGatewayProviderSchema(
+  provider: string
+): Promise<{ provider: GatewayProviderMeta }> {
+  const res = await apiFetch(
+    `/v1/portal/escritorio/gateway/providers/${encodeURIComponent(provider)}/schema`,
+    { method: "GET" }
+  );
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { provider: GatewayProviderMeta };
+}
+
+export async function patchGatewayProvider(
+  body: PatchGatewayProviderBody
+): Promise<{ config: EscritorioConfig | null }> {
+  const res = await apiFetch("/v1/portal/escritorio/gateway", {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  return json as { config: EscritorioConfig | null };
+}
+
+export async function fetchGatewayChangeHistory(): Promise<{ data: GatewayChangeLogEntry[] }> {
+  const res = await apiFetch("/v1/portal/escritorio/gateway/history?limit=10", { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    throw new ApiError(apiMessageFromJson(json, res.status), res.status, json);
+  }
+  const o = json as { data?: GatewayChangeLogEntry[] };
+  return { data: Array.isArray(o.data) ? o.data : [] };
 }
 
 export async function patchEscritorioConfig(body: PatchEscritorioConfigBody): Promise<{ config: EscritorioConfig | null }> {

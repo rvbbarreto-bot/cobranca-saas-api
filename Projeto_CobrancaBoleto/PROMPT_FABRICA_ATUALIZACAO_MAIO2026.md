@@ -4,22 +4,24 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **`main`:** consolidado (Sprint I #16).
-- **Próxima entrega:** Sprint J — [DEMANDA_SPRINT_J_CI_ASAAS_E2E.md](./DEMANDA_SPRINT_J_CI_ASAAS_E2E.md)
-- **Branch:** `feat/sprint-j-ci-asaas-e2e`
+- **`main`:** Sprint L mergeado (#20 docs, #21 factory Inter/Cora).
+- **Próxima entrega:** Sprint M — [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md)
+- **Branch:** `feat/sprint-m-gateway-fase2`
 
-## Sprint J — ATUAL
+## Sprint M — ATUAL
 
-1. Workflow `.github/workflows/asaas-e2e-manual.yml`
-2. Docs + teste estático do workflow
-3. PR — TL configura `ASAAS_API_KEY` e faz merge
+1. Adapter **C6** + registry/factory (PO: implementar)
+2. Migration `026_gateway_change_log` + troca gateway **permitida com log**
+3. Portal **ConfiguracoesPage** — credenciais dinâmicas (Asaas/Inter/Cora/C6)
+4. **BB:** sprint futura (credenciais sandbox PO)
+5. Inter L: emissão OK; PDF/smoke opcional P2
 
 ## Backlog
 
-| Item | Tipo |
-|------|------|
-| Checklist PO Asaas | Processo |
-| Portal “Carregar mais” | P1 quando PO priorizar |
+| Item | Sprint |
+|------|--------|
+| Estorno + webhooks normalizados | N |
+| Contratos recorrentes | N+ |
 
 ## Regras
 

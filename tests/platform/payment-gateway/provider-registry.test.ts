@@ -20,6 +20,7 @@ describe("provider-registry", () => {
     expect(ids).toContain("asaas");
     expect(ids).toContain("inter");
     expect(ids).toContain("cora");
+    expect(ids).toContain("c6");
     expect(ids).not.toContain("bb");
   });
 });

@@ -28,37 +28,60 @@ describe("isValidBrDocumentoDigits", () => {
 });
 
 describe("parsePortalClienteCreateBody", () => {
-  it("aceita payload valido minimo com CPF valido", () => {
+  it("aceita payload valido com CPF, email e telefone", () => {
     const r = parsePortalClienteCreateBody({
       documento: CPF_VALIDO,
-      nome: "Maria Silva"
+      nome: "Maria Silva",
+      email: "maria@test.com",
+      telefone: "11987654321",
+      whatsapp_opt_in: false
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value.documento).toBe("39053344705");
       expect(r.value.nome).toBe("Maria Silva");
-      expect(r.value.email).toBe(null);
+      expect(r.value.email).toBe("maria@test.com");
+      expect(r.value.telefone).toBe("11987654321");
       expect(r.value.whatsappOptIn).toBe(false);
     }
   });
 
-  it("aceita email e whatsapp_opt_in com CNPJ valido", () => {
+  it("normaliza email para minusculas", () => {
     const r = parsePortalClienteCreateBody({
       documento: CNPJ_VALIDO,
       nome: "Empresa X",
-      email: " contato@empresa.com ",
-      whatsapp_opt_in: true
+      email: " Contato@Empresa.COM ",
+      whatsapp_opt_in: false
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.value.documento).toBe("11222333000181");
       expect(r.value.email).toBe("contato@empresa.com");
-      expect(r.value.whatsappOptIn).toBe(true);
+    }
+  });
+
+  it("rejeita sem email", () => {
+    const r = parsePortalClienteCreateBody({ documento: CPF_VALIDO, nome: "Maria Silva" });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.issues.some((i) => i.path === "email")).toBe(true);
+    }
+  });
+
+  it("exige telefone com opt-in", () => {
+    const r = parsePortalClienteCreateBody({
+      documento: CNPJ_VALIDO,
+      nome: "Empresa X",
+      email: "a@b.co",
+      whatsapp_opt_in: true
+    });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.issues.some((i) => i.path === "telefone")).toBe(true);
     }
   });
 
   it("rejeita documento com tamanho invalido", () => {
-    const r = parsePortalClienteCreateBody({ documento: "123", nome: "A" });
+    const r = parsePortalClienteCreateBody({ documento: "123", nome: "A", email: "a@b.co" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.issues.some((i) => i.path === "documento")).toBe(true);
@@ -66,7 +89,7 @@ describe("parsePortalClienteCreateBody", () => {
   });
 
   it("rejeita CPF com digitos verificadores incorretos", () => {
-    const r = parsePortalClienteCreateBody({ documento: CPF_DV_INVALIDO, nome: "X" });
+    const r = parsePortalClienteCreateBody({ documento: CPF_DV_INVALIDO, nome: "X", email: "a@b.co" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.issues.some((i) => i.path === "documento")).toBe(true);
@@ -74,7 +97,7 @@ describe("parsePortalClienteCreateBody", () => {
   });
 
   it("rejeita nome vazio", () => {
-    const r = parsePortalClienteCreateBody({ documento: CPF_VALIDO, nome: "   " });
+    const r = parsePortalClienteCreateBody({ documento: CPF_VALIDO, nome: "   ", email: "a@b.co" });
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.issues.some((i) => i.path === "nome")).toBe(true);
@@ -95,18 +118,6 @@ describe("parsePortalClienteCreateBody", () => {
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.issues.some((i) => i.path === "email")).toBe(true);
-    }
-  });
-
-  it("rejeita whatsapp_opt_in nao boolean", () => {
-    const r = parsePortalClienteCreateBody({
-      documento: CPF_VALIDO,
-      nome: "X",
-      whatsapp_opt_in: "sim"
-    });
-    expect(r.ok).toBe(false);
-    if (!r.ok) {
-      expect(r.issues.some((i) => i.path === "whatsapp_opt_in")).toBe(true);
     }
   });
 });

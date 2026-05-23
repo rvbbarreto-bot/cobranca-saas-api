@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { PageErrorBoundary } from "../components/PageErrorBoundary";
 import { useAuth } from "../hooks/useAuth";
 import { fetchPortalMe } from "../lib/api";
 
@@ -86,7 +87,9 @@ export function AppShell(): JSX.Element {
           </div>
         ) : null}
         <div className="shell-content">
-          <Outlet />
+          <PageErrorBoundary>
+            <Outlet />
+          </PageErrorBoundary>
         </div>
       </div>
     </div>

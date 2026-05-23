@@ -60,10 +60,19 @@ Write-Host "[dev-up] Seed (host)..." -ForegroundColor Cyan
 npm run seed:dev
 if ($LASTEXITCODE -ne 0) { throw "seed:dev falhou" }
 
+$portalEnvLocal = Join-Path $Root "apps\portal-web\.env.local"
+$portalEnvDocker = @"
+# Gerado/alinhado por dev-up.ps1 — API Docker na porta 3333 (proxy Vite em dev).
+# Homolog Inter no host (:3334): copie apps/portal-web/.env.local.inter-homolog.example
+
+"@
+Set-Content -Path $portalEnvLocal -Value $portalEnvDocker -Encoding utf8
+Write-Host "[dev-up] Portal .env.local alinhado ao Docker (:3333 via proxy Vite)" -ForegroundColor Cyan
+
 Write-Host ""
 Write-Host "=== Ambiente base OK ===" -ForegroundColor Green
 Write-Host "  API:    http://localhost:3333/health/ready"
-Write-Host "  Portal: npm run portal:dev  ->  http://localhost:5173/login"
+Write-Host "  Portal: npm run portal:dev  ->  http://localhost:5173/login  (reinicie o Vite se ja estava aberto)"
 Write-Host "  Login:  portal-seed@local.dev | tenant: escritorio-demo (ou 1) | senha: PortalSeedDev!ChangeMe1"
 Write-Host ""
 Write-Host "Parar: docker compose stop api postgres redis" -ForegroundColor DarkGray

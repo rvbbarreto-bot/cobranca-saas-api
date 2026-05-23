@@ -4,6 +4,7 @@
 **Para:** Fábrica (IA + dev)  
 **Data:** Maio 2026 · **Base:** `main` (pós Sprint I/J, Playwright, n8n homolog)  
 **Prioridade:** P1 · **Estimativa:** 10–14 dias · **Branch:** `feat/sprint-l-universal-gateway`  
+**Status:** ✅ Concluído (PR #20 + #21). Próximo: [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md)  
 **Fonte de pesquisa (não executar direto):** [ESTUDO_APIS_BANCARIAS.md](./ESTUDO_APIS_BANCARIAS.md)  
 **Arquitetura alvo:** [LLD_REVISADO_v2.md](./LLD_REVISADO_v2.md) (seções 2.x — registry + factory)
 

@@ -1,9 +1,15 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { ChargeRow } from "../lib/api";
-import { fetchPortalCobrancaDetail } from "../lib/api";
+import { fetchEscritorioConfig, fetchPortalCobrancaDetail } from "../lib/api";
+import { getPortalChargeRules } from "../lib/gateway-charge-rules";
 import { CHARGE_DETAIL_POLL_MS, shouldPollChargeDetail } from "../lib/charge-detail-poll";
+import {
+  buildTimelineFromEvents,
+  extractEmissionError
+} from "../lib/charge-detail-timeline";
 import { ChargePaymentPanel } from "../components/ChargePaymentPanel";
+import { ReprocessEmissionButton } from "../components/ReprocessEmissionButton";
 import {
   bankLabel,
   chargeClienteNome,
@@ -32,53 +38,12 @@ function formatDueFull(iso: string): string {
   return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-type TlKind = "info" | "teal" | "ok";
-
-type TlItem = { time: string; text: string; kind: TlKind };
-
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
-function buildTimeline(row: ChargeRow): TlItem[] {
-  const p = row.dueDate.split("-").map(Number);
-  const y = p[0] ?? 2026;
-  const mo = (p[1] ?? 1) - 1;
-  const day = p[2] ?? 1;
-  const base = new Date(y, mo, day, 8, 1, 0, 0);
-  const t = (mins: number): Date => new Date(base.getTime() + mins * 60_000);
-  const fmt = (d: Date): string => `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-
-  const items: TlItem[] = [
-    { time: fmt(t(0)), text: "Boleto criado no portal", kind: "info" },
-    { time: fmt(t(1)), text: "Validação de regras concluída", kind: "teal" }
-  ];
-  const s = row.canonicalStatus;
-  if (s !== "rascunho") {
-    items.push({ time: fmt(t(2)), text: "Emissão no banco concluída", kind: "ok" });
-    items.push({ time: fmt(t(3)), text: "PDF salvo em storage privado", kind: "ok" });
-  }
-  if (s === "enviada" || s === "pendente_pagamento" || s === "paga" || s === "vencida") {
-    items.push({ time: fmt(t(4)), text: "Mensagem enviada ao cliente", kind: "teal" });
-  }
-  if (s === "paga") {
-    items.push({ time: fmt(t(5)), text: "Pagamento conciliado", kind: "ok" });
-  }
-  if (s === "vencida") {
-    items.push({ time: fmt(t(6)), text: "Título vencido sem liquidação", kind: "info" });
-  }
-  if (s === "cancelada") {
-    items.push({ time: fmt(t(4)), text: "Cancelamento registrado", kind: "info" });
-  }
-  if (s === "erro_emissao") {
-    items.push({ time: fmt(t(2)), text: "Falha na emissão — requer reprocessamento", kind: "info" });
-  }
-  return items;
-}
-
-function itemClass(kind: TlKind): string {
+function itemClass(kind: "info" | "teal" | "ok" | "err"): string {
   if (kind === "ok") {
     return "timeline__item timeline__item--ok";
+  }
+  if (kind === "err") {
+    return "timeline__item timeline__item--info";
   }
   if (kind === "info") {
     return "timeline__item timeline__item--info";
@@ -89,6 +54,9 @@ function itemClass(kind: TlKind): string {
 export function BoletoDetalhePage(): JSX.Element {
   const { chargeId } = useParams<{ chargeId: string }>();
 
+  const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
+  const gatewayRules = getPortalChargeRules(configQ.data?.config?.gateway_provider);
+
   const detailQ = useQuery({
     queryKey: ["cobranca", chargeId],
     queryFn: () => fetchPortalCobrancaDetail(chargeId!),
@@ -97,13 +65,15 @@ export function BoletoDetalhePage(): JSX.Element {
   });
 
   const charge = detailQ.data?.charge;
+  const events = detailQ.data?.events ?? [];
   const payment = detailQ.data?.payment ?? null;
+  const emissionError = extractEmissionError(events);
+  const timeline = events.length > 0 ? buildTimelineFromEvents(events) : [];
+
   const chargeType =
     charge?.type === "pix" || charge?.type === "boleto"
       ? charge.type
       : payment?.type;
-
-  const timeline = charge ? buildTimeline(charge as ChargeRow) : [];
 
   const showLoading = Boolean(chargeId) && detailQ.isLoading && !detailQ.data;
   const showNotFound = Boolean(chargeId) && !charge && !detailQ.isLoading && !detailQ.isError;
@@ -116,6 +86,11 @@ export function BoletoDetalhePage(): JSX.Element {
         ? `Ref. ${charge.reference}`
         : "—";
 
+  const polling =
+    charge &&
+    charge.canonicalStatus === "rascunho" &&
+    !payment;
+
   return (
     <div className="shell-page">
       <div className="shell-page__head">
@@ -125,6 +100,9 @@ export function BoletoDetalhePage(): JSX.Element {
             <Link to={`/cobrancas/${chargeId}/editar`} className="btn-primary">
               Editar
             </Link>
+          ) : null}
+          {charge?.canonicalStatus === "erro_emissao" && chargeId ? (
+            <ReprocessEmissionButton chargeId={chargeId} className="btn-primary" />
           ) : null}
           <Link to="/cobrancas" className="btn-secondary">
             Voltar à lista
@@ -145,6 +123,12 @@ export function BoletoDetalhePage(): JSX.Element {
         <div className="boleto-detail-grid">
           <div className="form-card">
             <h3 className="form-card__title">Resumo do título</h3>
+            {emissionError ? <div className="banner-err">{emissionError}</div> : null}
+            {polling ? (
+              <div className="banner-ok" style={{ marginBottom: "0.75rem" }}>
+                Emissão em andamento — a página atualiza automaticamente.
+              </div>
+            ) : null}
             <dl style={{ margin: 0 }}>
               <div className="boleto-summary__row">
                 <dt>Cliente</dt>
@@ -187,6 +171,7 @@ export function BoletoDetalhePage(): JSX.Element {
               payment={payment}
               chargeStatus={charge.canonicalStatus}
               chargeType={chargeType}
+              showPixQr={gatewayRules.supportsPix}
             />
             <p className="form-note" style={{ marginTop: "0.75rem" }}>
               WhatsApp + e-mail (roadmap)
@@ -195,15 +180,19 @@ export function BoletoDetalhePage(): JSX.Element {
           <div className="form-card">
             <h3 className="form-card__title">Linha do tempo do boleto</h3>
             <p className="form-note" style={{ marginTop: 0 }}>
-              Ilustração operacional derivada do status atual; eventos reais virão da API de auditoria.
+              Eventos registrados pela API para esta cobrança.
             </p>
             <div className="timeline" style={{ marginTop: "0.75rem" }}>
-              {timeline.map((it) => (
-                <div key={it.time + it.text} className={itemClass(it.kind)}>
-                  <span className="timeline__time">{it.time}</span>
-                  <span className="timeline__text">{it.text}</span>
-                </div>
-              ))}
+              {timeline.length === 0 ? (
+                <p className="muted">Nenhum evento registrado ainda.</p>
+              ) : (
+                timeline.map((it) => (
+                  <div key={`${it.time}-${it.text}`} className={itemClass(it.kind)}>
+                    <span className="timeline__time">{it.time}</span>
+                    <span className="timeline__text">{it.text}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

@@ -11,6 +11,7 @@ import { getProviderMeta } from "../../../platform/payment-gateway/provider-regi
 import { AsaasAdapter } from "../infrastructure/asaas/asaas-adapter";
 import { InterAdapter } from "../infrastructure/inter/inter-adapter";
 import { CoraAdapter } from "../infrastructure/cora/cora-adapter";
+import { C6BankAdapter } from "../infrastructure/c6/c6-adapter";
 
 export type GetGatewayForTenantDeps = {
   decrypt?: (ciphertext: string, iv: string) => string;
@@ -39,7 +40,8 @@ export const ADAPTER_LOADERS: Record<string, AdapterLoader> = {
     return new AsaasAdapter({ apiKey, baseUrl });
   },
   inter: (ctx) => new InterAdapter(ctx),
-  cora: (ctx) => new CoraAdapter(ctx)
+  cora: (ctx) => new CoraAdapter(ctx),
+  c6: (ctx) => new C6BankAdapter(ctx)
 };
 
 function resolveCredentials(

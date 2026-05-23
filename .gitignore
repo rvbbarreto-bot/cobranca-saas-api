@@ -17,3 +17,8 @@ docs/evidencias/asaas-e2e-*.json
 e2e/.auth/
 test-results/
 playwright-report/
+
+# Postman — secrets locais (QA preenche .local a partir do .example)
+postman/*.local.postman_environment.json
+postman/secrets/
+docs/evidencias/postman-inter-homolog-report.json
