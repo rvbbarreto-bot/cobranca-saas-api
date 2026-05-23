@@ -81,7 +81,12 @@ export function ChargePaymentPanel({
         {payment.pix_emv ? (
           <div className="payment-panel__copy">
             <code className="payment-panel__emv">{payment.pix_emv}</code>
-            <button type="button" className="btn-cyan" onClick={() => void copyPix()}>
+            <button
+              type="button"
+              className="btn-cyan"
+              aria-label={copied ? "Código PIX copiado" : "Copiar código PIX copia e cola"}
+              onClick={() => void copyPix()}
+            >
               {copied ? "Copiado" : "Copiar PIX copia e cola"}
             </button>
           </div>
