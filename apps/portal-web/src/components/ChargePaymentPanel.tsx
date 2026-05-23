@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PortalChargePayment } from "../lib/api";
+import { isUsableHttpUrl } from "../lib/charge-payment-ui";
 
 function pixQrSrc(base64: string): string {
   const raw = base64.trim();
@@ -13,9 +14,16 @@ type Props = {
   payment: PortalChargePayment | null;
   chargeStatus: string;
   chargeType?: "boleto" | "pix";
+  /** Quando false (ex.: Banco Inter), oculta bloco PIX mesmo que existam campos residuais. */
+  showPixQr?: boolean;
 };
 
-export function ChargePaymentPanel({ payment, chargeStatus, chargeType }: Props): JSX.Element {
+export function ChargePaymentPanel({
+  payment,
+  chargeStatus,
+  chargeType,
+  showPixQr = true
+}: Props): JSX.Element {
   const [copied, setCopied] = useState(false);
 
   const awaitingEmission =
@@ -92,8 +100,15 @@ export function ChargePaymentPanel({ payment, chargeStatus, chargeType }: Props)
     );
   }
 
+  const hasPix =
+    showPixQr &&
+    Boolean(payment.pix_qrcode_base64?.trim() || payment.pix_emv?.trim() || payment.pix_link?.trim());
+
+  const boletoUrl = isUsableHttpUrl(payment.boleto_url) ? payment.boleto_url : null;
+  const pdfUrl = isUsableHttpUrl(payment.boleto_pdf_url) ? payment.boleto_pdf_url : null;
+
   return (
-    <div className="payment-panel">
+    <div id="pagamento" className="payment-panel">
       <p className="payment-panel__title">Boleto</p>
       {payment.boleto_barcode ? (
         <p className="small" style={{ wordBreak: "break-all", fontVariantNumeric: "tabular-nums" }}>
@@ -101,19 +116,41 @@ export function ChargePaymentPanel({ payment, chargeStatus, chargeType }: Props)
         </p>
       ) : null}
       <div className="form-actions" style={{ marginTop: "0.75rem", flexWrap: "wrap" }}>
-        {payment.boleto_url ? (
-          <a href={payment.boleto_url} target="_blank" rel="noreferrer" className="btn-cyan">
+        {boletoUrl ? (
+          <a href={boletoUrl} target="_blank" rel="noreferrer" className="btn-cyan">
             Abrir boleto
           </a>
         ) : null}
-        {payment.boleto_pdf_url ? (
-          <a href={payment.boleto_pdf_url} target="_blank" rel="noreferrer" className="btn-secondary">
+        {pdfUrl ? (
+          <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-secondary">
             PDF do boleto
           </a>
         ) : null}
       </div>
       {payment.expires_at ? (
         <p className="muted small">Validade: {new Date(payment.expires_at).toLocaleString("pt-BR")}</p>
+      ) : null}
+      {hasPix ? (
+        <div className="payment-panel__pix-block" style={{ marginTop: "1rem" }}>
+          <p className="payment-panel__title">PIX (QR integrado)</p>
+          {payment.pix_qrcode_base64 ? (
+            <img
+              className="payment-panel__qr"
+              src={pixQrSrc(payment.pix_qrcode_base64)}
+              alt="QR Code PIX"
+              width={180}
+              height={180}
+            />
+          ) : null}
+          {payment.pix_emv ? (
+            <div className="payment-panel__copy">
+              <code className="payment-panel__emv">{payment.pix_emv}</code>
+              <button type="button" className="btn-cyan" onClick={() => void copyPix()}>
+                {copied ? "Copiado" : "Copiar PIX copia e cola"}
+              </button>
+            </div>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

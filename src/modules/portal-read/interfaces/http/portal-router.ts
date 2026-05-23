@@ -11,6 +11,7 @@ import { auditContextFromRequest } from "../../../../platform/audit/audit-contex
 import { getPool } from "../../../../platform/persistence/pool";
 import { withTenantTransaction } from "../../../../platform/persistence/with-tenant-transaction";
 import { cancelChargeUseCase } from "../../../billing-core/application/cancel-charge";
+import { reprocessPortalChargeEmissionUseCase } from "../../application/reprocess-portal-charge-emission";
 import {
   listChargesByPortalClienteIdPage,
   listChargesPage,
@@ -48,6 +49,7 @@ import { createEscritorioRouter } from "./escritorio-router";
 import { createClientePortalRouter } from "./cliente-portal-router";
 import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
 import { assertTenantCanMutate } from "../../../saas-billing/application/assert-tenant-can-mutate";
+import { resolveAutomacaoTenantId } from "../../../../platform/tenancy/resolve-automacao-tenant-id";
 
 /**
  * Login portal com senha (Sprint A). Disponivel em producao — nao passa por mockAuthRoutesGate.
@@ -65,6 +67,15 @@ async function portalLoginWithPassword(req: Request, res: Response): Promise<voi
     return;
   }
 
+  const automacaoTenantId = await resolveAutomacaoTenantId(tenantId);
+  if (!automacaoTenantId) {
+    res.status(403).json({
+      error: "portal_auth_forbidden",
+      message: "Email, tenant ou senha invalidos."
+    });
+    return;
+  }
+
   const pool = getPool();
   const q = await pool.query<{ app_user_id: string; tenant_id: string; password_hash: string | null }>(
     `SELECT u.id::text AS app_user_id, m.tenant_id, u.password_hash
@@ -72,7 +83,7 @@ async function portalLoginWithPassword(req: Request, res: Response): Promise<voi
      INNER JOIN portal.membership m ON m.app_user_id = u.id
      WHERE lower(u.email) = lower($1) AND m.tenant_id = $2
      LIMIT 1`,
-    [email, tenantId]
+    [email, automacaoTenantId]
   );
 
   const row = q.rows[0];
@@ -321,7 +332,9 @@ async function listClientes(req: Request, res: Response): Promise<void> {
   }
   const keyset: ClienteKeysetCursor | null = parsed ? { nome: parsed.nome, id: parsed.id } : null;
 
-  const { items, has_more } = await listClientesByTenantPage(tenantId, { limit, cursor: keyset });
+  const searchRaw = firstQueryString(req.query.search);
+  const search = searchRaw && searchRaw.length >= 2 ? searchRaw.slice(0, 80) : null;
+  const { items, has_more } = await listClientesByTenantPage(tenantId, { limit, cursor: keyset, search });
   const last = items[items.length - 1];
   const next_cursor = has_more && last ? clienteCursorFromRow(last) : null;
 
@@ -404,7 +417,7 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
     });
   } catch (error: unknown) {
     const err = error as Error & { issues?: unknown };
-    if (err.message === "VALIDATION_ERROR") {
+    if (err.message === "VALIDATION_ERROR" || err.message === "PORTAL_CHARGE_VALIDATION") {
       res.status(422).json({ error: "validation_error", issues: err.issues });
       return;
     }
@@ -437,6 +450,31 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
     }
     throw error;
   }
+}
+
+async function getPortalClienteHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem consultar clientes."
+    });
+    return;
+  }
+
+  const automacaoTenantId = req.tenantContext?.tenantId;
+  const clienteId = typeof req.params.clienteId === "string" ? req.params.clienteId.trim() : "";
+  if (!automacaoTenantId || !clienteId || !isUuid(clienteId)) {
+    res.status(400).json({ error: "invalid_request", message: "tenant ou cliente_id invalido." });
+    return;
+  }
+
+  const cliente = await getClienteByIdForTenant(clienteId, automacaoTenantId);
+  if (!cliente) {
+    res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
+    return;
+  }
+
+  res.json({ cliente });
 }
 
 async function listClienteCobrancasHttp(req: Request, res: Response): Promise<void> {
@@ -524,13 +562,23 @@ async function patchPortalClienteHttp(req: Request, res: Response): Promise<void
     return;
   }
 
-  const row = await updateClienteForTenant(clienteId, tenantId, parsed.value);
-  if (!row) {
-    res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
-    return;
+  try {
+    const row = await updateClienteForTenant(clienteId, tenantId, parsed.value);
+    if (!row) {
+      res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
+      return;
+    }
+    res.json({ cliente: row });
+  } catch (err) {
+    if (err instanceof Error && err.message === "portal_cliente_telefone_required_for_optin") {
+      res.status(422).json({
+        error: "validation_error",
+        issues: [{ path: "telefone", message: "Telefone obrigatorio quando whatsapp_opt_in for true." }]
+      });
+      return;
+    }
+    throw err;
   }
-
-  res.json({ cliente: row });
 }
 
 async function patchPortalCobrancaHttp(req: Request, res: Response): Promise<void> {
@@ -582,6 +630,59 @@ async function patchPortalCobrancaHttp(req: Request, res: Response): Promise<voi
   }
 
   res.json({ charge: result.charge });
+}
+
+async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem reprocessar emissao."
+    });
+    return;
+  }
+
+  const automacaoTenantId = req.tenantContext?.tenantId;
+  const chargeId = typeof req.params.chargeId === "string" ? req.params.chargeId.trim() : "";
+  if (!automacaoTenantId || !chargeId || !isUuid(chargeId)) {
+    res.status(400).json({ error: "invalid_request", message: "tenant ou charge_id invalido." });
+    return;
+  }
+
+  const publicTenantId = await getPublicTenantIdForAutomacao(automacaoTenantId);
+  if (!publicTenantId) {
+    res.status(409).json({
+      error: "billing_link_missing",
+      message: "Configure portal.billing_tenant_link antes de reprocessar cobranca."
+    });
+    return;
+  }
+
+  const audit = auditContextFromRequest(req);
+  const result = await withTenantTransaction(publicTenantId, (client) =>
+    reprocessPortalChargeEmissionUseCase(client, chargeId, audit)
+  );
+
+  if (!result.ok) {
+    if (result.kind === "not_found") {
+      res.status(404).json({
+        error: "charge_not_found",
+        message: "Cobranca inexistente neste tenant de faturacao."
+      });
+      return;
+    }
+    res.status(409).json({
+      error: "charge_not_reprocessable",
+      message: "Somente cobrancas em erro_emissao podem ser reprocessadas.",
+      status: result.status
+    });
+    return;
+  }
+
+  res.status(202).json({
+    charge: result.charge,
+    job_scheduled: result.jobScheduled,
+    message: "Emissao reagendada. Acompanhe o status no detalhe do boleto."
+  });
 }
 
 async function cancelPortalCobrancaHttp(req: Request, res: Response): Promise<void> {
@@ -709,8 +810,13 @@ export function createPortalRouter(): Router {
   protectedRoutes.get("/cobrancas/:chargeId", asyncHandler(getPortalCobrancaHttp));
   protectedRoutes.post("/cobrancas", asyncHandler(createPortalChargeHttp));
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
+  protectedRoutes.post(
+    "/cobrancas/:chargeId/reprocess-emission",
+    asyncHandler(reprocessPortalCobrancaEmissionHttp)
+  );
   protectedRoutes.patch("/cobrancas/:chargeId", asyncHandler(patchPortalCobrancaHttp));
   protectedRoutes.get("/clientes", asyncHandler(listClientes));
+  protectedRoutes.get("/clientes/:clienteId", asyncHandler(getPortalClienteHttp));
   protectedRoutes.get("/clientes/:clienteId/cobrancas", asyncHandler(listClienteCobrancasHttp));
   protectedRoutes.patch("/clientes/:clienteId", asyncHandler(patchPortalClienteHttp));
   protectedRoutes.post("/clientes", asyncHandler(createCliente));

@@ -10,6 +10,14 @@ import {
   patchEscritorioConfigUseCase
 } from "../../application/escritorio-config-use-cases";
 import {
+  getGatewayProviderSchemaUseCase,
+  listGatewayProvidersUseCase
+} from "../../application/gateway-providers-use-cases";
+import {
+  listGatewayChangeHistoryUseCase,
+  patchGatewayProviderUseCase
+} from "../../application/change-gateway-provider";
+import {
   createChargingRule,
   deleteChargingRule,
   listChargingRules,
@@ -92,6 +100,84 @@ export function createEscritorioRouter(): Router {
         getEscritorioConfigUseCase(client, tenantId)
       );
       res.json({ config });
+    })
+  );
+
+  router.get(
+    "/gateway/providers",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      res.json({ data: listGatewayProvidersUseCase() });
+    })
+  );
+
+  router.get(
+    "/gateway/providers/:provider/schema",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const provider = String(req.params.provider ?? "").trim().toLowerCase();
+      try {
+        res.json({ provider: getGatewayProviderSchemaUseCase(provider) });
+      } catch {
+        res.status(404).json({ error: "provider_not_found", message: `Provider ${provider} desconhecido.` });
+      }
+    })
+  );
+
+  router.patch(
+    "/gateway",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const tenantId = await resolvePublicTenant(req, res);
+      if (!tenantId) return;
+      try {
+        const audit = auditContextFromRequest(req);
+        const config = await withTenantTransaction(tenantId, (client) =>
+          patchGatewayProviderUseCase(client, tenantId, req.body, audit)
+        );
+        res.json({ config });
+      } catch (error: unknown) {
+        const err = error as Error & { issues?: unknown };
+        if (err.message === "VALIDATION_ERROR") {
+          res.status(422).json({ error: "validation_error", issues: err.issues });
+          return;
+        }
+        if (err.message === "PROVIDER_DISABLED") {
+          res.status(422).json({ error: "provider_disabled" });
+          return;
+        }
+        if (err.message === "CREDENTIALS_REQUIRED") {
+          res.status(422).json({ error: "credentials_required" });
+          return;
+        }
+        throw error;
+      }
+    })
+  );
+
+  router.get(
+    "/gateway/history",
+    asyncHandler(async (req, res) => {
+      if (!isEscritorioAdmin(req)) {
+        res.status(403).json({ error: "portal_forbidden", message: "Apenas admin_escritorio." });
+        return;
+      }
+      const tenantId = await resolvePublicTenant(req, res);
+      if (!tenantId) return;
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+      const data = await withTenantTransaction(tenantId, (client) =>
+        listGatewayChangeHistoryUseCase(client, tenantId, limit)
+      );
+      res.json({ data });
     })
   );
 

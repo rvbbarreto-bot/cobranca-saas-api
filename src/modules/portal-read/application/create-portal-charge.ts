@@ -12,6 +12,7 @@ import {
   recordChargeCreatedForMetering
 } from "../../saas-billing/application/assert-tenant-can-mutate";
 import { SaasBillingError } from "../../saas-billing/domain/saas-billing-error";
+import { assertPortalChargeCreateAllowed } from "./validate-portal-charge-create";
 
 const portalChargeCreateSchema = createChargeBodySchema.extend({
   portal_cliente_id: z.string().uuid().optional()
@@ -44,6 +45,13 @@ export async function createPortalChargeUseCase(
 
   const data = parsed.data;
 
+  const { reference: sanitizedReference } = await assertPortalChargeCreateAllowed(client, automacaoTenantId, {
+    reference: data.reference,
+    amount: data.amount,
+    due_date: data.due_date,
+    portal_cliente_id: data.portal_cliente_id
+  });
+
   if (data.portal_cliente_id) {
     const chk = await client.query(
       `SELECT 1 FROM portal.cliente WHERE id = $1::uuid AND tenant_id = $2 LIMIT 1`,
@@ -70,7 +78,7 @@ export async function createPortalChargeUseCase(
   }
 
   const result = await insertCharge(client, {
-    reference: data.reference,
+    reference: sanitizedReference,
     idempotencyKey: data.idempotency_key,
     amount: data.amount,
     dueDate: data.due_date,

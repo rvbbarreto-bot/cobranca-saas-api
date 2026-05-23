@@ -10,83 +10,93 @@
 | Marco | PR | Status |
 |-------|-----|--------|
 | Sprints B–F | #6–#11 | Concluído |
-| Sprint G — `charge.emitted` n8n | #12 | Concluído |
-| Sprint H — homolog Asaas E2E | #14 | Concluído |
-| FASE2 A — auth produção | #15 | Concluído |
-| **Sprint I — consolidar `main`** | (PR aberto) | **← ATUAL** |
+| Sprint G–H, FASE2 A | #12–#15 | Concluído |
+| Sprint I — `main` consolidado | #16 | Concluído |
+| Sprint J — CI Asaas manual | #17 | Concluído |
+| Playwright E2E + n8n JSON | #18–#19 | Concluído |
+| Sprint L — docs gateway universal | #20 | Concluído |
+| Sprint L — factory + Inter/Cora | #21 | Concluído |
+| **Sprint M — C6 + portal dinâmico + homolog** | [#22](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/22) | **Concluído** |
+| **P2.2 endereço pagador (emissão)** | — | **PR aberto** → `feat/p2-inter-payer-address` |
+| **P2.3–P2.4 + Onda C portal (MVP)** | — | **Na mesma fila** — ver [COORDENACAO_ENTREGA_P2.md](./COORDENACAO_ENTREGA_P2.md) |
 
-**Testes:** `npm test` 220+ · `portal:test` 33 · CI `quality:gate`
+**Testes:** `npm test` · `portal:test` · CI `quality:gate`
 
-**Branch integração:** `feat/sprint1-payment-emission-portal` @ `ee4b8d8`  
-**`main`:** ainda em Sprint F até merge do PR Sprint I
+**Branch fábrica:** `feat/p2-inter-payer-address` ← `main` (P2.2 + incrementos P2.3/4/5–8)
 
 ---
 
 ## 2. Gate de entrada
 
 ```bash
-git fetch origin
-git checkout feat/sprint1-payment-emission-portal && git pull origin feat/sprint1-payment-emission-portal
+git fetch origin && git checkout main && git pull origin main
+git checkout -b feat/sprint-m-gateway-fase2
 npm ci && npm run migrate && npm run seed:dev
-npm run build && npm test && npm run portal:test && npm run quality:gate
+npm run build && npm test && npm run portal:test
+npm run quality:gate
 ```
 
 ---
 
 ## 3. Implementado (não refazer)
 
-- API + portal completo (editar cobrança, configurações, paginação, SaaS billing)
-- Inbox idempotência, n8n outbound (**6 eventos**, incl. `charge.emitted`)
-- Runner E2E Asaas + runbook auth (FASE2 A)
+- Gateway universal L: `getGatewayForTenant`, adapters **Asaas / Inter / Cora**, migration 025, worker + charge-sync via factory
+- API portal: `GET /gateway/providers`, `PATCH /config` com `gateway_credentials`
+- Docs: [docs/GATEWAY_UNIVERSAL.md](../docs/GATEWAY_UNIVERSAL.md), [DEMANDA_SPRINT_L_UNIVERSAL_GATEWAY.md](./DEMANDA_SPRINT_L_UNIVERSAL_GATEWAY.md)
 
 ---
 
-## 4. Trabalho imediato — Sprint I
+## 4. Trabalho imediato — Sprint M
 
-**Pacote:** [DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md](./DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md)
+**Pacote:** [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md)  
+**Pesquisa:** [ESTUDO_APIS_BANCARIAS.md](./ESTUDO_APIS_BANCARIAS.md) §4–§5
 
 | # | Item |
 |---|------|
-| I.1 | `docs/RELEASE_NOTES_INTEGRACAO_MAIN.md` |
-| I.2 | RETOMADA + PROMPT |
-| I.3 | PR `feat/sprint1-payment-emission-portal` → `main` |
-| I.4 | CI verde + handoff TL (**sem merge IA**) |
+| M.0 | Registry BB/C6 + loaders na factory |
+| M.1 | Migration `026_gateway_change_log.sql` |
+| M.2 | ~~BB~~ → **sprint futura** (credenciais sandbox PO) |
+| M.3 | Adapter **C6** (PO: implementar agora) |
+| M.4 | API troca gateway + histórico |
+| M.5 | Portal — formulário dinâmico de credenciais |
+| M.6 | Testes + smoke BB |
 
-### Histórico
+### Inter (Sprint L #21) — auditoria rápida
 
-| Sprint | PR |
-|--------|-----|
-| B activate + paginação | #6 |
-| C `/configuracoes` | #8 |
-| D inbox + deploy | #9 |
-| E n8n régua/ciclo | #10 |
-| F portal editar cobrança | #11 |
-| G `charge.emitted` n8n | #12 |
-| H homolog Asaas E2E | #14 |
-| FASE2 A auth produção | #15 |
+| Área | Status |
+|------|--------|
+| Adapter mTLS + OAuth + `POST/GET /cobrancas/v2` | ✅ |
+| Factory + worker + charge-sync | ✅ |
+| API portal `gateway_credentials` + providers | ✅ |
+| PIX dedicado | ✅ `not_supported` (esperado) |
+| URL boleto/PDF | ⚠️ placeholder `inter://...` (sem `GET /pdf`) |
+| Portal UI credenciais Inter | ⚠️ só API — **M.5** resolve |
+| Smoke E2E Inter | ⚠️ script stub |
+| Webhooks Inter | ❌ Sprint N |
 
-### Backlog pós–Sprint I
+**Conclusão:** Inter **implementado para emissão técnica** (credenciais via PATCH + worker). Falta polish portal/PDF/homolog sandbox.
 
-| Ordem | Item | Pacote |
-|-------|------|--------|
-| 1 | Homolog PO checklist sandbox | Processo (PO) |
-| 2 | CI `workflow_dispatch` Asaas E2E | [DEMANDA_SPRINT_J_CI_ASAAS_E2E.md](./DEMANDA_SPRINT_J_CI_ASAAS_E2E.md) |
+### Decisões PO (Sprint M)
+
+- **BB:** outra sprint · **C6:** implementar · **Troca gateway:** permitir com log
+
+### Backlog pós–Sprint M (Sprint N)
+
+- Estorno `estornada`, normalização webhooks multi-banco, polling — ver ESTUDO §10
 
 ---
 
 ## 5. Ordem de execução
 
 ```
-feat/sprint1-payment-emission-portal → PR main (Sprint I)
-TL merge → git pull main
-Sprint J (opcional CI Asaas)
+feat/sprint-m-gateway-fase2 → quality:gate → PR → homolog sandbox BB
 ```
 
 ---
 
 ## 6. Regras absolutas
 
-Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · migrations NNN · cobertura ≥82% · **nunca** commitar `ASAAS_API_KEY` nem JSON E2E com dados reais.
+Multi-tenant · RLS · credenciais cifradas · **nunca** commitar PEM/API keys · C6 só com doc/credenciais PO.
 
 ---
 
@@ -94,19 +104,19 @@ Multi-tenant · RLS · inbox dedup · n8n noop sem URL · estados terminais · m
 
 | Doc | Uso |
 |-----|-----|
-| [DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md](./DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md) | **Atual** |
-| [docs/RELEASE_NOTES_INTEGRACAO_MAIN.md](../docs/RELEASE_NOTES_INTEGRACAO_MAIN.md) | Release |
-| [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) | PR / merge |
+| [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md) | **Atual** |
+| [DEMANDA_SPRINT_L_UNIVERSAL_GATEWAY.md](./DEMANDA_SPRINT_L_UNIVERSAL_GATEWAY.md) | Referência L (concluído) |
+| [docs/GATEWAY_UNIVERSAL.md](../docs/GATEWAY_UNIVERSAL.md) | Arquitetura |
+| [docs/QA_HOMOLOG_INTER_GATEWAY_PORTAL.md](../docs/QA_HOMOLOG_INTER_GATEWAY_PORTAL.md) | **Homologação Inter (PO/QA)** |
 
 ---
 
 ## 8. SYSTEM PROMPT (colar no Cursor)
 
 ```
-Repositório: cobranca-saas-api. Sprints B–H + FASE2 A mergeados na branch integração.
-Sprint I ATUAL: PR feat/sprint1-payment-emission-portal → main (release notes).
-Pacote: Projeto_CobrancaBoleto/DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md
-Gate: npm test + portal:test + quality:gate
-Governança: IA abre PR; Tech Lead merge.
-Próximo após I: DEMANDA_SPRINT_J_CI_ASAAS_E2E.md
+Repositório: cobranca-saas-api. main atualizado (Sprint L #20 + #21).
+Sprint M ATUAL: C6 adapter + portal dinâmico + gateway_change_log (troca permitida com log).
+BB: OUTRA SPRINT. Branch: feat/sprint-m-gateway-fase2
+Pacote: Projeto_CobrancaBoleto/DEMANDA_SPRINT_M_GATEWAY_FASE2.md
+Inter: emissão OK (#21); portal/PDF/smoke = M.5 ou P2.
 ```

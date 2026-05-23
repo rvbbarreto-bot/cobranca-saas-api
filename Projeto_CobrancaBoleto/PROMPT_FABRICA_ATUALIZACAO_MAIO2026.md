@@ -4,29 +4,25 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **Integração:** `feat/sprint1-payment-emission-portal` — Sprints B–H + FASE2 A (#15 mergeado).
-- **`main`:** defasado (Sprint F) até PR Sprint I.
-- **Próxima entrega:** Sprint I — [DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md](./DEMANDA_SPRINT_I_CONSOLIDACAO_MAIN.md)
-- **Testes:** `npm test` → 220+ · `portal:test` → 33 · `quality:gate`
+- **`main`:** Sprint L mergeado (#20 docs, #21 factory Inter/Cora).
+- **Próxima entrega:** Sprint M — [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md)
+- **Branch:** `feat/sprint-m-gateway-fase2`
 
-## NÃO refazer
+## Sprint M — ATUAL
 
-- FASE2 A, Sprint H E2E, n8n G, portal B–F (já na branch integração).
-- Novo IdP/OAuth (fora de escopo).
+1. Adapter **C6** + registry/factory (PO: implementar)
+2. Migration `026_gateway_change_log` + troca gateway **permitida com log**
+3. Portal **ConfiguracoesPage** — credenciais dinâmicas (Asaas/Inter/Cora/C6)
+4. **BB:** sprint futura (credenciais sandbox PO)
+5. Inter L: emissão OK; PDF/smoke opcional P2
 
-## Sprint I — ATUAL (consolidar main)
+## Backlog
 
-1. PR `feat/sprint1-payment-emission-portal` → `main`
-2. `docs/RELEASE_NOTES_INTEGRACAO_MAIN.md`
-3. Handoff TL — **sem merge IA**
-
-## Backlog (após Sprint I)
-
-| Item | Pacote |
+| Item | Sprint |
 |------|--------|
-| Homolog PO | Checklist Asaas assinado (processo) |
-| CI manual Asaas | [DEMANDA_SPRINT_J_CI_ASAAS_E2E.md](./DEMANDA_SPRINT_J_CI_ASAAS_E2E.md) |
+| Estorno + webhooks normalizados | N |
+| Contratos recorrentes | N+ |
 
 ## Regras
 
-[GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) · multi-tenant · secrets fora do git.
+[GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) · secrets fora do git.

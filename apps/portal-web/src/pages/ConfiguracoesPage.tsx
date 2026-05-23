@@ -6,14 +6,19 @@ import {
   fetchChargingRules,
   fetchCobrancas,
   fetchEscritorioConfig,
+  fetchGatewayChangeHistory,
+  fetchGatewayProviderSchema,
+  fetchGatewayProviders,
   fetchNotificationTemplates,
   fetchPortalMe,
   patchChargingRule,
   patchEscritorioConfig,
+  patchGatewayProvider,
   patchNotificationTemplate,
   postChargingRule,
   previewNotificationTemplate,
   shouldPatchSecret,
+  type GatewayProviderMeta,
   type PatchEscritorioConfigBody
 } from "../lib/api";
 
@@ -41,17 +46,40 @@ export function ConfiguracoesPage(): JSX.Element {
   });
 
   const [razaoSocial, setRazaoSocial] = useState("");
-  const [gatewayProvider, setGatewayProvider] = useState<"asaas" | "pagarme" | "">("");
+  const [gatewayProvider, setGatewayProvider] = useState("");
   const [gatewayApiKey, setGatewayApiKey] = useState("");
+  const [gatewayCredentials, setGatewayCredentials] = useState<Record<string, string>>({});
   const [whatsappProvider, setWhatsappProvider] = useState<"zapi" | "twilio" | "">("");
   const [whatsappToken, setWhatsappToken] = useState("");
+
+  const providersQ = useQuery({
+    queryKey: ["gatewayProviders"],
+    queryFn: fetchGatewayProviders,
+    enabled: isAdmin
+  });
+
+  const schemaQ = useQuery({
+    queryKey: ["gatewaySchema", gatewayProvider],
+    queryFn: () => fetchGatewayProviderSchema(gatewayProvider),
+    enabled: isAdmin && Boolean(gatewayProvider)
+  });
+
+  const gatewayHistoryQ = useQuery({
+    queryKey: ["gatewayHistory"],
+    queryFn: fetchGatewayChangeHistory,
+    enabled: isAdmin && tab === "gateway"
+  });
+
+  const selectedMeta: GatewayProviderMeta | undefined =
+    providersQ.data?.data.find((p) => p.id === gatewayProvider) ?? schemaQ.data?.provider;
 
   useEffect(() => {
     const c = configQ.data?.config;
     if (!c) return;
     setRazaoSocial(c.razao_social ?? "");
-    setGatewayProvider((c.gateway_provider as "asaas" | "pagarme") ?? "");
-    setGatewayApiKey(c.gateway_api_key ?? "");
+    setGatewayProvider(c.gateway_provider ?? "");
+    setGatewayApiKey("");
+    setGatewayCredentials({});
     setWhatsappProvider((c.whatsapp_provider as "zapi" | "twilio") ?? "");
     setWhatsappToken(c.whatsapp_token ?? "");
   }, [configQ.data?.config]);
@@ -69,20 +97,71 @@ export function ConfiguracoesPage(): JSX.Element {
     }
   });
 
+  const saveGateway = useMutation({
+    mutationFn: async () => {
+      if (!gatewayProvider) throw new Error("Selecione um gateway.");
+      const meta = selectedMeta;
+      if (meta?.authType === "api_key") {
+        const maskedKey = configQ.data?.config?.gateway_api_key;
+        const apiKey = gatewayCredentials.api_key?.trim() || gatewayApiKey.trim();
+        if (!shouldPatchSecret(apiKey, maskedKey) && !configQ.data?.config?.gateway_credentials_configured) {
+          throw new Error("Informe a API key do gateway.");
+        }
+        return patchGatewayProvider({
+          gateway_provider: gatewayProvider,
+          ...(shouldPatchSecret(apiKey, maskedKey) ? { gateway_api_key: apiKey } : {}),
+          ...(Object.keys(gatewayCredentials).length > 0
+            ? { gateway_credentials: { api_key: apiKey, ...gatewayCredentials } }
+            : {})
+        });
+      }
+      const creds = { ...gatewayCredentials };
+      const filled = Object.entries(creds).filter(([, v]) => v.trim());
+      if (filled.length === 0 && !configQ.data?.config?.gateway_credentials_configured) {
+        throw new Error("Preencha as credenciais do gateway.");
+      }
+      return patchGatewayProvider({
+        gateway_provider: gatewayProvider,
+        gateway_credentials: Object.fromEntries(filled.map(([k, v]) => [k, v.trim()]))
+      });
+    },
+    onSuccess: async () => {
+      setSaveErr(null);
+      setSaveMsg("Configurações guardadas.");
+      await qc.invalidateQueries({ queryKey: ["escritorioConfig"] });
+      await qc.invalidateQueries({ queryKey: ["gatewayHistory"] });
+    },
+    onError: (e: unknown) => {
+      setSaveMsg(null);
+      setSaveErr(e instanceof Error ? e.message : "Erro ao guardar");
+    }
+  });
+
   function onSaveGateway(e: FormEvent): void {
     e.preventDefault();
     if (!isAdmin) return;
     setSaveMsg(null);
     setSaveErr(null);
-    const maskedKey = configQ.data?.config?.gateway_api_key;
     const maskedWa = configQ.data?.config?.whatsapp_token;
     const body: PatchEscritorioConfigBody = {};
     if (razaoSocial.trim()) body.razao_social = razaoSocial.trim();
-    if (gatewayProvider) body.gateway_provider = gatewayProvider;
-    if (shouldPatchSecret(gatewayApiKey, maskedKey)) body.gateway_api_key = gatewayApiKey.trim();
     if (whatsappProvider) body.whatsapp_provider = whatsappProvider;
     if (shouldPatchSecret(whatsappToken, maskedWa)) body.whatsapp_token = whatsappToken.trim();
-    saveConfig.mutate(body);
+
+    const saveWhatsappOnly =
+      !gatewayProvider &&
+      (body.razao_social !== undefined ||
+        body.whatsapp_provider !== undefined ||
+        body.whatsapp_token !== undefined);
+
+    if (saveWhatsappOnly && Object.keys(body).length > 0) {
+      saveConfig.mutate(body);
+      return;
+    }
+    saveGateway.mutate();
+    if (Object.keys(body).length > 0) {
+      saveConfig.mutate(body);
+    }
   }
 
   const reguaQ = useQuery({
@@ -242,25 +321,91 @@ export function ConfiguracoesPage(): JSX.Element {
               Gateway
               <select
                 value={gatewayProvider}
-                onChange={(e) => setGatewayProvider(e.target.value as "asaas" | "pagarme" | "")}
+                onChange={(e) => {
+                  setGatewayProvider(e.target.value);
+                  setGatewayCredentials({});
+                  setGatewayApiKey("");
+                }}
               >
                 <option value="">—</option>
-                <option value="asaas">Asaas</option>
-                <option value="pagarme">Pagar.me</option>
+                {(providersQ.data?.data ?? []).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
               </select>
             </label>
-            <label className="field-label">
-              API key do gateway
-              <input
-                type="password"
-                value={gatewayApiKey}
-                placeholder={configQ.data?.config?.gateway_api_key ? "Deixe em branco para manter" : "Mín. 10 caracteres"}
-                onChange={(e) => setGatewayApiKey(e.target.value)}
-              />
-              {configQ.data?.config?.gateway_api_key ? (
-                <span className="muted small">Atual: {configQ.data.config.gateway_api_key}</span>
-              ) : null}
-            </label>
+            {selectedMeta?.authType === "api_key" ? (
+              <label className="field-label">
+                API key
+                <input
+                  type="password"
+                  value={gatewayCredentials.api_key ?? gatewayApiKey}
+                  placeholder={
+                    configQ.data?.config?.gateway_api_key
+                      ? "Deixe em branco para manter"
+                      : "Mín. 10 caracteres"
+                  }
+                  onChange={(e) =>
+                    setGatewayCredentials((prev) => ({ ...prev, api_key: e.target.value }))
+                  }
+                />
+                {configQ.data?.config?.gateway_api_key ? (
+                  <span className="muted small">Atual: {configQ.data.config.gateway_api_key}</span>
+                ) : null}
+              </label>
+            ) : null}
+            {(selectedMeta?.credentialFields ?? [])
+              .filter((f) => f.key !== "api_key")
+              .map((field) => (
+                <label key={field.key} className="field-label">
+                  {field.label}
+                  {field.secret && (field.key.includes("pem") || field.key.includes("certificate")) ? (
+                    <textarea
+                      rows={4}
+                      value={gatewayCredentials[field.key] ?? ""}
+                      placeholder={
+                        configQ.data?.config?.gateway_credentials_configured
+                          ? "Deixe em branco para manter"
+                          : field.required
+                            ? "Obrigatório"
+                            : ""
+                      }
+                      onChange={(e) =>
+                        setGatewayCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                    />
+                  ) : (
+                    <input
+                      type={field.secret ? "password" : "text"}
+                      value={gatewayCredentials[field.key] ?? ""}
+                      placeholder={
+                        configQ.data?.config?.gateway_credentials_configured
+                          ? "Deixe em branco para manter"
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setGatewayCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                    />
+                  )}
+                </label>
+              ))}
+            {configQ.data?.config?.gateway_credentials_configured ? (
+              <p className="muted small">Credenciais já configuradas (valores mascarados no servidor).</p>
+            ) : null}
+            {gatewayHistoryQ.data?.data.length ? (
+              <div className="muted small" style={{ gridColumn: "1 / -1" }}>
+                <strong>Últimas trocas de gateway</strong>
+                <ul>
+                  {gatewayHistoryQ.data.data.map((h) => (
+                    <li key={h.id}>
+                      {h.old_provider ?? "—"} → {h.new_provider} ({new Date(h.changed_at).toLocaleString()})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <label className="field-label">
               WhatsApp (provedor)
               <select
@@ -285,8 +430,12 @@ export function ConfiguracoesPage(): JSX.Element {
           {saveMsg ? <div className="banner-ok">{saveMsg}</div> : null}
           {saveErr ? <div className="banner-err">{saveErr}</div> : null}
           <p style={{ marginTop: "1rem" }}>
-            <button type="submit" className="btn-primary" disabled={saveConfig.isPending}>
-              {saveConfig.isPending ? "A guardar…" : "Guardar configurações"}
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={saveConfig.isPending || saveGateway.isPending}
+            >
+              {saveConfig.isPending || saveGateway.isPending ? "A guardar…" : "Guardar configurações"}
             </button>
           </p>
         </form>

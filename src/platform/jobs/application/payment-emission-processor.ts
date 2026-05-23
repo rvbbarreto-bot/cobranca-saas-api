@@ -1,9 +1,18 @@
 import { UnrecoverableError } from "bullmq";
 import type { PoolClient } from "pg";
-import type { PaymentGatewayAdapter } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
-import type { BoletoResult, PixResult } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
-import { AsaasAdapter } from "../../../modules/payment-gateway/infrastructure/asaas/asaas-adapter";
+import type {
+  BoletoResult,
+  CreateCustomerInput,
+  PaymentGatewayAdapter,
+  PixResult
+} from "../../../modules/payment-gateway/domain/payment-gateway.interface";
+import {
+  mapRowToCustomerAddress,
+  type PortalClienteAddressFields
+} from "../../../modules/portal-read/application/portal-cliente-address";
+import { getGatewayForTenant } from "../../../modules/payment-gateway/application/get-gateway-for-tenant";
 import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
+import { isProductionNodeEnv } from "../../config/runtime-flags";
 import { decrypt } from "../../crypto/decrypt";
 import { insertChargeEvent } from "../../../modules/billing-core/infrastructure/charge-events-repository";
 import { writeAuditLog } from "../../audit/audit.service";
@@ -34,11 +43,51 @@ export type PortalClienteEmissionRow = {
   email: string | null;
   telefone: string | null;
   gatewayCustomerId: string | null;
+  address: PortalClienteAddressFields;
 };
+
+const PORTAL_CLIENTE_EMISSION_SELECT = `id, documento, nome, email, telefone, gateway_customer_id,
+  endereco_cep, endereco_logradouro, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf`;
+
+function mapPortalClienteEmissionRow(row: Record<string, unknown>): PortalClienteEmissionRow {
+  return {
+    id: String(row.id),
+    documento: String(row.documento),
+    nome: String(row.nome),
+    email: row.email ? String(row.email) : null,
+    telefone: row.telefone ? String(row.telefone) : null,
+    gatewayCustomerId: row.gateway_customer_id ? String(row.gateway_customer_id) : null,
+    address: {
+      endereco_cep: row.endereco_cep ? String(row.endereco_cep) : null,
+      endereco_logradouro: row.endereco_logradouro ? String(row.endereco_logradouro) : null,
+      endereco_numero: row.endereco_numero ? String(row.endereco_numero) : null,
+      endereco_complemento: row.endereco_complemento ? String(row.endereco_complemento) : null,
+      endereco_bairro: row.endereco_bairro ? String(row.endereco_bairro) : null,
+      endereco_cidade: row.endereco_cidade ? String(row.endereco_cidade) : null,
+      endereco_uf: row.endereco_uf ? String(row.endereco_uf) : null
+    }
+  };
+}
+
+export function buildPayerInputFromPortalCliente(cliente: PortalClienteEmissionRow): CreateCustomerInput {
+  const email = cliente.email?.trim() || `sem-email+${cliente.id}@cobranca.local`;
+  return {
+    name: cliente.nome,
+    cpfCnpj: cliente.documento,
+    email,
+    phone: cliente.telefone ?? undefined,
+    externalReference: cliente.id,
+    endereco: mapRowToCustomerAddress(cliente.address)
+  };
+}
 
 export type PaymentEmissionProcessorDeps = {
   withTenant?: typeof withTenantTransaction;
   createAdapter?: (apiKey: string) => PaymentGatewayAdapter;
+  getGateway?: (
+    client: PoolClient,
+    tenantId: string
+  ) => Promise<PaymentGatewayAdapter>;
   decryptApiKey?: (ciphertext: string, ivBase64: string) => string;
 };
 
@@ -79,18 +128,9 @@ async function loadCharge(
   return mapChargeRow(row);
 }
 
-type EscritorioConfigRow = {
-  gatewayProvider: string;
-  gatewayApiKeyEncrypted: string;
-  encryptionIv: string;
-};
-
-async function loadEscritorioConfig(
-  client: PoolClient,
-  tenantId: string
-): Promise<EscritorioConfigRow> {
+async function loadGatewayProvider(client: PoolClient, tenantId: string): Promise<string> {
   const r = await client.query<Record<string, unknown>>(
-    `SELECT gateway_provider, gateway_api_key_encrypted, encryption_iv
+    `SELECT gateway_provider
      FROM escritorio_config
      WHERE tenant_id = $1
      LIMIT 1`,
@@ -100,14 +140,7 @@ async function loadEscritorioConfig(
   if (!row) {
     throw new UnrecoverableError("escritorio_config_not_found");
   }
-  if (!row.gateway_api_key_encrypted || !row.encryption_iv) {
-    throw new UnrecoverableError("escritorio_config_not_found");
-  }
-  return {
-    gatewayProvider: String(row.gateway_provider || "asaas"),
-    gatewayApiKeyEncrypted: String(row.gateway_api_key_encrypted),
-    encryptionIv: String(row.encryption_iv)
-  };
+  return String(row.gateway_provider || "asaas");
 }
 
 async function loadPortalCliente(
@@ -117,14 +150,14 @@ async function loadPortalCliente(
 ): Promise<PortalClienteEmissionRow> {
   const r = automacaoTenantId
     ? await client.query<Record<string, unknown>>(
-        `SELECT id, documento, nome, email, telefone, gateway_customer_id
+        `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
          FROM portal.cliente
          WHERE id = $1::uuid AND tenant_id = $2
          LIMIT 1`,
         [portalClienteId, automacaoTenantId]
       )
     : await client.query<Record<string, unknown>>(
-        `SELECT id, documento, nome, email, telefone, gateway_customer_id
+        `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
          FROM portal.cliente
          WHERE id = $1::uuid
          LIMIT 1`,
@@ -134,14 +167,7 @@ async function loadPortalCliente(
   if (!row) {
     throw new Error(`portal.cliente ${portalClienteId} nao encontrado.`);
   }
-  return {
-    id: String(row.id),
-    documento: String(row.documento),
-    nome: String(row.nome),
-    email: row.email ? String(row.email) : null,
-    telefone: row.telefone ? String(row.telefone) : null,
-    gatewayCustomerId: row.gateway_customer_id ? String(row.gateway_customer_id) : null
-  };
+  return mapPortalClienteEmissionRow(row);
 }
 
 async function insertPaymentTransaction(
@@ -186,10 +212,34 @@ async function insertPaymentTransaction(
   );
 }
 
-function defaultCreateAdapter(apiKey: string): PaymentGatewayAdapter {
-  return new AsaasAdapter({
-    apiKey,
-    baseUrl: process.env.ASAAS_API_URL
+async function resolveGatewayAdapter(
+  client: PoolClient,
+  tenantId: string,
+  deps: PaymentEmissionProcessorDeps
+): Promise<PaymentGatewayAdapter> {
+  if (deps.getGateway) {
+    return deps.getGateway(client, tenantId);
+  }
+  if (deps.createAdapter) {
+    const r = await client.query<Record<string, unknown>>(
+      `SELECT gateway_api_key_encrypted, encryption_iv
+       FROM escritorio_config WHERE tenant_id = $1 LIMIT 1`,
+      [tenantId]
+    );
+    const row = r.rows[0];
+    if (!row?.gateway_api_key_encrypted || !row.encryption_iv) {
+      throw new UnrecoverableError("escritorio_config_not_found");
+    }
+    const decryptKey = deps.decryptApiKey ?? decrypt;
+    const apiKey = decryptKey(
+      String(row.gateway_api_key_encrypted),
+      String(row.encryption_iv)
+    );
+    return deps.createAdapter(apiKey);
+  }
+  return getGatewayForTenant(client, tenantId, {
+    decrypt: deps.decryptApiKey ?? decrypt,
+    sandbox: !isProductionNodeEnv()
   });
 }
 
@@ -198,9 +248,6 @@ async function runEmission(
   data: PaymentEmissionJobData,
   deps: PaymentEmissionProcessorDeps
 ): Promise<void> {
-  const decryptKey = deps.decryptApiKey ?? decrypt;
-  const createAdapter = deps.createAdapter ?? defaultCreateAdapter;
-
   const charge = await loadCharge(client, data.chargeId, data.tenantId);
 
   if (charge.canonicalStatus !== "rascunho") {
@@ -209,13 +256,8 @@ async function runEmission(
 
   const oldStatus = charge.canonicalStatus;
 
-  const config = await loadEscritorioConfig(client, data.tenantId);
-  if (config.gatewayProvider !== "asaas") {
-    throw new Error(`Gateway ${config.gatewayProvider} ainda nao suportado no worker.`);
-  }
-
-  const apiKey = decryptKey(config.gatewayApiKeyEncrypted, config.encryptionIv);
-  const adapter = createAdapter(apiKey);
+  const gatewayProvider = await loadGatewayProvider(client, data.tenantId);
+  const adapter = await resolveGatewayAdapter(client, data.tenantId, deps);
 
   const portalClienteId = charge.metadata.portal_cliente_id;
   if (typeof portalClienteId !== "string" || !portalClienteId.trim()) {
@@ -228,17 +270,11 @@ async function runEmission(
       : undefined;
 
   const cliente = await loadPortalCliente(client, portalClienteId.trim(), automacaoTenantId);
+  const payer = buildPayerInputFromPortalCliente(cliente);
   let gatewayCustomerId = cliente.gatewayCustomerId;
 
   if (!gatewayCustomerId) {
-    const email = cliente.email?.trim() || `sem-email+${cliente.id}@cobranca.local`;
-    gatewayCustomerId = await adapter.createCustomer({
-      name: cliente.nome,
-      cpfCnpj: cliente.documento,
-      email,
-      phone: cliente.telefone ?? undefined,
-      externalReference: cliente.id
-    });
+    gatewayCustomerId = await adapter.createCustomer(payer);
     await client.query(
       `UPDATE portal.cliente
        SET gateway_customer_id = $2, updated_at = now()
@@ -252,7 +288,8 @@ async function runEmission(
     value: Number(charge.amount),
     dueDate: charge.dueDate,
     description: charge.reference,
-    externalReference: charge.idempotencyKey
+    externalReference: charge.idempotencyKey,
+    payer
   };
 
   let gatewayTransactionId: string;
@@ -272,7 +309,7 @@ async function runEmission(
   await insertPaymentTransaction(client, {
     tenantId: data.tenantId,
     chargeId: charge.id,
-    gateway: config.gatewayProvider,
+    gateway: gatewayProvider,
     gatewayTransactionId,
     type: charge.type,
     amount: charge.amount,
@@ -288,7 +325,7 @@ async function runEmission(
          provider_charge_id = $4,
          updated_at = now()
      WHERE id = $1::uuid AND tenant_id = $2::uuid`,
-    [charge.id, data.tenantId, config.gatewayProvider, gatewayTransactionId]
+    [charge.id, data.tenantId, gatewayProvider, gatewayTransactionId]
   );
 
   await insertChargeEvent(client, {

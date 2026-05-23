@@ -1,17 +1,25 @@
 import { isValidBrTaxIdDigits } from "./br-cpf-cnpj";
+import {
+  parsePortalClienteEnderecoBody,
+  type PortalClienteEnderecoInput
+} from "./portal-cliente-address";
 
 export type PortalClienteCreateInput = {
   documento: string;
   nome: string;
-  email: string | null;
+  email: string;
+  telefone: string | null;
   whatsappOptIn: boolean;
+  endereco?: PortalClienteEnderecoInput | null;
 };
 
 /** Atualização parcial (PATCH): não altera documento nesta versão. */
 export type PortalClientePatchInput = {
   nome?: string;
   email?: string | null;
+  telefone?: string | null;
   whatsappOptIn?: boolean;
+  endereco?: PortalClienteEnderecoInput | null;
 };
 
 export type PortalClienteValidationIssue = { path: string; message: string };
@@ -27,12 +35,57 @@ export function isValidBrDocumentoDigits(digits: string): boolean {
   return false;
 }
 
+const PARTY_NAME = /^[\p{L}\p{N} ,.'\-]+$/u;
+
+function isValidPartyName(name: string): boolean {
+  const t = name.trim();
+  return t.length >= 1 && t.length <= 100 && PARTY_NAME.test(t);
+}
+
 function isPlausibleEmail(value: string): boolean {
-  const v = value.trim();
+  const v = value.trim().toLowerCase();
   if (v.length < 3 || v.length > 254) {
     return false;
   }
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
+function parseTelefoneField(
+  b: Record<string, unknown>,
+  whatsappOptIn: boolean,
+  issues: PortalClienteValidationIssue[]
+): string | null {
+  if (b.telefone === undefined || b.telefone === null) {
+    if (whatsappOptIn) {
+      issues.push({
+        path: "telefone",
+        message: "Telefone obrigatorio quando whatsapp_opt_in for true."
+      });
+    }
+    return null;
+  }
+  if (typeof b.telefone !== "string") {
+    issues.push({ path: "telefone", message: "telefone deve ser texto." });
+    return null;
+  }
+  const digits = onlyDigits(b.telefone);
+  if (digits.length === 0) {
+    if (whatsappOptIn) {
+      issues.push({
+        path: "telefone",
+        message: "Telefone obrigatorio quando whatsapp_opt_in for true."
+      });
+    }
+    return null;
+  }
+  if (digits.length !== 10 && digits.length !== 11) {
+    issues.push({
+      path: "telefone",
+      message: "Telefone invalido: informe DDD + numero (10 ou 11 digitos)."
+    });
+    return null;
+  }
+  return digits;
 }
 
 export function parsePortalClienteCreateBody(body: unknown): {
@@ -61,23 +114,22 @@ export function parsePortalClienteCreateBody(body: unknown): {
   }
 
   const nomeRaw = typeof b.nome === "string" ? b.nome.trim() : "";
-  if (nomeRaw.length < 1 || nomeRaw.length > 300) {
-    issues.push({ path: "nome", message: "Nome obrigatorio (1 a 300 caracteres)." });
+  if (!isValidPartyName(nomeRaw)) {
+    issues.push({
+      path: "nome",
+      message: "Nome obrigatorio (1 a 100 caracteres; caracteres permitidos: letras, numeros, , . - ')."
+    });
   }
 
-  let email: string | null = null;
-  if (b.email !== undefined && b.email !== null) {
-    if (typeof b.email !== "string") {
-      issues.push({ path: "email", message: "Email deve ser texto." });
+  let email = "";
+  if (typeof b.email !== "string" || b.email.trim().length === 0) {
+    issues.push({ path: "email", message: "E-mail obrigatorio para envio de cobrancas." });
+  } else {
+    const e = b.email.trim().toLowerCase();
+    if (!isPlausibleEmail(e)) {
+      issues.push({ path: "email", message: "Email invalido." });
     } else {
-      const e = b.email.trim();
-      if (e.length > 0) {
-        if (!isPlausibleEmail(e)) {
-          issues.push({ path: "email", message: "Email invalido." });
-        } else {
-          email = e;
-        }
-      }
+      email = e;
     }
   }
 
@@ -87,6 +139,22 @@ export function parsePortalClienteCreateBody(body: unknown): {
       whatsappOptIn = b.whatsapp_opt_in;
     } else {
       issues.push({ path: "whatsapp_opt_in", message: "whatsapp_opt_in deve ser boolean." });
+    }
+  }
+
+  const telefone = parseTelefoneField(b, whatsappOptIn, issues);
+
+  let endereco: PortalClienteEnderecoInput | null | undefined;
+  if (b.endereco !== undefined) {
+    if (b.endereco === null) {
+      endereco = null;
+    } else {
+      const parsedAddr = parsePortalClienteEnderecoBody(b.endereco);
+      if (!parsedAddr.ok) {
+        issues.push({ path: "endereco", message: parsedAddr.message });
+      } else {
+        endereco = parsedAddr.value;
+      }
     }
   }
 
@@ -100,7 +168,9 @@ export function parsePortalClienteCreateBody(body: unknown): {
       documento: rawDoc,
       nome: nomeRaw,
       email,
-      whatsappOptIn
+      telefone,
+      whatsappOptIn,
+      endereco
     }
   };
 }
@@ -123,8 +193,11 @@ export function parsePortalClientePatchBody(body: unknown): {
       issues.push({ path: "nome", message: "nome deve ser texto." });
     } else {
       const nomeRaw = b.nome.trim();
-      if (nomeRaw.length < 1 || nomeRaw.length > 300) {
-        issues.push({ path: "nome", message: "Nome deve ter 1 a 300 caracteres." });
+      if (!isValidPartyName(nomeRaw)) {
+        issues.push({
+          path: "nome",
+          message: "Nome deve ter 1 a 100 caracteres (caracteres permitidos: letras, numeros, , . - ')."
+        });
       } else {
         patch.nome = nomeRaw;
       }
@@ -133,13 +206,13 @@ export function parsePortalClientePatchBody(body: unknown): {
 
   if (b.email !== undefined) {
     if (b.email === null) {
-      patch.email = null;
+      issues.push({ path: "email", message: "E-mail nao pode ser removido." });
     } else if (typeof b.email !== "string") {
-      issues.push({ path: "email", message: "Email deve ser texto ou null." });
+      issues.push({ path: "email", message: "Email deve ser texto." });
     } else {
-      const e = b.email.trim();
+      const e = b.email.trim().toLowerCase();
       if (e.length === 0) {
-        patch.email = null;
+        issues.push({ path: "email", message: "E-mail obrigatorio." });
       } else if (!isPlausibleEmail(e)) {
         issues.push({ path: "email", message: "Email invalido." });
       } else {
@@ -148,11 +221,47 @@ export function parsePortalClientePatchBody(body: unknown): {
     }
   }
 
-  if (b.whatsapp_opt_in !== undefined && b.whatsapp_opt_in !== null) {
-    if (typeof b.whatsapp_opt_in !== "boolean") {
-      issues.push({ path: "whatsapp_opt_in", message: "whatsapp_opt_in deve ser boolean." });
-    } else {
+  const optInProvided = b.whatsapp_opt_in !== undefined && b.whatsapp_opt_in !== null;
+  let nextOptIn: boolean | undefined;
+  if (optInProvided) {
+    if (typeof b.whatsapp_opt_in === "boolean") {
+      nextOptIn = b.whatsapp_opt_in;
       patch.whatsappOptIn = b.whatsapp_opt_in;
+    } else {
+      issues.push({ path: "whatsapp_opt_in", message: "whatsapp_opt_in deve ser boolean." });
+    }
+  }
+
+  if (b.telefone !== undefined) {
+    if (b.telefone === null) {
+      patch.telefone = null;
+    } else if (typeof b.telefone !== "string") {
+      issues.push({ path: "telefone", message: "telefone deve ser texto ou null." });
+    } else {
+      const digits = onlyDigits(b.telefone);
+      if (digits.length === 0) {
+        patch.telefone = null;
+      } else if (digits.length !== 10 && digits.length !== 11) {
+        issues.push({
+          path: "telefone",
+          message: "Telefone invalido: informe DDD + numero (10 ou 11 digitos)."
+        });
+      } else {
+        patch.telefone = digits;
+      }
+    }
+  }
+
+  if (b.endereco !== undefined) {
+    if (b.endereco === null) {
+      patch.endereco = null;
+    } else {
+      const parsedAddr = parsePortalClienteEnderecoBody(b.endereco);
+      if (!parsedAddr.ok) {
+        issues.push({ path: "endereco", message: parsedAddr.message });
+      } else {
+        patch.endereco = parsedAddr.value;
+      }
     }
   }
 
@@ -160,10 +269,41 @@ export function parsePortalClientePatchBody(body: unknown): {
     return { ok: false, issues };
   }
 
-  if (patch.nome === undefined && patch.email === undefined && patch.whatsappOptIn === undefined) {
+  if (
+    patch.nome === undefined &&
+    patch.email === undefined &&
+    patch.telefone === undefined &&
+    patch.whatsappOptIn === undefined &&
+    patch.endereco === undefined
+  ) {
     return {
       ok: false,
-      issues: [{ path: "body", message: "Informe ao menos um campo: nome, email ou whatsapp_opt_in." }]
+      issues: [
+        {
+          path: "body",
+          message:
+            "Informe ao menos um campo: nome, email, telefone, whatsapp_opt_in ou endereco."
+        }
+      ]
+    };
+  }
+
+  if (nextOptIn === true && patch.telefone === undefined) {
+    return {
+      ok: false,
+      issues: [
+        {
+          path: "telefone",
+          message: "Informe telefone ao ativar whatsapp_opt_in ou envie telefone no mesmo PATCH."
+        }
+      ]
+    };
+  }
+
+  if (nextOptIn === true && patch.telefone === null) {
+    return {
+      ok: false,
+      issues: [{ path: "telefone", message: "Telefone obrigatorio quando whatsapp_opt_in for true." }]
     };
   }
 

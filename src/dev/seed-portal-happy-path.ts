@@ -1,4 +1,5 @@
 import pg from "pg";
+import { insertCharge } from "../modules/billing-core/infrastructure/charge-repository";
 import { hashPortalPassword } from "../modules/portal-read/application/portal-password";
 
 /** UUID do tenant `demo` criado em `001_init_multi_tenant_rls.sql`. */
@@ -14,10 +15,14 @@ const SEED_AUTOMACAO_ADVISORY_LOCK = 9_157_240_019;
 export const SEED_PORTAL_DEFAULT_PASSWORD =
   process.env.SEED_PORTAL_PASSWORD?.trim() || "PortalSeedDev!ChangeMe1";
 
+/** Mínimo de cobranças no tenant público para o botão «Carregar mais» (page size portal = 50). */
+export const SEED_PAGINATION_CHARGE_MIN = 55;
+
 export type SeedPortalHappyPathResult = {
   automacaoTenantId: string;
   portalEmail: string;
   publicTenantId: string;
+  paginationCharges: { before: number; after: number; inserted: number };
 };
 
 /**
@@ -35,11 +40,13 @@ export async function runSeedPortalHappyPath(
     await ensurePortalPasswordHash(client, appUserId);
     await ensureMembership(client, appUserId, automacaoTenantId);
     await ensureBillingLink(client, automacaoTenantId);
+    const paginationCharges = await ensurePaginationCharges(client, DEMO_PUBLIC_TENANT_UUID);
 
     return {
       automacaoTenantId,
       portalEmail: SEED_PORTAL_EMAIL,
-      publicTenantId: DEMO_PUBLIC_TENANT_UUID
+      publicTenantId: DEMO_PUBLIC_TENANT_UUID,
+      paginationCharges
     };
   } finally {
     await client.end();
@@ -119,4 +126,53 @@ async function ensureBillingLink(client: pg.Client, automacaoTenantId: string): 
        SET public_tenant_id = EXCLUDED.public_tenant_id`,
     [automacaoTenantId, DEMO_PUBLIC_TENANT_UUID]
   );
+}
+
+/**
+ * Garante ≥ {@link SEED_PAGINATION_CHARGE_MIN} cobranças em rascunho no tenant público demo
+ * (idempotente — referências `SEED-PAG-QA-*`).
+ */
+async function ensurePaginationCharges(
+  client: pg.Client,
+  publicTenantId: string
+): Promise<{ before: number; after: number; inserted: number }> {
+  await client.query("BEGIN");
+  try {
+    await client.query(`SELECT set_config('app.tenant_id', $1, true)`, [publicTenantId]);
+    const countRes = await client.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM charges WHERE tenant_id = $1::uuid`,
+      [publicTenantId]
+    );
+    const before = Number(countRes.rows[0]?.n ?? 0);
+    if (before >= SEED_PAGINATION_CHARGE_MIN) {
+      await client.query("COMMIT");
+      return { before, after: before, inserted: 0 };
+    }
+
+    const need = SEED_PAGINATION_CHARGE_MIN - before;
+    const baseDate = new Date();
+    for (let i = 0; i < need; i++) {
+      const n = before + i + 1;
+      const due = new Date(baseDate);
+      due.setDate(due.getDate() + 30 + (n % 120));
+      await insertCharge(client, {
+        reference: `SEED-PAG-QA-${String(n).padStart(4, "0")}`,
+        idempotencyKey: `seed-pagination-qa-${n}`,
+        amount: 10 + (n % 50),
+        dueDate: due.toISOString().slice(0, 10),
+        metadata: { seed: "pagination-qa" }
+      });
+    }
+
+    const afterRes = await client.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM charges WHERE tenant_id = $1::uuid`,
+      [publicTenantId]
+    );
+    const after = Number(afterRes.rows[0]?.n ?? 0);
+    await client.query("COMMIT");
+    return { before, after, inserted: after - before };
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  }
 }

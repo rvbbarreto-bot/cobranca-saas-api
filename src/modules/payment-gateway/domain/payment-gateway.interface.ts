@@ -3,6 +3,16 @@
  * Nao alterar assinaturas sem revisao de arquitetura — ver PROMPT_FABRICA_KICKOFF Sprint 1.
  */
 
+export interface CustomerAddressInput {
+  logradouro: string;
+  numero?: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  cep: string;
+}
+
 export interface CreateCustomerInput {
   name: string;
   cpfCnpj: string;
@@ -10,6 +20,8 @@ export interface CreateCustomerInput {
   phone?: string;
   /** portal_cliente_id ou outro id estavel no nosso dominio */
   externalReference: string;
+  /** Obrigatorio para alguns bancos (Inter, Cora, BB). */
+  endereco?: CustomerAddressInput;
 }
 
 export interface CreateBoletoInput {
@@ -24,6 +36,8 @@ export interface CreateBoletoInput {
   finePercent?: number;
   /** Percentual de juros ao mes (padrao Asaas: 0.033) */
   interestPercent?: number;
+  /** Dados do pagador (Inter/Cora/C6 usam no corpo da emissao). */
+  payer?: CreateCustomerInput;
 }
 
 export interface BoletoResult {
@@ -45,6 +59,7 @@ export interface CreatePixInput {
   dueDate: string;
   description: string;
   externalReference: string;
+  payer?: CreateCustomerInput;
 }
 
 export interface PixResult {

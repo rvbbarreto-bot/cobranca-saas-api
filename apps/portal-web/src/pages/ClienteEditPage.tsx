@@ -1,19 +1,22 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { clienteEditFormSchema } from "../lib/schemas";
-import type { ClienteEditFormValues } from "../lib/schemas";
-import { fetchClientes, patchPortalCliente } from "../lib/api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCliente } from "../hooks/useCliente";
+import { invalidateClientesQueries } from "../lib/cliente-query-keys";
+import { maskBrPhone } from "../lib/format-br";
+import { clienteEditFormSchema, normalizeClienteEditPayload } from "../lib/schemas";
+import { patchPortalCliente } from "../lib/api";
 
 export function ClienteEditPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const q = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes() });
-  const cliente = id ? q.data?.data.find((c) => c.id === id) : undefined;
+  const clienteQ = useCliente(id);
+  const cliente = clienteQ.data ?? undefined;
 
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
@@ -22,14 +25,15 @@ export function ClienteEditPage(): JSX.Element {
     if (cliente) {
       setNome(cliente.nome);
       setEmail(cliente.email ?? "");
+      setTelefone(cliente.telefone ? maskBrPhone(cliente.telefone) : "");
       setWhatsappOptIn(cliente.whatsapp_opt_in);
     }
   }, [cliente]);
 
   const m = useMutation({
-    mutationFn: (body: ClienteEditFormValues) => patchPortalCliente(id!, body),
+    mutationFn: (body: ReturnType<typeof normalizeClienteEditPayload>) => patchPortalCliente(id!, body),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ["clientes"] });
+      await invalidateClientesQueries(qc);
       navigate(`/clientes/${id}`, { replace: true });
     },
     onError: (e: unknown) => {
@@ -45,7 +49,8 @@ export function ClienteEditPage(): JSX.Element {
     setApiError(null);
     const parsed = clienteEditFormSchema.safeParse({
       nome,
-      email: email || undefined,
+      email,
+      telefone: telefone || undefined,
       whatsapp_opt_in: whatsappOptIn
     });
     if (!parsed.success) {
@@ -60,16 +65,16 @@ export function ClienteEditPage(): JSX.Element {
       return;
     }
     setFieldErrors({});
-    m.mutate(parsed.data);
+    m.mutate(normalizeClienteEditPayload(parsed.data));
   }
 
   return (
     <div className="shell-page">
       <div className="shell-page__head">
         <div>
-          <h2 className="shell-page__title">Edição do cliente</h2>
+          <h2 className="shell-page__title">Edicao do cliente</h2>
           <p className="shell-page__desc" style={{ marginBottom: 0 }}>
-            Atualização via <code style={{ fontSize: "0.85em" }}>PATCH /v1/portal/clientes/:id</code>. O documento não
+            Atualizacao via <code style={{ fontSize: "0.85em" }}>PATCH /v1/portal/clientes/:id</code>. O documento nao
             pode ser alterado.
           </p>
         </div>
@@ -82,18 +87,18 @@ export function ClienteEditPage(): JSX.Element {
         </div>
       </div>
 
-      {q.isLoading ? <p className="muted">Carregando…</p> : null}
-      {q.isError ? (
-        <div className="banner-err">{q.error instanceof Error ? q.error.message : "Erro"}</div>
+      {clienteQ.isLoading ? <p className="muted">Carregando…</p> : null}
+      {clienteQ.isError ? (
+        <div className="banner-err">{clienteQ.error instanceof Error ? clienteQ.error.message : "Erro"}</div>
       ) : null}
-      {!q.isLoading && q.data && !cliente ? (
-        <div className="banner-err">Cliente não encontrado neste escritório.</div>
+      {!clienteQ.isLoading && clienteQ.isSuccess && !cliente ? (
+        <div className="banner-err">Cliente nao encontrado neste escritorio.</div>
       ) : null}
 
       {cliente ? (
         <form onSubmit={onSubmit} className="form-grid-proto" style={{ maxWidth: "720px" }}>
           <div className="form-card form-card--full">
-            <h3 className="form-card__title">Identificação (somente leitura)</h3>
+            <h3 className="form-card__title">Identificacao (somente leitura)</h3>
             <p style={{ margin: "0 0 0.75rem", fontSize: "0.88rem" }}>
               <span className="muted">Documento:</span>{" "}
               <strong style={{ fontVariantNumeric: "tabular-nums" }}>{cliente.documento}</strong>
@@ -101,15 +106,40 @@ export function ClienteEditPage(): JSX.Element {
           </div>
           <div className="form-card">
             <h3 className="form-card__title">Dados cadastrais</h3>
-            <label>
-              Razão social / nome
-              <input value={nome} onChange={(e) => setNome(e.target.value)} disabled={m.isPending} />
+            <label htmlFor="cliente-edit-nome">
+              Nome / razao social
+              <input
+                id="cliente-edit-nome"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                disabled={m.isPending}
+                maxLength={100}
+              />
               {fieldErrors.nome ? <span className="err">{fieldErrors.nome}</span> : null}
             </label>
-            <label>
+            <label htmlFor="cliente-edit-email">
               E-mail
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} disabled={m.isPending} />
+              <input
+                id="cliente-edit-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={m.isPending}
+                maxLength={254}
+                required
+              />
               {fieldErrors.email ? <span className="err">{fieldErrors.email}</span> : null}
+            </label>
+            <label htmlFor="cliente-edit-telefone">
+              WhatsApp
+              <input
+                id="cliente-edit-telefone"
+                value={telefone}
+                onChange={(e) => setTelefone(maskBrPhone(e.target.value))}
+                disabled={m.isPending}
+                placeholder="(00) 00000-0000"
+              />
+              {fieldErrors.telefone ? <span className="err">{fieldErrors.telefone}</span> : null}
             </label>
             <label className="checkbox-row">
               <input
@@ -118,14 +148,13 @@ export function ClienteEditPage(): JSX.Element {
                 onChange={(e) => setWhatsappOptIn(e.target.checked)}
                 disabled={m.isPending}
               />
-              Opt-in WhatsApp
+              <span>Autorizo comunicacoes via WhatsApp (LGPD — opt-in explicito)</span>
             </label>
           </div>
           <div className="form-card">
-            <h3 className="form-card__title">Observações</h3>
+            <h3 className="form-card__title">Observacoes</h3>
             <p className="form-note" style={{ margin: 0 }}>
-              Demais blocos do protótipo (endereço, regra de cobrança) permanecem no cadastro visual até existirem
-              campos na API.
+              Endereco e regra de cobranca recorrente permanecem no cadastro completo (Em breve na API).
             </p>
             <div className="form-actions" style={{ marginTop: "1rem" }}>
               <Link to={`/clientes/${cliente.id}`} className="btn-ghost">

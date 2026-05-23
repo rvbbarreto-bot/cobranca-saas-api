@@ -48,6 +48,14 @@ npm run test:integration:asaas
 
 Requer `DATABASE_URL`, `ASAAS_API_KEY`, `ENCRYPTION_KEY` no ambiente.
 
+### GitHub Actions (homolog manual — Sprint J)
+
+Disparo manual (não roda em `push`/`pull_request`): workflow **Asaas E2E (manual)**.
+
+1. Configurar secret `ASAAS_API_KEY` (sandbox) no repositório.
+2. **Actions** → **Asaas E2E (manual)** → **Run workflow**.
+3. Baixar o artefacto JSON gerado (ver [evidencias/README.md](./evidencias/README.md#ci-manual-github-actions--sprint-j)).
+
 ## Fluxo manual (Postman / curl)
 
 Collection: [`postman/Asaas_Sandbox_E2E.postman_collection.json`](../postman/Asaas_Sandbox_E2E.postman_collection.json)

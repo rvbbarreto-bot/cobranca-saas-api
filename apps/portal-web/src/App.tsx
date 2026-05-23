@@ -24,6 +24,7 @@ import { ClienteAcessoPage } from "./pages/ClienteAcessoPage";
 import { ClienteCobrancasPage } from "./pages/ClienteCobrancasPage";
 import { ClienteCobrancaDetalhePage } from "./pages/ClienteCobrancaDetalhePage";
 import { ClienteProtectedRoute } from "./components/ClienteProtectedRoute";
+import { ToastProvider } from "./components/ToastProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,8 +38,9 @@ const queryClient = new QueryClient({
 export function App(): JSX.Element {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <BrowserRouter>
+      <ToastProvider>
+        <AuthProvider>
+          <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/acesso" element={<ClienteAcessoPage />} />
@@ -94,8 +96,9 @@ export function App(): JSX.Element {
             <Route path="/" element={<RootRedirect />} />
             <Route path="*" element={<RootRedirect />} />
           </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+          </BrowserRouter>
+        </AuthProvider>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

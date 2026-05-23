@@ -1,4 +1,7 @@
-import type { PoolClient } from "pg";
+import type { Client, PoolClient } from "pg";
+
+/** Conexão PG com `query` (pool ou `Client` dedicado em scripts/seed). */
+export type ChargeDbClient = PoolClient | Client;
 import { evaluateChargeStatusTransition } from "../application/charge-status-transition";
 import type { Charge, ChargePaymentType, ChargePaymentView, CanonicalChargeStatus } from "../domain/charge";
 
@@ -28,7 +31,7 @@ function mapRow(row: Record<string, unknown>): Charge {
 }
 
 export async function insertCharge(
-  client: PoolClient,
+  client: ChargeDbClient,
   input: {
     reference: string;
     idempotencyKey: string;

@@ -1,8 +1,15 @@
-import { FormEvent, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { FormEvent, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { cobrancaFormSchema } from "../lib/schemas";
-import { fetchClientes, postPortalCobranca } from "../lib/api";
+import { BrDatePicker } from "../components/BrDatePicker";
+import { ClienteAutocomplete } from "../components/ClienteAutocomplete";
+import { ConfirmDialog } from "../components/ConfirmDialog";
+import { CurrencyInput } from "../components/CurrencyInput";
+import { useToast } from "../components/ToastProvider";
+import { buildCobrancaFormSchema, getPortalChargeRules, normalizeCobrancaPayload } from "../lib/cobranca-form";
+import { defaultDueDateIso, sanitizeChargeReference } from "../lib/gateway-charge-rules";
+import { clienteDetailQueryKey } from "../lib/cliente-query-keys";
+import { fetchClienteById, fetchEscritorioConfig, postPortalCobranca } from "../lib/api";
 
 function newIdempotencyKey(): string {
   const r =
@@ -12,48 +19,93 @@ function newIdempotencyKey(): string {
   return `portal-${Date.now()}-${r}`.slice(0, 128);
 }
 
+function formIsDirty(fields: {
+  reference: string;
+  amountDisplay: string;
+  portalClienteId: string;
+  dueIso: string;
+  defaultDue: string;
+}): boolean {
+  return (
+    fields.reference.trim().length > 0 ||
+    fields.amountDisplay.trim().length > 0 ||
+    fields.portalClienteId.trim().length > 0 ||
+    fields.dueIso !== fields.defaultDue
+  );
+}
+
 export function CobrancaFormPage(): JSX.Element {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { showToast } = useToast();
   const [searchParams] = useSearchParams();
   const preClienteId = searchParams.get("clienteId")?.trim() || "";
 
-  const clientesQ = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes() });
+  const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
+  const gatewayKey = configQ.data?.config?.gateway_provider ?? "asaas";
+  const rules = useMemo(() => getPortalChargeRules(gatewayKey), [gatewayKey]);
+  const schema = useMemo(() => buildCobrancaFormSchema(rules), [rules]);
+
+  const defaultDue = useMemo(() => defaultDueDateIso(30), []);
+
+  const preClienteQ = useQuery({
+    queryKey: clienteDetailQueryKey(preClienteId || "none"),
+    enabled: Boolean(preClienteId),
+    queryFn: () => fetchClienteById(preClienteId)
+  });
+
   const [reference, setReference] = useState("");
-  const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [amountDisplay, setAmountDisplay] = useState("");
+  const [amountValue, setAmountValue] = useState<number | null>(null);
+  const [dueIso, setDueIso] = useState(defaultDue);
   const [portalClienteId, setPortalClienteId] = useState(preClienteId);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
-  const defaultDue = useMemo(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() + 1);
-    return d.toISOString().slice(0, 10);
-  }, []);
+  const idempotencyRef = useRef<string | null>(null);
+  const submitLockRef = useRef(false);
 
   const m = useMutation({
     mutationFn: (body: Parameters<typeof postPortalCobranca>[0]) => postPortalCobranca(body),
     onSuccess: async (data) => {
+      showToast("Cobranca criada com sucesso");
       await qc.invalidateQueries({ queryKey: ["cobrancas"] });
       await qc.invalidateQueries({ queryKey: ["clienteCobrancas"] });
       const id = data.charge.id;
       navigate(id ? `/cobrancas/${encodeURIComponent(id)}` : "/cobrancas", { replace: true });
     },
     onError: (e: unknown) => {
-      setApiError(e instanceof Error ? e.message : "Erro ao criar cobrança");
+      submitLockRef.current = false;
+      idempotencyRef.current = null;
+      setApiError(e instanceof Error ? e.message : "Erro ao criar cobranca");
+    },
+    onSettled: () => {
+      submitLockRef.current = false;
     }
   });
 
+  const isSubmitting = m.isPending || submitLockRef.current;
+
+  function onReferenceChange(raw: string): void {
+    setReference(sanitizeChargeReference(raw, rules));
+  }
+
   function onSubmit(e: FormEvent): void {
     e.preventDefault();
+    if (submitLockRef.current || m.isPending) {
+      return;
+    }
     setApiError(null);
-    const parsed = cobrancaFormSchema.safeParse({
+
+    const amount = amountValue ?? 0;
+    const parsed = schema.safeParse({
       reference,
       amount,
-      due_date: dueDate || defaultDue,
+      due_date: dueIso,
       portal_cliente_id: portalClienteId || undefined
     });
+
     if (!parsed.success) {
       const fe: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -65,82 +117,139 @@ export function CobrancaFormPage(): JSX.Element {
       setFieldErrors(fe);
       return;
     }
+
     setFieldErrors({});
-    const v = parsed.data;
+    submitLockRef.current = true;
+    if (!idempotencyRef.current) {
+      idempotencyRef.current = newIdempotencyKey();
+    }
+
+    const payload = normalizeCobrancaPayload(parsed.data, rules);
     m.mutate({
-      reference: v.reference,
-      idempotency_key: newIdempotencyKey(),
-      amount: v.amount,
-      due_date: v.due_date,
-      ...(v.portal_cliente_id ? { portal_cliente_id: v.portal_cliente_id } : {})
+      ...payload,
+      idempotency_key: idempotencyRef.current
     });
   }
+
+  function requestCancel(): void {
+    if (
+      formIsDirty({
+        reference,
+        amountDisplay,
+        portalClienteId,
+        dueIso,
+        defaultDue
+      })
+    ) {
+      setCancelOpen(true);
+      return;
+    }
+    navigate("/cobrancas");
+  }
+
+  const infoText = `A cobranca e criada em rascunho e a emissao no gateway (${rules.displayName}) ocorre em segundo plano. Se o gateway estiver temporariamente indisponivel, o titulo permanece pendente e sera reprocessado automaticamente.`;
 
   return (
     <div className="shell-page">
       <div className="shell-page__head">
-        <h2 className="shell-page__title">Nova cobrança</h2>
-        <Link to="/cobrancas" className="btn-secondary">
+        <h2 className="shell-page__title">Nova cobranca avulsa</h2>
+        <button type="button" className="btn-secondary" onClick={requestCancel} disabled={isSubmitting}>
           Voltar
-        </Link>
+        </button>
       </div>
-      <p className="muted">
-        A cobrança é criada em rascunho e a emissão no gateway (Asaas) ocorre em segundo plano. Após salvar, você verá o
-        QR Code PIX ou o link do boleto na tela de detalhe.
-      </p>
+      <p className="muted">{infoText}</p>
 
-      <form onSubmit={(e) => void onSubmit(e)} className="form-grid">
+      <form onSubmit={onSubmit} className="form-grid" noValidate>
         <div className="form-card form-card--full">
-          <h3 className="form-card__title">Dados</h3>
-          <label>
-            Referência
-            <input value={reference} onChange={(e) => setReference(e.target.value)} disabled={m.isPending} />
-            {fieldErrors.reference ? <span className="err">{fieldErrors.reference}</span> : null}
-          </label>
-          <label>
-            Valor (R$)
+          <h3 className="form-card__title">Dados da cobranca</h3>
+
+          <label htmlFor="cobranca-reference">
+            Referencia / Descricao
+            <span className="field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
             <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              disabled={m.isPending}
+              id="cobranca-reference"
+              value={reference}
+              onChange={(e) => onReferenceChange(e.target.value)}
+              disabled={isSubmitting}
+              required
+              maxLength={rules.referenceMaxLength}
+              placeholder="Ex: Mensalidade junho, NF-1234, Contrato #99"
+              aria-describedby="cobranca-reference-hint"
             />
-            {fieldErrors.amount ? <span className="err">{fieldErrors.amount}</span> : null}
           </label>
-          <label>
-            Vencimento
-            <input type="date" value={dueDate || defaultDue} onChange={(e) => setDueDate(e.target.value)} disabled={m.isPending} />
-            {fieldErrors.due_date ? <span className="err">{fieldErrors.due_date}</span> : null}
+          <p id="cobranca-reference-hint" className="form-note">
+            Maximo {rules.referenceMaxLength} caracteres
+            {rules.referenceAlphanumericOnly ? " (somente letras, numeros e espacos — Banco Inter)" : ""}.
+            {reference.length > 0 ? ` ${reference.length}/${rules.referenceMaxLength}` : null}
+          </p>
+          {fieldErrors.reference ? <span className="err">{fieldErrors.reference}</span> : null}
+
+          <label htmlFor="cobranca-amount">
+            Valor (R$)
+            <span className="field-required" aria-hidden="true">
+              {" "}
+              *
+            </span>
+            <CurrencyInput
+              id="cobranca-amount"
+              value={amountDisplay}
+              onChange={(display, n) => {
+                setAmountDisplay(display);
+                setAmountValue(n);
+              }}
+              disabled={isSubmitting}
+              required
+            />
           </label>
-          <label>
-            Cliente (opcional)
-            <select
-              value={portalClienteId}
-              onChange={(e) => setPortalClienteId(e.target.value)}
-              disabled={m.isPending || clientesQ.isLoading}
-            >
-              <option value="">— Não associar —</option>
-              {(clientesQ.data?.data ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nome} ({c.documento})
-                </option>
-              ))}
-            </select>
-            {fieldErrors.portal_cliente_id ? <span className="err">{fieldErrors.portal_cliente_id}</span> : null}
-          </label>
+          {fieldErrors.amount ? <span className="err">{fieldErrors.amount}</span> : null}
+
+          <BrDatePicker
+            id="cobranca-due"
+            label="Vencimento"
+            valueIso={dueIso}
+            onChangeIso={setDueIso}
+            rules={rules}
+            disabled={isSubmitting}
+            required
+            error={fieldErrors.due_date}
+          />
+
+          <ClienteAutocomplete
+            id="cobranca-cliente"
+            label={rules.requiresPayer ? "Cliente (pagador obrigatorio)" : "Cliente (opcional)"}
+            value={portalClienteId}
+            onChange={(id) => setPortalClienteId(id)}
+            disabled={isSubmitting}
+            required={rules.requiresPayer}
+            error={fieldErrors.portal_cliente_id}
+            initialCliente={preClienteQ.data ?? null}
+          />
         </div>
+
         {apiError ? <div className="banner-err form-card--full">{apiError}</div> : null}
+
         <div className="form-actions form-card--full">
-          <button type="submit" className="btn-primary" disabled={m.isPending}>
-            {m.isPending ? "A gravar…" : "Criar cobrança"}
+          <button type="submit" className="btn-primary" disabled={isSubmitting} aria-busy={isSubmitting}>
+            {isSubmitting ? "Criando…" : "Criar cobranca"}
           </button>
-          <Link to="/cobrancas" className="btn-ghost">
+          <button type="button" className="btn-ghost" onClick={requestCancel} disabled={isSubmitting}>
             Cancelar
-          </Link>
+          </button>
         </div>
       </form>
+
+      <ConfirmDialog
+        open={cancelOpen}
+        title="Descartar cobranca?"
+        message="Tem certeza? Os dados preenchidos nesta cobranca serao perdidos."
+        confirmLabel="Sim, sair"
+        cancelLabel="Continuar editando"
+        onConfirm={() => navigate("/cobrancas")}
+        onCancel={() => setCancelOpen(false)}
+      />
     </div>
   );
 }

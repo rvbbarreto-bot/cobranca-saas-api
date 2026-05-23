@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -64,10 +64,9 @@ describe("CobrancaEditPage", () => {
   it("submete PATCH com valor e vencimento", async () => {
     const user = userEvent.setup();
     renderPage();
-    await screen.findByLabelText(/Valor/i);
-    const amountInput = screen.getByLabelText(/Valor/i);
-    await user.clear(amountInput);
-    await user.type(amountInput, "200");
+    const amountInput = await screen.findByLabelText(/Valor/i);
+    // fireEvent evita flakiness de <input type="number"> no Linux CI (clear+type vira "150200").
+    fireEvent.change(amountInput, { target: { value: "200" } });
     await user.click(screen.getByRole("button", { name: /Salvar/i }));
     await waitFor(() => expect(patchCobrancaMock).toHaveBeenCalled());
     expect(patchCobrancaMock).toHaveBeenCalledWith(

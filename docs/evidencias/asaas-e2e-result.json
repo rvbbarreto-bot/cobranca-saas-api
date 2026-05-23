@@ -1,0 +1,194 @@
+{
+  "generatedAt": "2026-05-22T00:34:30.792Z",
+  "playwrightRun": true,
+  "summary": {
+    "passed": 21,
+    "failed": 0,
+    "skipped": 3
+  },
+  "scenarios": [
+    {
+      "feature": "autenticar seed portal",
+      "scenario": "autenticar seed portal",
+      "status": "Passou",
+      "durationMs": 981,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\auth.setup.ts"
+    },
+    {
+      "feature": "Saúde da API",
+      "scenario": "Liveness responde OK",
+      "status": "Passou",
+      "durationMs": 60,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\01-api-health.spec.ts"
+    },
+    {
+      "feature": "Saúde da API",
+      "scenario": "Readiness com banco migrado",
+      "status": "Passou",
+      "durationMs": 22,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\01-api-health.spec.ts"
+    },
+    {
+      "feature": "Login do portal",
+      "scenario": "Login válido redireciona para área autenticada",
+      "status": "Passou",
+      "durationMs": 1392,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\02-portal-login.spec.ts"
+    },
+    {
+      "feature": "Login do portal",
+      "scenario": "Login inválido exibe erro",
+      "status": "Passou",
+      "durationMs": 1171,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\02-portal-login.spec.ts"
+    },
+    {
+      "feature": "Login do portal",
+      "scenario": "Rota protegida sem sessão",
+      "status": "Passou",
+      "durationMs": 759,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\02-portal-login.spec.ts"
+    },
+    {
+      "feature": "Listagem de cobranças",
+      "scenario": "Lista carrega sem erro",
+      "status": "Passou",
+      "durationMs": 752,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\03-portal-cobrancas.spec.ts"
+    },
+    {
+      "feature": "Listagem de cobranças",
+      "scenario": "Carregar mais (paginação)",
+      "status": "Passou",
+      "durationMs": 2053,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\03-portal-cobrancas.spec.ts"
+    },
+    {
+      "feature": "Nova cobrança",
+      "scenario": "Criar cobrança com sucesso",
+      "status": "Passou",
+      "durationMs": 759,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\04-portal-nova-cobranca.spec.ts"
+    },
+    {
+      "feature": "Nova cobrança",
+      "scenario": "Nova cobrança a partir do cliente",
+      "status": "Passou",
+      "durationMs": 655,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\04-portal-nova-cobranca.spec.ts"
+    },
+    {
+      "feature": "Editar cobrança (Sprint F)",
+      "scenario": "Editar valor e vencimento",
+      "status": "Passou",
+      "durationMs": 951,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\05-portal-editar-cobranca.spec.ts"
+    },
+    {
+      "feature": "Editar cobrança (Sprint F)",
+      "scenario": "Cobrança paga não permite edição",
+      "status": "Ignorado",
+      "durationMs": 772,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\05-portal-editar-cobranca.spec.ts"
+    },
+    {
+      "feature": "Clientes",
+      "scenario": "Listar clientes",
+      "status": "Passou",
+      "durationMs": 818,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\06-portal-clientes.spec.ts"
+    },
+    {
+      "feature": "Clientes",
+      "scenario": "Criar cliente",
+      "status": "Passou",
+      "durationMs": 1103,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\06-portal-clientes.spec.ts"
+    },
+    {
+      "feature": "Clientes",
+      "scenario": "Editar cliente sem alterar documento",
+      "status": "Passou",
+      "durationMs": 1009,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\06-portal-clientes.spec.ts"
+    },
+    {
+      "feature": "Configurações do escritório (admin)",
+      "scenario": "Acesso à página de configurações",
+      "status": "Passou",
+      "durationMs": 727,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\07-portal-config-escritorio.spec.ts"
+    },
+    {
+      "feature": "Configurações do escritório (admin)",
+      "scenario": "Utilizador sem perfil admin não acessa",
+      "status": "Ignorado",
+      "durationMs": 2,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\07-portal-config-escritorio.spec.ts"
+    },
+    {
+      "feature": "Escritório e assinatura SaaS",
+      "scenario": "Página escritório exibe tenant e link",
+      "status": "Passou",
+      "durationMs": 712,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\07-portal-config-escritorio.spec.ts"
+    },
+    {
+      "feature": "Homolog Asaas — workflow GitHub (Sprint J)",
+      "scenario": "Workflow sem secret apenas avisa",
+      "status": "Passou",
+      "durationMs": 8,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\08-asaas-homolog.spec.ts"
+    },
+    {
+      "feature": "Homolog Asaas — workflow GitHub (Sprint J)",
+      "scenario": "Workflow com secret gera evidência",
+      "status": "Passou",
+      "durationMs": 1,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\08-asaas-homolog.spec.ts"
+    },
+    {
+      "feature": "Homolog Asaas — workflow GitHub (Sprint J)",
+      "scenario": "JSON de evidência não contém segredos",
+      "status": "Passou",
+      "durationMs": 6,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\08-asaas-homolog.spec.ts"
+    },
+    {
+      "feature": "Homolog Asaas — execução local",
+      "scenario": "Script falha sem DATABASE_URL",
+      "status": "Passou",
+      "durationMs": 1296,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\08-asaas-homolog.spec.ts"
+    },
+    {
+      "feature": "Homolog Asaas — execução local",
+      "scenario": "Script completo com ambiente válido",
+      "status": "Ignorado",
+      "durationMs": 2,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\08-asaas-homolog.spec.ts"
+    },
+    {
+      "feature": "Inbox webhook (API)",
+      "scenario": "Webhook duplicado deduplicado",
+      "status": "Passou",
+      "durationMs": 58,
+      "file": "C:\\Users\\Ricardo\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto\\Projeto\\cobranca-saas-api\\e2e\\tests\\09-inbox-webhook.spec.ts"
+    }
+  ],
+  "networkSamples": [],
+  "asaasScript": {
+    "case": "missing_database_url",
+    "exitCode": 1,
+    "ok": true
+  },
+  "githubWorkflow": {
+    "validatedAt": "2026-05-22T00:34:29.227Z",
+    "note": "Disparo real no GitHub exige secret ASAAS_API_KEY; job asaas-e2e-not-configured validado estaticamente no YAML.",
+    "jobs": [
+      "asaas-e2e-not-configured",
+      "asaas-e2e"
+    ]
+  },
+  "consoleErrors": []
+}

@@ -1,0 +1,324 @@
+{
+  "name": "Cobrança SaaS — eventos API (homolog)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cobranca-saas-events",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "f1a10001-0001-4000-8000-000000000001",
+      "name": "Webhook cobranca-saas-events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 320],
+      "webhookId": "cobranca-saas-events"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst headers = item.headers || {};\nconst got = (headers['x-webhook-secret'] || headers['X-Webhook-Secret'] || '').toString();\nconst expected = ($env.N8N_PLATFORM_WEBHOOK_SECRET || '').toString().trim();\nconst body = item.body && typeof item.body === 'object' ? item.body : item;\nconst event = body.event;\nif (!event) {\n  throw new Error('Payload invalido: campo event ausente');\n}\nif (expected && got !== expected) {\n  return [{ json: { ok: false, error: 'invalid_webhook_secret', event, tenant_id: body.tenant_id } } }];\n}\nreturn [{\n  json: {\n    ok: true,\n    event,\n    occurred_at: body.occurred_at,\n    tenant_id: body.tenant_id,\n    payload: body.payload || {},\n    homolog_branch: null\n  }\n}];"
+      },
+      "id": "f1a10002-0002-4000-8000-000000000002",
+      "name": "Normalizar e validar secret",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-secret-ok",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f1a10003-0003-4000-8000-000000000003",
+      "name": "Secret OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [520, 320]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { homolog_status: 'rejected', reason: 'invalid_webhook_secret', received_event: $json.event } }];"
+      },
+      "id": "f1a10004-0004-4000-8000-000000000004",
+      "name": "Homolog secret invalido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, 520]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "charge.paid",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "charge.paid"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "charge.emitted",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "charge.emitted"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "charge.overdue",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "charge.overdue"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "charge.cancelled",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "charge.cancelled"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "notification.regua_enqueued",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "notification.regua_enqueued"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.event }}",
+                    "rightValue": "subscription.past_due",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "subscription.past_due"
+            }
+          ]
+        },
+        "options": { "fallbackOutput": "extra" }
+      },
+      "id": "f1a10005-0005-4000-8000-000000000005",
+      "name": "Switch por event",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [780, 200]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a1", "name": "homolog_branch", "value": "charge.paid", "type": "string" },
+            { "id": "a2", "name": "crm_action", "value": "fechar_tarefa_cobranca", "type": "string" },
+            { "id": "a3", "name": "charge_id", "value": "={{ $json.payload.charge_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10010-0010-4000-8000-000000000010",
+      "name": "Homolog charge.paid",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, -80]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "b1", "name": "homolog_branch", "value": "charge.emitted", "type": "string" },
+            { "id": "b2", "name": "crm_action", "value": "registrar_emissao_gateway", "type": "string" },
+            { "id": "b3", "name": "charge_id", "value": "={{ $json.payload.charge_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10011-0011-4000-8000-000000000011",
+      "name": "Homolog charge.emitted",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 40]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "c1", "name": "homolog_branch", "value": "charge.overdue", "type": "string" },
+            { "id": "c2", "name": "crm_action", "value": "abrir_tarefa_recuperacao", "type": "string" },
+            { "id": "c3", "name": "charge_id", "value": "={{ $json.payload.charge_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10012-0012-4000-8000-000000000012",
+      "name": "Homolog charge.overdue",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 160]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "d1", "name": "homolog_branch", "value": "charge.cancelled", "type": "string" },
+            { "id": "d2", "name": "crm_action", "value": "encerrar_sequencias", "type": "string" },
+            { "id": "d3", "name": "charge_id", "value": "={{ $json.payload.charge_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10013-0013-4000-8000-000000000013",
+      "name": "Homolog charge.cancelled",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 280]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "e1", "name": "homolog_branch", "value": "notification.regua_enqueued", "type": "string" },
+            { "id": "e2", "name": "crm_action", "value": "log_metrica_regua", "type": "string" },
+            { "id": "e3", "name": "event_type", "value": "={{ $json.payload.event_type }}", "type": "string" },
+            { "id": "e4", "name": "note", "value": "Email/WhatsApp segue na API (Resend/Z-API)", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10014-0014-4000-8000-000000000014",
+      "name": "Homolog regua enqueued",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "f1", "name": "homolog_branch", "value": "subscription.past_due", "type": "string" },
+            { "id": "f2", "name": "crm_action", "value": "fluxo_retencao_saas", "type": "string" },
+            { "id": "f3", "name": "subscription_id", "value": "={{ $json.payload.subscription_id }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10015-0015-4000-8000-000000000015",
+      "name": "Homolog subscription.past_due",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 520]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "g1", "name": "homolog_branch", "value": "unknown_event", "type": "string" },
+            { "id": "g2", "name": "event", "value": "={{ $json.event }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a10016-0016-4000-8000-000000000016",
+      "name": "Homolog evento desconhecido",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1080, 640]
+    }
+  ],
+  "connections": {
+    "Webhook cobranca-saas-events": {
+      "main": [[{ "node": "Normalizar e validar secret", "type": "main", "index": 0 }]]
+    },
+    "Normalizar e validar secret": {
+      "main": [[{ "node": "Secret OK?", "type": "main", "index": 0 }]]
+    },
+    "Secret OK?": {
+      "main": [
+        [{ "node": "Switch por event", "type": "main", "index": 0 }],
+        [{ "node": "Homolog secret invalido", "type": "main", "index": 0 }]
+      ]
+    },
+    "Switch por event": {
+      "main": [
+        [{ "node": "Homolog charge.paid", "type": "main", "index": 0 }],
+        [{ "node": "Homolog charge.emitted", "type": "main", "index": 0 }],
+        [{ "node": "Homolog charge.overdue", "type": "main", "index": 0 }],
+        [{ "node": "Homolog charge.cancelled", "type": "main", "index": 0 }],
+        [{ "node": "Homolog regua enqueued", "type": "main", "index": 0 }],
+        [{ "node": "Homolog subscription.past_due", "type": "main", "index": 0 }],
+        [{ "node": "Homolog evento desconhecido", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [{ "name": "cobranca-saas" }, { "name": "homolog" }],
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cobranca-saas-factory"
+  }
+}

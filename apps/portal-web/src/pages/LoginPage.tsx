@@ -92,8 +92,14 @@ export function LoginPage(): JSX.Element {
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value)}
                 disabled={isSubmitting}
-                placeholder='UUID ou slug, ex.: "escritorio-demo"'
+                placeholder='ex.: 1 ou escritorio-demo'
+                autoComplete="organization"
               />
+              <span className="muted small" style={{ display: "block", marginTop: "0.35rem" }}>
+                Use o <strong>id</strong> numérico ou o <strong>slug</strong> do tenant (ex.:{" "}
+                <code>1</code>, <code>escritorio-demo</code>). O nome do escritório (ex. &quot;Escritório&quot;) não
+                é aceito.
+              </span>
               {fieldErrors.tenant_id ? <span className="err">{fieldErrors.tenant_id}</span> : null}
             </label>
             {error ? <div className="banner-err">{error}</div> : null}

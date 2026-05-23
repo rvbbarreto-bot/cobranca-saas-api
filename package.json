@@ -32,7 +32,19 @@
     "portal:dev": "npm --prefix apps/portal-web run dev",
     "portal:build": "npm --prefix apps/portal-web run build",
     "portal:test": "npm --prefix apps/portal-web run test",
-    "portal:preview": "npm --prefix apps/portal-web run preview"
+    "portal:preview": "npm --prefix apps/portal-web run preview",
+    "dev:up": "powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1",
+    "e2e:playwright": "playwright test -c e2e/playwright.config.cjs",
+    "e2e:playwright:ui": "playwright test -c e2e/playwright.config.cjs --ui",
+    "e2e:playwright:install": "playwright install chromium",
+    "n8n:smoke:outbound": "node scripts/n8n-smoke-outbound.mjs",
+    "gateway:smoke:inter": "tsx scripts/gateway-smoke-inter-sandbox.ts",
+    "inter:oauth:check": "node scripts/inter-oauth-token.mjs",
+    "gateway:smoke:cora": "tsx scripts/gateway-smoke-cora-sandbox.ts",
+    "gateway:smoke:c6": "tsx scripts/gateway-smoke-c6-sandbox.ts",
+    "postman:inter:setup-local": "node scripts/setup-postman-inter-local.mjs",
+    "postman:inter:smoke": "node scripts/run-postman-inter-homolog.mjs --smoke",
+    "postman:inter:homolog": "node scripts/run-postman-inter-homolog.mjs"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -48,6 +60,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.8",
@@ -55,6 +68,7 @@
     "@types/pg": "^8.20.0",
     "@types/supertest": "^6.0.2",
     "@vitest/coverage-v8": "^3.2.4",
+    "newman": "^6.2.1",
     "supertest": "^7.0.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
