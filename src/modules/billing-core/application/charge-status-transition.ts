@@ -20,7 +20,7 @@ const ALLOWED: Record<CanonicalChargeStatus, ReadonlySet<CanonicalChargeStatus>>
   vencida: new Set(["paga", "cancelada"]),
   paga: new Set(),
   cancelada: new Set(["emitida"]),
-  erro_emissao: new Set(["emitida", "cancelada"])
+  erro_emissao: new Set(["emitida", "cancelada", "rascunho"])
 };
 
 export type ChargeTransitionDecision = "allow" | "noop" | "deny";

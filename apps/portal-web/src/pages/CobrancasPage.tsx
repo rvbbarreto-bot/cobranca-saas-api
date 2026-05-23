@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { PortalLoadMore } from "../components/PortalLoadMore";
+import { ReprocessEmissionButton } from "../components/ReprocessEmissionButton";
 import { fetchCobrancas } from "../lib/api";
 import type { ChargeRow } from "../lib/api";
 import {
@@ -71,11 +72,7 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
       Cobrar
     </span>
   );
-  const reprocessar = (
-    <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Em roadmap">
-      Reprocessar
-    </span>
-  );
+  const reprocessar = <ReprocessEmissionButton chargeId={row.id} />;
   const historico = (
     <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Em roadmap">
       Histórico

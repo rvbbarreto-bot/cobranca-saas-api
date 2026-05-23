@@ -33,4 +33,8 @@ describe("evaluateChargeStatusTransition", () => {
   it("erro_emissao pode voltar para emitida", () => {
     expect(evaluateChargeStatusTransition("erro_emissao", "emitida")).toBe("allow");
   });
+
+  it("erro_emissao pode voltar para rascunho (reprocessamento manual)", () => {
+    expect(evaluateChargeStatusTransition("erro_emissao", "rascunho")).toBe("allow");
+  });
 });

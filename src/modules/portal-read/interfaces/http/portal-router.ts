@@ -11,6 +11,7 @@ import { auditContextFromRequest } from "../../../../platform/audit/audit-contex
 import { getPool } from "../../../../platform/persistence/pool";
 import { withTenantTransaction } from "../../../../platform/persistence/with-tenant-transaction";
 import { cancelChargeUseCase } from "../../../billing-core/application/cancel-charge";
+import { reprocessPortalChargeEmissionUseCase } from "../../application/reprocess-portal-charge-emission";
 import {
   listChargesByPortalClienteIdPage,
   listChargesPage,
@@ -631,6 +632,59 @@ async function patchPortalCobrancaHttp(req: Request, res: Response): Promise<voi
   res.json({ charge: result.charge });
 }
 
+async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem reprocessar emissao."
+    });
+    return;
+  }
+
+  const automacaoTenantId = req.tenantContext?.tenantId;
+  const chargeId = typeof req.params.chargeId === "string" ? req.params.chargeId.trim() : "";
+  if (!automacaoTenantId || !chargeId || !isUuid(chargeId)) {
+    res.status(400).json({ error: "invalid_request", message: "tenant ou charge_id invalido." });
+    return;
+  }
+
+  const publicTenantId = await getPublicTenantIdForAutomacao(automacaoTenantId);
+  if (!publicTenantId) {
+    res.status(409).json({
+      error: "billing_link_missing",
+      message: "Configure portal.billing_tenant_link antes de reprocessar cobranca."
+    });
+    return;
+  }
+
+  const audit = auditContextFromRequest(req);
+  const result = await withTenantTransaction(publicTenantId, (client) =>
+    reprocessPortalChargeEmissionUseCase(client, chargeId, audit)
+  );
+
+  if (!result.ok) {
+    if (result.kind === "not_found") {
+      res.status(404).json({
+        error: "charge_not_found",
+        message: "Cobranca inexistente neste tenant de faturacao."
+      });
+      return;
+    }
+    res.status(409).json({
+      error: "charge_not_reprocessable",
+      message: "Somente cobrancas em erro_emissao podem ser reprocessadas.",
+      status: result.status
+    });
+    return;
+  }
+
+  res.status(202).json({
+    charge: result.charge,
+    job_scheduled: result.jobScheduled,
+    message: "Emissao reagendada. Acompanhe o status no detalhe do boleto."
+  });
+}
+
 async function cancelPortalCobrancaHttp(req: Request, res: Response): Promise<void> {
   if (!isEscritorioStaff(req)) {
     res.status(403).json({
@@ -756,6 +810,10 @@ export function createPortalRouter(): Router {
   protectedRoutes.get("/cobrancas/:chargeId", asyncHandler(getPortalCobrancaHttp));
   protectedRoutes.post("/cobrancas", asyncHandler(createPortalChargeHttp));
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
+  protectedRoutes.post(
+    "/cobrancas/:chargeId/reprocess-emission",
+    asyncHandler(reprocessPortalCobrancaEmissionHttp)
+  );
   protectedRoutes.patch("/cobrancas/:chargeId", asyncHandler(patchPortalCobrancaHttp));
   protectedRoutes.get("/clientes", asyncHandler(listClientes));
   protectedRoutes.get("/clientes/:clienteId", asyncHandler(getPortalClienteHttp));

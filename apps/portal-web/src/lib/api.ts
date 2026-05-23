@@ -94,9 +94,18 @@ export type PortalChargePayment = {
   expires_at: string | null;
 };
 
+export type PortalChargeEvent = {
+  event_type: string;
+  old_status: string | null;
+  new_status: string | null;
+  created_at: string;
+  payload_json?: Record<string, unknown> | null;
+};
+
 export type PortalCobrancaDetailResponse = {
   charge: ChargeRow & Record<string, unknown>;
   payment: PortalChargePayment | null;
+  events: PortalChargeEvent[];
 };
 
 export type PortalListQuery = {
@@ -589,9 +598,46 @@ export async function fetchPortalCobrancaDetail(chargeId: string): Promise<Porta
   if (!o.charge || typeof o.charge !== "object") {
     throw new ApiError("Resposta sem charge", res.status, json);
   }
+  const rawEvents = (json as { events?: unknown }).events;
+  const events = Array.isArray(rawEvents)
+    ? (rawEvents as PortalChargeEvent[])
+    : [];
+
   return {
     charge: o.charge as ChargeRow & Record<string, unknown>,
-    payment: o.payment === null || o.payment === undefined ? null : (o.payment as PortalChargePayment)
+    payment: o.payment === null || o.payment === undefined ? null : (o.payment as PortalChargePayment),
+    events
+  };
+}
+
+export async function reprocessPortalCobrancaEmission(
+  chargeId: string
+): Promise<{ charge: ChargeRow & Record<string, unknown>; job_scheduled: boolean }> {
+  const res = await apiFetch(
+    `/v1/portal/cobrancas/${encodeURIComponent(chargeId)}/reprocess-emission`,
+    { method: "POST" }
+  );
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { charge?: ChargeRow; job_scheduled?: boolean };
+  if (!o.charge) {
+    throw new ApiError("Resposta sem charge", res.status, json);
+  }
+  return {
+    charge: o.charge as ChargeRow & Record<string, unknown>,
+    job_scheduled: o.job_scheduled === true
   };
 }
 
