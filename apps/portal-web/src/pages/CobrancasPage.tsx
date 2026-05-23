@@ -58,25 +58,29 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
     </Link>
   ) : null;
   const pdf = (
-    <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Integração PDF em roadmap">
+    <Link to={`/cobrancas/${row.id}#pagamento`} className="link-inline" title="Abrir pagamento e PDF">
       Ver PDF
-    </span>
+    </Link>
   );
   const enviar = (
-    <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Em roadmap">
+    <Link to={`/cobrancas/${row.id}#enviar`} className="link-inline" title="Compartilhar com o cliente">
       Enviar
-    </span>
+    </Link>
   );
   const cobrar = (
-    <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Em roadmap">
+    <Link
+      to={`/cobrancas/${row.id}#enviar`}
+      className="link-inline"
+      title="Reenviar cobrança vencida ao cliente"
+    >
       Cobrar
-    </span>
+    </Link>
   );
   const reprocessar = <ReprocessEmissionButton chargeId={row.id} />;
   const historico = (
-    <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Em roadmap">
+    <Link to={`/cobrancas/${row.id}#timeline`} className="link-inline" title="Linha do tempo do boleto">
       Histórico
-    </span>
+    </Link>
   );
 
   let extra: JSX.Element[] = [];

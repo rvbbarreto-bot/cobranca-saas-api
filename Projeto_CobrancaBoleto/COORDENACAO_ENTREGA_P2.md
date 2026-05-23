@@ -1,0 +1,86 @@
+# Coordenação de entrega — P2 Inter + portal (multidisciplinar)
+
+**Atualizado:** 2026-05-23 · **Coordenador:** PO + fábrica  
+**Base:** `main` (Sprint M mergeada) · **Autorização:** [DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md](./DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md)
+
+---
+
+## 1. Status executivo (não parar a fila)
+
+| Stream | Item | Dono sugerido | Status | Próximo passo |
+|--------|------|---------------|--------|----------------|
+| **Gateway** | P2.2 Endereço pagador | Backend | ✅ Código na branch `feat/p2-inter-payer-address` | Abrir/merge PR · `npm run migrate` (027) |
+| **Gateway** | P2.3 Smoke Inter OAuth | Backend/DevOps | 🟡 Em progresso | `RUN_INTER_SANDBOX=1 npm run gateway:smoke:inter` com credenciais locais |
+| **Gateway** | P2.4 PEM + Postman | DevOps/QA | 🟡 Validação PEM no save | Postman local sem commit de secrets |
+| **Homolog** | OAuth Inter sandbox | QA + Inter | 🔴 Bloqueado externo | `SSL alert unknown ca` — pacote certificado com o banco |
+| **Portal** | P2.8 Histórico | Frontend | 🟢 MVP | Lista → detalhe `#timeline` |
+| **Portal** | P2.6 Enviar (WhatsApp) | Frontend | 🟢 MVP | Detalhe `#enviar` · wa.me |
+| **Portal** | P2.5 Ver PDF | Frontend | 🟡 Parcial | Detalhe `#pagamento` · PDF real depende P2.1 |
+| **Portal** | P2.7 Cobrar vencida | Frontend | 🟡 MVP | Lista → detalhe `#enviar` |
+| **Gateway** | P2.1 PDF Inter | Backend | ⏸ Onda B | Após OAuth 200 ou mock HTTP |
+
+**Regra de ouro:** itens **Onda A** e **C** seguem mesmo com homolog Inter bloqueada.
+
+---
+
+## 2. Fila paralela (esta semana)
+
+```text
+[PR merge] feat/p2-inter-payer-address  →  main
+     │
+     ├─► feat/p2-inter-smoke (P2.3) — se não couber no PR acima
+     ├─► feat/p2-inter-pem-qa (P2.4)
+     └─► feat/portal-onda-c (P2.5–P2.8) — pode ser um PR UX se escopo pequeno
+```
+
+**CI obrigatório antes de merge:** `npm run build && npm test && npm run portal:test`
+
+---
+
+## 3. Ritual diário (15 min)
+
+1. **PO/Coordenador:** confirmar 1 item “em merge” e 1 item “em dev”.
+2. **Tech Lead:** revisar PR aberto; decidir split se diff > ~400 linhas.
+3. **QA:** registrar homolog Inter em `docs/evidencias/` (sem secrets).
+4. **Dev:** branch a partir de `main` após cada merge; nunca acumular 3 features numa branch sem PR.
+
+---
+
+## 4. Comandos rápidos
+
+```bash
+git fetch origin && git checkout main && git pull origin main
+npm ci && npm run migrate && npm run seed:dev
+npm run build && npm test && npm run portal:test
+```
+
+**Smoke Inter (máquina com certificado):**
+
+```powershell
+$env:INTER_CLIENT_ID="..."
+$env:INTER_CLIENT_SECRET="..."
+$env:INTER_CERT_PATH="C:\QA\inter-sandbox\Inter API_Certificado.crt"
+$env:INTER_KEY_PATH="C:\QA\inter-sandbox\Inter API_Chave.key"
+$env:RUN_INTER_SANDBOX="1"
+npm run gateway:smoke:inter
+```
+
+---
+
+## 5. Bloqueios e donos
+
+| Bloqueio | Impacto | Ação |
+|----------|---------|------|
+| Inter rejeita cert (unknown CA) | P2.1 PDF, emissão real | QA + comercial Inter; continuar Onda A/C |
+| PDF placeholder `inter://` | P2.5 lista sem URL | Ver PDF no detalhe após emissão mock/Asaas |
+| E-mail transacional | P2.6 completo | MVP WhatsApp; e-mail em sprint seguinte |
+
+---
+
+## 6. Definição de pronto (por PR)
+
+- [ ] Migração aplicada em dev (`npm run migrate`)
+- [ ] Testes unitários/integração verdes
+- [ ] `portal:test` se tocou `apps/portal-web`
+- [ ] Sem `.env`, PEM ou Postman com secrets no commit
+- [ ] `RETOMADA_FABRICA.md` ou este doc atualizado se mudou status de item

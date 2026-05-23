@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PoolClient } from "pg";
 import { patchGatewayProviderUseCase } from "../../src/modules/portal-read/application/change-gateway-provider";
+import { TEST_INTER_GATEWAY_CREDENTIALS } from "../fixtures/mtls-test-pem";
 
 vi.mock("../../src/platform/crypto/symmetric-encryption", () => ({
   encryptAes256Gcm: vi.fn(() => ({ ciphertext: "enc", iv: "iv123456789012" }))
@@ -62,12 +63,7 @@ describe("patchGatewayProviderUseCase", () => {
     const client = mockClient({});
     const result = await patchGatewayProviderUseCase(client, tenantId, {
       gateway_provider: "inter",
-      gateway_credentials: {
-        client_id: "id",
-        client_secret: "secret",
-        certificate_pem: "-----BEGIN CERTIFICATE-----\nX\n-----END CERTIFICATE-----",
-        private_key_pem: "-----BEGIN PRIVATE KEY-----\nY\n-----END PRIVATE KEY-----"
-      }
+      gateway_credentials: { ...TEST_INTER_GATEWAY_CREDENTIALS }
     });
 
     expect(result?.gateway_provider).toBe("inter");

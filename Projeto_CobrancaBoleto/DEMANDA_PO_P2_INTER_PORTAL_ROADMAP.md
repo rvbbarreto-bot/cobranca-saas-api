@@ -74,13 +74,13 @@ npm run build && npm test && npm run portal:test
 |----|---------|------|---------------|-----------------|------------|
 | **P2.0** | Reprocessar `erro_emissao` | Lista + detalhe | ✅ **Feito** | (Sprint M) | — |
 | **P2.1** | PDF Inter real (`GET .../pdf`) | Adapter Inter + storage/URL | Onda B | `feat/p2-inter-pdf` | Homolog Inter ou mock |
-| **P2.2** | Endereço pagador no worker | `payment-emission-processor` + `portal.cliente` | Onda A · **P1 técnico** | `feat/p2-inter-payer-address` | Dados cliente no portal |
-| **P2.3** | Smoke Inter E2E evoluído | `scripts/gateway-smoke-inter-sandbox.ts` | Onda A | `feat/p2-inter-smoke` | Credenciais em env local |
-| **P2.4** | Validação PEM / Postman | `credential-schema`, Postman, docs | Onda A · ops | `feat/p2-inter-pem-qa` | **Não** commitar secrets |
-| **P2.5** | Ver PDF | `CobrancasPage`, `BoletoDetalhePage` | Onda C | `feat/portal-pdf-view` | P2.1 ou URL mock |
-| **P2.6** | Enviar boleto (WhatsApp/e-mail) | Lista + detalhe | Onda C | `feat/portal-enviar-boleto` | Definição canal MVP |
-| **P2.7** | Cobrar (vencida) | Lista | Onda C | `feat/portal-cobrar-vencida` | Regras cobrança vencida |
-| **P2.8** | Histórico do boleto | Lista | Onda C | `feat/portal-historico-boleto` | Eventos `charge_events` |
+| **P2.2** | Endereço pagador no worker | `payment-emission-processor` + `portal.cliente` | Onda A · **PR** | `feat/p2-inter-payer-address` | Migração 027 |
+| **P2.3** | Smoke Inter OAuth | `gateway-smoke-inter-sandbox.ts` | Onda A · **MVP** | (mesma branch ou `feat/p2-inter-smoke`) | `RUN_INTER_SANDBOX=1` |
+| **P2.4** | Validação PEM | `mtls-credential-validation.ts` | Onda A · **MVP** | (mesma branch) | Fixtures em `tests/fixtures/` |
+| **P2.5** | Ver PDF | Lista → `#pagamento` | Onda C · **MVP** | portal | PDF HTTP real = P2.1 |
+| **P2.6** | Enviar (WhatsApp/e-mail) | Detalhe `#enviar` | Onda C · **MVP** | portal | Telefone no cliente |
+| **P2.7** | Cobrar (vencida) | Lista → `#enviar` | Onda C · **MVP** | portal | Regras avançadas depois |
+| **P2.8** | Histórico | Lista → `#timeline` | Onda C · **MVP** | portal | `charge_events` |
 
 ---
 

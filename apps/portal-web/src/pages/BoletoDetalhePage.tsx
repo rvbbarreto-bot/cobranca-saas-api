@@ -1,7 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { ChargeRow } from "../lib/api";
 import { fetchEscritorioConfig, fetchPortalCobrancaDetail } from "../lib/api";
+import { ChargeShareActions } from "../components/ChargeShareActions";
+import { useHashScroll } from "../hooks/useHashScroll";
+import { useCliente } from "../hooks/useCliente";
 import { getPortalChargeRules } from "../lib/gateway-charge-rules";
 import { CHARGE_DETAIL_POLL_MS, shouldPollChargeDetail } from "../lib/charge-detail-poll";
 import {
@@ -51,8 +53,14 @@ function itemClass(kind: "info" | "teal" | "ok" | "err"): string {
   return "timeline__item";
 }
 
+function portalClienteIdFromMetadata(metadata: Record<string, unknown> | undefined): string | undefined {
+  const raw = metadata?.portal_cliente_id;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
+}
+
 export function BoletoDetalhePage(): JSX.Element {
   const { chargeId } = useParams<{ chargeId: string }>();
+  useHashScroll(Boolean(chargeId));
 
   const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
   const gatewayRules = getPortalChargeRules(configQ.data?.config?.gateway_provider);
@@ -67,6 +75,9 @@ export function BoletoDetalhePage(): JSX.Element {
   const charge = detailQ.data?.charge;
   const events = detailQ.data?.events ?? [];
   const payment = detailQ.data?.payment ?? null;
+  const chargeMeta = charge?.metadata as Record<string, unknown> | undefined;
+  const portalClienteId = portalClienteIdFromMetadata(chargeMeta);
+  const clienteQ = useCliente(portalClienteId);
   const emissionError = extractEmissionError(events);
   const timeline = events.length > 0 ? buildTimelineFromEvents(events) : [];
 
@@ -173,11 +184,16 @@ export function BoletoDetalhePage(): JSX.Element {
               chargeType={chargeType}
               showPixQr={gatewayRules.supportsPix}
             />
-            <p className="form-note" style={{ marginTop: "0.75rem" }}>
-              WhatsApp + e-mail (roadmap)
-            </p>
+            <ChargeShareActions
+              clienteNome={chargeClienteNome(charge)}
+              clienteTelefone={clienteQ.data?.telefone}
+              clienteEmail={clienteQ.data?.email}
+              amountLabel={formatMoney(charge.amount)}
+              dueLabel={formatDueFull(charge.dueDate)}
+              payment={payment}
+            />
           </div>
-          <div className="form-card">
+          <div id="timeline" className="form-card">
             <h3 className="form-card__title">Linha do tempo do boleto</h3>
             <p className="form-note" style={{ marginTop: 0 }}>
               Eventos registrados pela API para esta cobrança.
