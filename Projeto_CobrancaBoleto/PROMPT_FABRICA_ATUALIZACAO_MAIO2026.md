@@ -16,6 +16,14 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 4. **BB:** sprint futura (credenciais sandbox PO)
 5. Inter L: emissão OK; PDF/smoke opcional P2
 
+## P2 + portal (PO autorizou)
+
+Pacote: [DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md](./DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md)  
+Onda A: endereço worker, smoke Inter, PEM/Postman (sem secrets no git).  
+Onda B: PDF Inter (após homolog).  
+Onda C: Ver PDF, Enviar, Cobrar, Histórico.  
+P2.0 reprocessar erro_emissao: feito (Sprint M).
+
 ## Backlog
 
 | Item | Sprint |

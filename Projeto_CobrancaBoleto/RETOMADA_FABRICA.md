@@ -16,7 +16,8 @@
 | Playwright E2E + n8n JSON | #18–#19 | Concluído |
 | Sprint L — docs gateway universal | #20 | Concluído |
 | Sprint L — factory + Inter/Cora | #21 | Concluído |
-| **Sprint M — BB + C6 + portal dinâmico** | — | **← PRÓXIMO** |
+| **Sprint M — C6 + portal dinâmico + homolog** | [#22](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/22) | **Em review / merge** |
+| **P2 Inter + roadmap portal** | — | **Autorizado PO** → [DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md](./DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md) |
 
 **Testes:** `npm test` 236+ · `portal:test` 33 · CI `quality:gate`
 
@@ -77,6 +78,12 @@ npm run quality:gate
 ### Decisões PO (Sprint M)
 
 - **BB:** outra sprint · **C6:** implementar · **Troca gateway:** permitir com log
+
+### P2 + portal (autorizado PO — Maio 2026)
+
+Pacote: [DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md](./DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md)  
+Ordem: endereço worker → smoke/PEM → PDF Inter (após homolog) → Ver PDF → Enviar / Cobrar / Histórico.  
+**Feito:** reprocessar `erro_emissao` (P2.0).
 
 ### Backlog pós–Sprint M (Sprint N)
 
