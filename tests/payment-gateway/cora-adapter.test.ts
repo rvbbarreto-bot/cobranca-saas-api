@@ -51,7 +51,20 @@ describe("CoraAdapter", () => {
       value: 250,
       dueDate: "2030-06-15",
       description: "Mensalidade",
-      externalReference: "code-1"
+      externalReference: "code-1",
+      payer: {
+        name: "Empresa",
+        cpfCnpj: "34052649000178",
+        email: "a@b.com",
+        externalReference: "c1",
+        endereco: {
+          cep: "01310100",
+          logradouro: "Av Paulista",
+          bairro: "Bela Vista",
+          cidade: "Sao Paulo",
+          uf: "SP"
+        }
+      }
     });
 
     expect(result.gatewayTransactionId).toBe("inv-1");

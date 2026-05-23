@@ -36,3 +36,20 @@ export function validateGatewayCredentials(
     }
   }
 }
+
+/** Mescla credenciais existentes com PATCH parcial e valida o conjunto final. */
+export function mergeGatewayCredentialsPatch(
+  provider: string,
+  existing: GatewayCredentials,
+  patch: GatewayCredentials
+): GatewayCredentials {
+  const merged: GatewayCredentials = { ...existing };
+  for (const [key, value] of Object.entries(patch)) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      merged[key] = trimmed;
+    }
+  }
+  validateGatewayCredentials(provider, merged);
+  return merged;
+}

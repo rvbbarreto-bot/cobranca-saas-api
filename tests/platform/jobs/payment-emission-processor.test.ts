@@ -264,6 +264,16 @@ describe("processPaymentEmission", () => {
     expect(state.events.some((e) => e.event_type === "erro_emissao")).toBe(true);
   });
 
+  it("sem portal_automacao_tenant_id → UnrecoverableError", async () => {
+    state.charge = baseCharge({
+      metadata: { portal_cliente_id: clienteId }
+    });
+    await expect(processPaymentEmission({ chargeId, tenantId }, deps())).rejects.toSatisfy(
+      (e: unknown) =>
+        e instanceof UnrecoverableError && e.message === "portal_automacao_tenant_id_required"
+    );
+  });
+
   it("charge de outro tenant → charge_not_found sem processar", async () => {
     await expect(
       processPaymentEmission(

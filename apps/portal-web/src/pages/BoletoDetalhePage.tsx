@@ -188,6 +188,7 @@ export function BoletoDetalhePage(): JSX.Element {
               clienteNome={chargeClienteNome(charge)}
               clienteTelefone={clienteQ.data?.telefone}
               clienteEmail={clienteQ.data?.email}
+              whatsappOptIn={clienteQ.data?.whatsapp_opt_in ?? false}
               amountLabel={formatMoney(charge.amount)}
               dueLabel={formatDueFull(charge.dueDate)}
               payment={payment}

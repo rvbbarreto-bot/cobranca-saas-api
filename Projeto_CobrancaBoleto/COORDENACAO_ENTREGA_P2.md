@@ -9,7 +9,7 @@
 
 | Stream | Item | Dono sugerido | Status | Próximo passo |
 |--------|------|---------------|--------|----------------|
-| **Gateway** | P2.2 Endereço pagador | Backend | ✅ Código na branch `feat/p2-inter-payer-address` | Abrir/merge PR · `npm run migrate` (027) |
+| **Gateway** | P2.2 Endereço pagador | Backend | ✅ + hardening `feat/p2-review-fixes` | Merge após CI |
 | **Gateway** | P2.3 Smoke Inter OAuth | Backend/DevOps | 🟡 Em progresso | `RUN_INTER_SANDBOX=1 npm run gateway:smoke:inter` com credenciais locais |
 | **Gateway** | P2.4 PEM + Postman | DevOps/QA | 🟡 Validação PEM no save | Postman local sem commit de secrets |
 | **Homolog** | OAuth Inter sandbox | QA + Inter | 🔴 Bloqueado externo | `SSL alert unknown ca` — pacote certificado com o banco |
@@ -77,7 +77,21 @@ npm run gateway:smoke:inter
 
 ---
 
-## 6. Definição de pronto (por PR)
+## 6. Correções pós-revisão técnica (2026-05-23)
+
+Branch `feat/p2-review-fixes`:
+
+- Q-01/Q-02: endereço obrigatório no backend (criação cobrança + worker + adapters Inter/Cora/C6; removido fallback `DEFAULT_ADDRESS`).
+- Q-03: erros PEM → HTTP 422 (`gateway_credentials_invalid`).
+- Q-04: merge de credenciais em PATCH parcial.
+- Q-05: `loadPortalCliente` exige `portal_automacao_tenant_id`.
+- U-01: WhatsApp respeita `whatsapp_opt_in`.
+- U-02: “Ver PDF” na lista só após emissão.
+- Testes: unitários + integração POST cliente com endereço.
+
+---
+
+## 7. Definição de pronto (por PR)
 
 - [ ] Migração aplicada em dev (`npm run migrate`)
 - [ ] Testes unitários/integração verdes

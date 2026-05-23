@@ -17,6 +17,10 @@ describe("gateway-charge-rules Inter", () => {
     expect(sanitizeChargeReference("abc!@#", rules)).toBe("abc");
   });
 
+  it("Inter exige endereco do pagador nas regras de gateway", () => {
+    expect(rules.requiresPayerAddress).toBe(true);
+  });
+
   it("exige cliente para Inter", () => {
     const r = schema.safeParse({
       reference: "Mensalidade",

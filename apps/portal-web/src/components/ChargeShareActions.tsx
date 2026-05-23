@@ -10,6 +10,7 @@ type Props = {
   clienteNome: string;
   clienteTelefone: string | null | undefined;
   clienteEmail: string | null | undefined;
+  whatsappOptIn?: boolean;
   amountLabel: string;
   dueLabel: string;
   payment: PortalChargePayment | null;
@@ -19,6 +20,7 @@ export function ChargeShareActions({
   clienteNome,
   clienteTelefone,
   clienteEmail,
+  whatsappOptIn = false,
   amountLabel,
   dueLabel,
   payment
@@ -37,7 +39,8 @@ export function ChargeShareActions({
     pixEmv
   });
 
-  const whatsappHref = phone ? buildWhatsAppShareUrl(phone, message) : null;
+  const whatsappHref =
+    phone && whatsappOptIn ? buildWhatsAppShareUrl(phone, message) : null;
   const mailtoHref =
     clienteEmail?.trim() && (boletoUrl || pdfUrl || pixEmv)
       ? `mailto:${encodeURIComponent(clienteEmail.trim())}?subject=${encodeURIComponent(
@@ -56,8 +59,17 @@ export function ChargeShareActions({
             WhatsApp
           </a>
         ) : (
-          <span className="muted small" title="Cadastre telefone do cliente com DDD">
-            WhatsApp indisponível (telefone do cliente ausente ou inválido).
+          <span
+            className="muted small"
+            title={
+              !phone
+                ? "Cadastre telefone do cliente com DDD"
+                : "Ative WhatsApp no cadastro do cliente"
+            }
+          >
+            {!phone
+              ? "WhatsApp indisponível (telefone do cliente ausente ou inválido)."
+              : "WhatsApp indisponível (cliente sem opt-in de WhatsApp)."}
           </span>
         )}
         {mailtoHref ? (
