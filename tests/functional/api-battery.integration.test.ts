@@ -184,7 +184,7 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
   });
 
   it("B4 POST /v1/portal/cobrancas (fase 2 — criar charge)", async () => {
-    const ref = `f2-bat-${Date.now()}`;
+    const ref = `f2bat${Date.now()}`;
     const idem = `idem-f2-${Date.now()}`;
     const r = await request(app)
       .post("/v1/portal/cobrancas")
@@ -210,7 +210,7 @@ describe.skipIf(!hasDb)("Bateria funcional sistematica (secao 5)", () => {
       .send({
         documento,
         nome: "Cliente bat antes",
-        email: null,
+        email: `bat+${documento.slice(-6)}@test.local`,
         whatsapp_opt_in: false
       })
       .expect(201);
