@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { PageErrorBoundary } from "../components/PageErrorBoundary";
 import { useAuth } from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
 import { fetchPortalMe } from "../lib/api";
 
 const navCls = ({ isActive }: { isActive: boolean }): string =>
@@ -9,6 +10,7 @@ const navCls = ({ isActive }: { isActive: boolean }): string =>
 
 export function AppShell(): JSX.Element {
   const { logout, email: sessionEmail } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const me = useQuery({ queryKey: ["portalMe"], queryFn: fetchPortalMe, staleTime: 60_000 });
 
@@ -63,6 +65,14 @@ export function AppShell(): JSX.Element {
             Ajuda (core)
           </NavLink>
         </nav>
+        <button
+          type="button"
+          className="shell-theme-toggle"
+          onClick={toggleTheme}
+          aria-label={theme === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
+        >
+          {theme === "light" ? "Tema escuro" : "Tema claro"}
+        </button>
       </aside>
       <div className="shell-main">
         <header className="shell-header">

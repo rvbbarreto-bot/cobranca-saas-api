@@ -9,6 +9,8 @@ import {
   type PortalChargeRules
 } from "../lib/gateway-charge-rules";
 
+const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
 type Props = {
   id: string;
   label: string;
@@ -55,6 +57,7 @@ export function BrDatePicker({
   const [text, setText] = useState(() => isoToBrDate(valueIso));
   const [open, setOpen] = useState(false);
   const minIso = useMemo(() => minDueDateIso(rules), [rules]);
+  const todayIso = useMemo(() => toIsoDateOnly(new Date()), []);
 
   useEffect(() => {
     setText(isoToBrDate(valueIso));
@@ -96,6 +99,16 @@ export function BrDatePicker({
     }
   }
 
+  function cellClass(iso: string, disabledCell: boolean): string {
+    const parts = ["br-date-picker__cell"];
+    if (iso === valueIso) {
+      parts.push("br-date-picker__cell--selected");
+    } else if (iso === todayIso) {
+      parts.push("br-date-picker__cell--today");
+    }
+    return parts.join(" ");
+  }
+
   return (
     <div className="br-date-picker" ref={wrapRef}>
       <label htmlFor={id}>
@@ -130,9 +143,10 @@ export function BrDatePicker({
           disabled={disabled}
           aria-expanded={open}
           aria-controls={listId}
+          aria-label={open ? "Fechar calendário" : "Abrir calendário"}
           onClick={() => setOpen((o) => !o)}
         >
-          Calendario
+          Calendário
         </button>
       </div>
       {open ? (
@@ -140,7 +154,8 @@ export function BrDatePicker({
           <div className="br-date-picker__nav">
             <button
               type="button"
-              className="btn-ghost"
+              className="br-date-picker__nav-btn"
+              aria-label="Mês anterior"
               onClick={() => {
                 if (viewMonth === 0) {
                   setViewYear((y) => y - 1);
@@ -152,12 +167,13 @@ export function BrDatePicker({
             >
               ‹
             </button>
-            <span>
+            <span className="br-date-picker__nav-title">
               {String(viewMonth + 1).padStart(2, "0")}/{viewYear}
             </span>
             <button
               type="button"
-              className="btn-ghost"
+              className="br-date-picker__nav-btn"
+              aria-label="Próximo mês"
               onClick={() => {
                 if (viewMonth === 11) {
                   setViewYear((y) => y + 1);
@@ -170,7 +186,14 @@ export function BrDatePicker({
               ›
             </button>
           </div>
-          <div className="br-date-picker__grid">
+          <div className="br-date-picker__weekdays" aria-hidden="true">
+            {WEEKDAY_LABELS.map((w) => (
+              <span key={w} className="br-date-picker__weekday">
+                {w}
+              </span>
+            ))}
+          </div>
+          <div className="br-date-picker__grid" role="grid">
             {days.map((cell, idx) =>
               cell.day === 0 ? (
                 <span key={`pad-${idx}`} className="br-date-picker__cell br-date-picker__cell--empty" />
@@ -178,12 +201,10 @@ export function BrDatePicker({
                 <button
                   key={cell.iso}
                   type="button"
-                  className={
-                    cell.iso === valueIso
-                      ? "br-date-picker__cell br-date-picker__cell--selected"
-                      : "br-date-picker__cell"
-                  }
-                  disabled={(parseIsoDateOnly(cell.iso)?.getTime() ?? 0) < minTs}
+                  className={cellClass(cell.iso, cell.disabled)}
+                  disabled={cell.disabled}
+                  aria-label={`${cell.day}/${String(viewMonth + 1).padStart(2, "0")}/${viewYear}`}
+                  aria-pressed={cell.iso === valueIso}
                   onClick={() => pickIso(cell.iso)}
                 >
                   {cell.day}
@@ -194,7 +215,7 @@ export function BrDatePicker({
         </div>
       ) : null}
       {error ? (
-        <span id={`${id}-err`} className="err">
+        <span id={`${id}-err`} className="err" role="alert">
           {error}
         </span>
       ) : null}
