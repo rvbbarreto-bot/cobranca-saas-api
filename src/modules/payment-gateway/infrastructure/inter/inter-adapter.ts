@@ -12,6 +12,7 @@ import { GatewayProviderError } from "../../domain/payment-gateway-error";
 import { requirePayerAddress } from "../../domain/require-payer-address";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
 import { InterHttpClient } from "./inter-http-client";
+import { buildInterPdfPlaceholder } from "./inter-pdf-url";
 import type { InterBoletoResponse, InterEmitBoletoPayload } from "./inter-types";
 
 function digitsOnly(value: string): string {
@@ -72,7 +73,7 @@ function mapBoletoResult(data: InterBoletoResponse, dueDate: string): BoletoResu
     });
   }
   const linha = data.linhaDigitavel?.trim() || data.codigoBarras?.trim() || "";
-  const pdfUrl = `inter://cobranca/${codigo}/pdf`;
+  const pdfUrl = buildInterPdfPlaceholder(codigo);
   return {
     gatewayTransactionId: codigo,
     boletoUrl: pdfUrl,
@@ -158,5 +159,10 @@ export class InterAdapter implements PaymentGatewayAdapter {
     return {
       status: data.situacao?.trim() || "UNKNOWN"
     };
+  }
+
+  async downloadBoletoPdf(gatewayTransactionId: string): Promise<Buffer> {
+    const id = gatewayTransactionId.trim();
+    return this.http.requestPdf(`/cobrancas/v2/${encodeURIComponent(id)}/pdf`);
   }
 }

@@ -70,9 +70,11 @@ inboxRouter.post(
     const source =
       typeof body.source === "string"
         ? body.source
-        : typeof body.event === "string" && body.payment
-          ? "asaas"
-          : "n8n";
+        : typeof body.codigoSolicitacao === "string" && typeof body.situacao === "string"
+          ? "inter"
+          : typeof body.event === "string" && body.payment
+            ? "asaas"
+            : "n8n";
 
     const result = await withTenantTransaction(tenantId, async (client) =>
       insertWebhookInbox(client, {
