@@ -1,7 +1,9 @@
 # Coordenação de entrega — P2 Inter + portal (multidisciplinar)
 
 **Atualizado:** 2026-05-23 · **Coordenador:** PO + fábrica  
-**Base:** `main` (Sprint M mergeada) · **Autorização:** [DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md](./DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md)
+**Base:** `main` (`85c5d34` — P2 #24 + portal UI P0 #25)  
+**P2 (referência):** [DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md](./DEMANDA_PO_P2_INTER_PORTAL_ROADMAP.md)  
+**Sprint atual:** [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md)
 
 ---
 
@@ -23,15 +25,19 @@
 
 ---
 
-## 2. Fila paralela (esta semana)
+## 2. Fila paralela (Sprint N — substitui fila P2)
 
 ```text
-[Concluído] PR #24 → main
+[Concluído] PR #24 + #25 → main
      │
-     ├─► QA homolog: docs/QA_P2_POS_MERGE_CHECKLIST.md
-     ├─► Onda B: feat/p2-inter-pdf (P2.1) — após OAuth Inter ou mock
-     └─► Evolução portal: envio rastreado, PDF real, régua vencida
+     ├─► Onda 0: QA homolog + evidências (docs/QA_* + SPRINT_N_HOMOLOG_RELATORIO)
+     ├─► Onda A: portal polish (detalhe boleto, P1, BrDatePicker edição)
+     ├─► Onda B: feat/p2-inter-pdf (P2.1) — mock ou OAuth Inter
+     ├─► Onda C: relatórios filtros data
+     └─► Onda D: webhook Inter + estorno
 ```
+
+Pacote único: **DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md**
 
 **CI obrigatório antes de merge:** `npm run build && npm test && npm run portal:test`
 
