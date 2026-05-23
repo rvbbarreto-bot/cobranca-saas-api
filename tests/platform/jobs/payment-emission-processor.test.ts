@@ -3,9 +3,11 @@ import { UnrecoverableError } from "bullmq";
 import type { PoolClient } from "pg";
 import type { PaymentGatewayAdapter } from "../../../src/modules/payment-gateway/domain/payment-gateway.interface";
 import {
+  buildPayerInputFromPortalCliente,
   handlePaymentEmissionFailure,
   processPaymentEmission,
-  type ChargeRow
+  type ChargeRow,
+  type PortalClienteEmissionRow
 } from "../../../src/platform/jobs/application/payment-emission-processor";
 
 const tenantId = "00000000-0000-4000-8000-000000000001";
@@ -33,15 +35,7 @@ function baseCharge(overrides: Partial<ChargeRow> = {}): ChargeRow {
 
 type MockState = {
   charge: ChargeRow | null;
-  cliente: {
-    id: string;
-    tenant_id: string;
-    documento: string;
-    nome: string;
-    email: string;
-    telefone: string | null;
-    gateway_customer_id: string | null;
-  };
+  cliente: Record<string, unknown>;
   chargeStatus: string;
   events: Array<Record<string, unknown>>;
   lastPaymentInsert: Record<string, unknown> | null;
@@ -179,7 +173,14 @@ describe("processPaymentEmission", () => {
         nome: "Cliente Teste",
         email: "c@test.com",
         telefone: null,
-        gateway_customer_id: "cus_existing"
+        gateway_customer_id: "cus_existing",
+        endereco_cep: "01310100",
+        endereco_logradouro: "Av Paulista",
+        endereco_numero: "100",
+        endereco_complemento: null,
+        endereco_bairro: "Bela Vista",
+        endereco_cidade: "Sao Paulo",
+        endereco_uf: "SP"
       },
       chargeStatus: "rascunho",
       events: [],
@@ -225,6 +226,30 @@ describe("processPaymentEmission", () => {
     await processPaymentEmission({ chargeId, tenantId }, deps());
     expect(adapter.createCustomer).not.toHaveBeenCalled();
     expect(state.chargeStatus).toBe("emitida");
+    const boletoArg = vi.mocked(adapter.createBoleto).mock.calls[0]?.[0];
+    expect(boletoArg?.payer?.endereco?.cep).toBe("01310100");
+  });
+
+  it("buildPayerInputFromPortalCliente inclui endereco quando cadastrado", () => {
+    const row: PortalClienteEmissionRow = {
+      id: clienteId,
+      documento: "12345678909",
+      nome: "Cliente",
+      email: "c@test.com",
+      telefone: null,
+      gatewayCustomerId: null,
+      address: {
+        endereco_cep: "01310100",
+        endereco_logradouro: "Av Paulista",
+        endereco_numero: null,
+        endereco_complemento: null,
+        endereco_bairro: "Bela Vista",
+        endereco_cidade: "Sao Paulo",
+        endereco_uf: "SP"
+      }
+    };
+    const payer = buildPayerInputFromPortalCliente(row);
+    expect(payer.endereco?.cep).toBe("01310100");
   });
 
   it("adapter lança erro → erro_emissao após falha permanente", async () => {
@@ -237,6 +262,16 @@ describe("processPaymentEmission", () => {
     await handlePaymentEmissionFailure({ chargeId, tenantId }, new Error("Asaas indisponivel"), deps());
     expect(state.chargeStatus).toBe("erro_emissao");
     expect(state.events.some((e) => e.event_type === "erro_emissao")).toBe(true);
+  });
+
+  it("sem portal_automacao_tenant_id → UnrecoverableError", async () => {
+    state.charge = baseCharge({
+      metadata: { portal_cliente_id: clienteId }
+    });
+    await expect(processPaymentEmission({ chargeId, tenantId }, deps())).rejects.toSatisfy(
+      (e: unknown) =>
+        e instanceof UnrecoverableError && e.message === "portal_automacao_tenant_id_required"
+    );
   });
 
   it("charge de outro tenant → charge_not_found sem processar", async () => {

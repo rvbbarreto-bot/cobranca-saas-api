@@ -9,18 +9,10 @@ import type {
   PixResult
 } from "../../domain/payment-gateway.interface";
 import { GatewayProviderError } from "../../domain/payment-gateway-error";
+import { requirePayerAddress } from "../../domain/require-payer-address";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
 import { InterHttpClient } from "./inter-http-client";
 import type { InterBoletoResponse, InterEmitBoletoPayload } from "./inter-types";
-
-const DEFAULT_ADDRESS: CreateCustomerInput["endereco"] = {
-  logradouro: "Nao informado",
-  numero: "S/N",
-  bairro: "Centro",
-  cidade: "Sao Paulo",
-  uf: "SP",
-  cep: "01001000"
-};
 
 function digitsOnly(value: string): string {
   return value.replace(/\D/g, "");
@@ -52,7 +44,7 @@ function parseInterGatewayCustomerId(gatewayCustomerId: string): CreateCustomerI
 
 function buildPagador(input: CreateCustomerInput): InterEmitBoletoPayload["pagador"] {
   const doc = digitsOnly(input.cpfCnpj);
-  const addr: NonNullable<CreateCustomerInput["endereco"]> = input.endereco ?? DEFAULT_ADDRESS!;
+  const addr = requirePayerAddress("inter", input.endereco);
   const phone = digitsOnly(input.phone ?? "");
   const ddd = phone.length >= 10 ? phone.slice(0, 2) : "11";
   const telefone = phone.length >= 10 ? phone.slice(2) : phone || "999999999";
@@ -112,7 +104,14 @@ export class InterAdapter implements PaymentGatewayAdapter {
   }
 
   async createBoleto(input: CreateBoletoInput): Promise<BoletoResult> {
-    const cliente = parseInterGatewayCustomerId(input.gatewayCustomerId);
+    const fromId = parseInterGatewayCustomerId(input.gatewayCustomerId);
+    const cliente: CreateCustomerInput = input.payer
+      ? {
+          ...fromId,
+          ...input.payer,
+          endereco: input.payer.endereco ?? fromId.endereco
+        }
+      : fromId;
     const payload: InterEmitBoletoPayload = {
       seuNumero: seuNumeroFromExternalReference(input.externalReference),
       valorNominal: input.value,

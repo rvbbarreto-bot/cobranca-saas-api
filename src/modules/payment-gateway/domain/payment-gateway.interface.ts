@@ -36,6 +36,8 @@ export interface CreateBoletoInput {
   finePercent?: number;
   /** Percentual de juros ao mes (padrao Asaas: 0.033) */
   interestPercent?: number;
+  /** Dados do pagador (Inter/Cora/C6 usam no corpo da emissao). */
+  payer?: CreateCustomerInput;
 }
 
 export interface BoletoResult {
@@ -57,6 +59,7 @@ export interface CreatePixInput {
   dueDate: string;
   description: string;
   externalReference: string;
+  payer?: CreateCustomerInput;
 }
 
 export interface PixResult {

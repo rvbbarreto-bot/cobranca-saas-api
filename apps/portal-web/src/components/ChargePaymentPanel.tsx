@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { PortalChargePayment } from "../lib/api";
+import { isUsableHttpUrl } from "../lib/charge-payment-ui";
 
 function pixQrSrc(base64: string): string {
   const raw = base64.trim();
@@ -103,8 +104,11 @@ export function ChargePaymentPanel({
     showPixQr &&
     Boolean(payment.pix_qrcode_base64?.trim() || payment.pix_emv?.trim() || payment.pix_link?.trim());
 
+  const boletoUrl = isUsableHttpUrl(payment.boleto_url) ? payment.boleto_url : null;
+  const pdfUrl = isUsableHttpUrl(payment.boleto_pdf_url) ? payment.boleto_pdf_url : null;
+
   return (
-    <div className="payment-panel">
+    <div id="pagamento" className="payment-panel">
       <p className="payment-panel__title">Boleto</p>
       {payment.boleto_barcode ? (
         <p className="small" style={{ wordBreak: "break-all", fontVariantNumeric: "tabular-nums" }}>
@@ -112,13 +116,13 @@ export function ChargePaymentPanel({
         </p>
       ) : null}
       <div className="form-actions" style={{ marginTop: "0.75rem", flexWrap: "wrap" }}>
-        {payment.boleto_url ? (
-          <a href={payment.boleto_url} target="_blank" rel="noreferrer" className="btn-cyan">
+        {boletoUrl ? (
+          <a href={boletoUrl} target="_blank" rel="noreferrer" className="btn-cyan">
             Abrir boleto
           </a>
         ) : null}
-        {payment.boleto_pdf_url ? (
-          <a href={payment.boleto_pdf_url} target="_blank" rel="noreferrer" className="btn-secondary">
+        {pdfUrl ? (
+          <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-secondary">
             PDF do boleto
           </a>
         ) : null}

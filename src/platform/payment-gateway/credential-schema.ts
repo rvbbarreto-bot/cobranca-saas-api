@@ -1,6 +1,12 @@
 import type { GatewayCredentials } from "../../modules/payment-gateway/domain/gateway-types";
-import { GatewayCredentialsMissingError } from "../../modules/payment-gateway/domain/payment-gateway-error";
+import {
+  GatewayCredentialsMissingError,
+  GatewayCredentialsValidationError
+} from "../../modules/payment-gateway/domain/payment-gateway-error";
 import { getProviderMeta } from "./provider-registry";
+import { validateMtlsPemPair } from "./mtls-credential-validation";
+
+const MTLS_PEM_PROVIDERS = new Set(["inter", "cora", "c6"]);
 
 export function validateGatewayCredentials(
   provider: string,
@@ -18,4 +24,32 @@ export function validateGatewayCredentials(
   if (missing.length > 0) {
     throw new GatewayCredentialsMissingError(provider, missing);
   }
+
+  if (MTLS_PEM_PROVIDERS.has(provider)) {
+    const cert = credentials.certificate_pem?.trim();
+    const key = credentials.private_key_pem?.trim();
+    if (cert && key) {
+      const pemCheck = validateMtlsPemPair(cert, key);
+      if (!pemCheck.ok) {
+        throw new GatewayCredentialsValidationError(provider, pemCheck.message);
+      }
+    }
+  }
+}
+
+/** Mescla credenciais existentes com PATCH parcial e valida o conjunto final. */
+export function mergeGatewayCredentialsPatch(
+  provider: string,
+  existing: GatewayCredentials,
+  patch: GatewayCredentials
+): GatewayCredentials {
+  const merged: GatewayCredentials = { ...existing };
+  for (const [key, value] of Object.entries(patch)) {
+    const trimmed = value?.trim();
+    if (trimmed) {
+      merged[key] = trimmed;
+    }
+  }
+  validateGatewayCredentials(provider, merged);
+  return merged;
 }

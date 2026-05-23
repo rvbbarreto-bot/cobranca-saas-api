@@ -417,7 +417,11 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
     });
   } catch (error: unknown) {
     const err = error as Error & { issues?: unknown };
-    if (err.message === "VALIDATION_ERROR" || err.message === "PORTAL_CHARGE_VALIDATION") {
+    if (
+      err.message === "VALIDATION_ERROR" ||
+      err.message === "PORTAL_CHARGE_VALIDATION" ||
+      err.message === "PORTAL_CLIENTE_ADDRESS_REQUIRED"
+    ) {
       res.status(422).json({ error: "validation_error", issues: err.issues });
       return;
     }

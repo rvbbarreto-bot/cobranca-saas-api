@@ -8,18 +8,10 @@ import type {
   PixResult
 } from "../../domain/payment-gateway.interface";
 import { GatewayProviderError } from "../../domain/payment-gateway-error";
+import { requirePayerAddress } from "../../domain/require-payer-address";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
 import { C6HttpClient } from "./c6-http-client";
 import type { C6BoletoResponse, C6EmitBoletoPayload } from "./c6-types";
-
-const DEFAULT_ADDRESS: CreateCustomerInput["endereco"] = {
-  logradouro: "Nao informado",
-  numero: "S/N",
-  bairro: "Centro",
-  cidade: "Sao Paulo",
-  uf: "SP",
-  cep: "01001000"
-};
 
 const EMIT_PATH = process.env.C6_EMIT_BOLETO_PATH?.trim() || "/v1/cobrancas/boletos";
 
@@ -80,9 +72,16 @@ export class C6BankAdapter implements PaymentGatewayAdapter {
   }
 
   async createBoleto(input: CreateBoletoInput): Promise<BoletoResult> {
-    const cliente = parseC6CustomerId(input.gatewayCustomerId);
+    const fromId = parseC6CustomerId(input.gatewayCustomerId);
+    const cliente: CreateCustomerInput = input.payer
+      ? {
+          ...fromId,
+          ...input.payer,
+          endereco: input.payer.endereco ?? fromId.endereco
+        }
+      : fromId;
     const doc = digitsOnly(cliente.cpfCnpj);
-    const addr: NonNullable<CreateCustomerInput["endereco"]> = cliente.endereco ?? DEFAULT_ADDRESS!;
+    const addr = requirePayerAddress("c6", cliente.endereco);
 
     const payload: C6EmitBoletoPayload = {
       conta: this.ctx.credentials.conta?.trim() ?? "",

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { asyncHandler } from "../../../../platform/http/async-handler";
+import { respondGatewayCredentialError } from "../../../../platform/http/respond-gateway-credential-error";
 import { escritorioCsvExportRateLimit } from "../../../../platform/http/middleware/rate-limit.middleware";
 import { auditContextFromRequest } from "../../../../platform/audit/audit-context";
 import { withTenantTransaction } from "../../../../platform/persistence/with-tenant-transaction";
@@ -159,6 +160,9 @@ export function createEscritorioRouter(): Router {
           res.status(422).json({ error: "credentials_required" });
           return;
         }
+        if (respondGatewayCredentialError(res, error)) {
+          return;
+        }
         throw error;
       }
     })
@@ -200,6 +204,9 @@ export function createEscritorioRouter(): Router {
         const err = error as Error & { issues?: unknown };
         if (err.message === "VALIDATION_ERROR") {
           res.status(422).json({ error: "validation_error", issues: err.issues });
+          return;
+        }
+        if (respondGatewayCredentialError(res, error)) {
           return;
         }
         throw error;

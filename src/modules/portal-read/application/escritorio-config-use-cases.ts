@@ -4,7 +4,12 @@ import type { AuditRequestContext } from "../../../platform/audit/audit-context"
 import { writeAuditLog } from "../../../platform/audit/audit.service";
 import { encryptAes256Gcm } from "../../../platform/crypto/symmetric-encryption";
 import { maskSecret } from "../../../platform/crypto/mask-secret";
-import { validateGatewayCredentials } from "../../../platform/payment-gateway/credential-schema";
+import type { GatewayCredentials } from "../../../modules/payment-gateway/domain/gateway-types";
+import { decrypt } from "../../../platform/crypto/decrypt";
+import {
+  mergeGatewayCredentialsPatch,
+  validateGatewayCredentials
+} from "../../../platform/payment-gateway/credential-schema";
 import { getProviderMeta } from "../../../platform/payment-gateway/provider-registry";
 import {
   getEscritorioConfig,
@@ -90,8 +95,20 @@ export async function patchEscritorioConfigUseCase(
   }
   if (data.gateway_credentials) {
     const provider = (data.gateway_provider ?? before?.gateway_provider ?? "asaas").trim().toLowerCase();
-    validateGatewayCredentials(provider, data.gateway_credentials);
-    const enc = encryptAes256Gcm(JSON.stringify(data.gateway_credentials));
+    let credentialsToSave: GatewayCredentials = data.gateway_credentials;
+    if (before?.gateway_credentials_encrypted?.trim() && before.encryption_iv?.trim()) {
+      try {
+        const existing = JSON.parse(
+          decrypt(before.gateway_credentials_encrypted, before.encryption_iv)
+        ) as GatewayCredentials;
+        credentialsToSave = mergeGatewayCredentialsPatch(provider, existing, data.gateway_credentials);
+      } catch {
+        validateGatewayCredentials(provider, data.gateway_credentials);
+      }
+    } else {
+      validateGatewayCredentials(provider, data.gateway_credentials);
+    }
+    const enc = encryptAes256Gcm(JSON.stringify(credentialsToSave));
     fields.gateway_credentials_encrypted = enc.ciphertext;
     iv = enc.iv;
     fields.encryption_iv = iv;

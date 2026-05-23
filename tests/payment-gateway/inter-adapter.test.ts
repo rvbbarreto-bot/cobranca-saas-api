@@ -33,7 +33,23 @@ describe("InterAdapter", () => {
     vi.clearAllMocks();
   });
 
-  it("createBoleto mapeia codigoSolicitacao", async () => {
+  it("createBoleto rejeita emissao sem endereco do pagador", async () => {
+    vi.mocked(InterHttpClient).mockImplementation(
+      () => ({ requestJson: vi.fn() }) as unknown as InterHttpClient
+    );
+    const adapter = new InterAdapter(ctx);
+    await expect(
+      adapter.createBoleto({
+        gatewayCustomerId: "inter:11122233344|Joao|a%40b.com",
+        value: 100,
+        dueDate: "2030-01-15",
+        description: "Ref",
+        externalReference: "idem-1"
+      })
+    ).rejects.toMatchObject({ code: "payer_address_required" });
+  });
+
+  it("createBoleto mapeia codigoSolicitacao com payer.endereco", async () => {
     const requestJson = vi.fn().mockResolvedValue({
       codigoSolicitacao: "uuid-inter-1",
       situacao: "EM_ABERTO",
@@ -58,11 +74,64 @@ describe("InterAdapter", () => {
       value: 100,
       dueDate: "2030-01-15",
       description: "Ref",
-      externalReference: "idem-1"
+      externalReference: "idem-1",
+      payer: {
+        name: "Joao",
+        cpfCnpj: "11122233344",
+        email: "a@b.com",
+        externalReference: "cli-1",
+        endereco: {
+          cep: "01310100",
+          logradouro: "Av Paulista",
+          bairro: "Bela Vista",
+          cidade: "Sao Paulo",
+          uf: "SP"
+        }
+      }
     });
 
     expect(result.gatewayTransactionId).toBe("uuid-inter-1");
     expect(result.barCode).toBe("077");
+    const emitBody = requestJson.mock.calls.find((c) => c[0] === "POST")?.[2] as {
+      pagador?: { cep?: string; endereco?: string };
+    };
+    expect(emitBody?.pagador?.cep).toBe("01310100");
+  });
+
+  it("createBoleto usa endereco do payer quando informado", async () => {
+    const requestJson = vi.fn().mockResolvedValue({
+      codigoSolicitacao: "uuid-inter-2",
+      situacao: "EM_ABERTO",
+      codigoBarras: "077",
+      linhaDigitavel: "07700"
+    });
+    vi.mocked(InterHttpClient).mockImplementation(
+      () => ({ requestJson }) as unknown as InterHttpClient
+    );
+    const adapter = new InterAdapter(ctx);
+    await adapter.createBoleto({
+      gatewayCustomerId: "inter:11122233344|Joao|a%40b.com",
+      value: 50,
+      dueDate: "2030-02-01",
+      description: "Ref",
+      externalReference: "idem-2",
+      payer: {
+        name: "Joao",
+        cpfCnpj: "11122233344",
+        email: "a@b.com",
+        externalReference: "cli-1",
+        endereco: {
+          cep: "01310100",
+          logradouro: "Av Paulista",
+          numero: "1000",
+          bairro: "Bela Vista",
+          cidade: "Sao Paulo",
+          uf: "SP"
+        }
+      }
+    });
+    const emitBody = requestJson.mock.calls[0]?.[2] as { pagador?: { cep?: string } };
+    expect(emitBody?.pagador?.cep).toBe("01310100");
   });
 
   it("createPix retorna not_supported", async () => {

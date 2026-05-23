@@ -16,11 +16,13 @@
 | Playwright E2E + n8n JSON | #18–#19 | Concluído |
 | Sprint L — docs gateway universal | #20 | Concluído |
 | Sprint L — factory + Inter/Cora | #21 | Concluído |
-| **Sprint M — BB + C6 + portal dinâmico** | — | **← PRÓXIMO** |
+| **Sprint M — C6 + portal dinâmico + homolog** | [#22](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/22) | **Concluído** |
+| **P2.2 endereço pagador (emissão)** | — | **PR aberto** → `feat/p2-inter-payer-address` |
+| **P2.3–P2.4 + Onda C portal (MVP)** | — | **Na mesma fila** — ver [COORDENACAO_ENTREGA_P2.md](./COORDENACAO_ENTREGA_P2.md) |
 
-**Testes:** `npm test` 236+ · `portal:test` 33 · CI `quality:gate`
+**Testes:** `npm test` · `portal:test` · CI `quality:gate`
 
-**Branch fábrica:** `feat/sprint-m-gateway-fase2` ← `main`
+**Branch fábrica:** `feat/p2-inter-payer-address` ← `main` (P2.2 + incrementos P2.3/4/5–8)
 
 ---
 

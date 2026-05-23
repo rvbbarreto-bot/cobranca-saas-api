@@ -399,24 +399,39 @@ export async function fetchClienteById(clienteId: string): Promise<ClienteRow | 
   return o.cliente ?? null;
 }
 
+export type ClienteEnderecoBody = {
+  cep: string;
+  logradouro: string;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+};
+
 export type CreateClienteBody = {
   documento: string;
   nome: string;
   email: string;
   telefone?: string | null;
   whatsapp_opt_in: boolean;
+  endereco?: ClienteEnderecoBody | null;
 };
 
 export async function postCliente(body: CreateClienteBody): Promise<{ cliente: ClienteRow }> {
+  const payload: Record<string, unknown> = {
+    documento: body.documento,
+    nome: body.nome,
+    email: body.email,
+    telefone: body.telefone ?? null,
+    whatsapp_opt_in: body.whatsapp_opt_in
+  };
+  if (body.endereco !== undefined) {
+    payload.endereco = body.endereco;
+  }
   const res = await apiFetch("/v1/portal/clientes", {
     method: "POST",
-    body: JSON.stringify({
-      documento: body.documento,
-      nome: body.nome,
-      email: body.email,
-      telefone: body.telefone ?? null,
-      whatsapp_opt_in: body.whatsapp_opt_in
-    })
+    body: JSON.stringify(payload)
   });
   const text = await res.text();
   let json: unknown;

@@ -1,7 +1,16 @@
 import { UnrecoverableError } from "bullmq";
 import type { PoolClient } from "pg";
-import type { PaymentGatewayAdapter } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
-import type { BoletoResult, PixResult } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
+import type {
+  BoletoResult,
+  CreateCustomerInput,
+  PaymentGatewayAdapter,
+  PixResult
+} from "../../../modules/payment-gateway/domain/payment-gateway.interface";
+import { isCompletePayerAddress } from "../../../modules/payment-gateway/domain/require-payer-address";
+import {
+  mapRowToCustomerAddress,
+  type PortalClienteAddressFields
+} from "../../../modules/portal-read/application/portal-cliente-address";
 import { getGatewayForTenant } from "../../../modules/payment-gateway/application/get-gateway-for-tenant";
 import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
 import { isProductionNodeEnv } from "../../config/runtime-flags";
@@ -35,7 +44,43 @@ export type PortalClienteEmissionRow = {
   email: string | null;
   telefone: string | null;
   gatewayCustomerId: string | null;
+  address: PortalClienteAddressFields;
 };
+
+const PORTAL_CLIENTE_EMISSION_SELECT = `id, documento, nome, email, telefone, gateway_customer_id,
+  endereco_cep, endereco_logradouro, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf`;
+
+function mapPortalClienteEmissionRow(row: Record<string, unknown>): PortalClienteEmissionRow {
+  return {
+    id: String(row.id),
+    documento: String(row.documento),
+    nome: String(row.nome),
+    email: row.email ? String(row.email) : null,
+    telefone: row.telefone ? String(row.telefone) : null,
+    gatewayCustomerId: row.gateway_customer_id ? String(row.gateway_customer_id) : null,
+    address: {
+      endereco_cep: row.endereco_cep ? String(row.endereco_cep) : null,
+      endereco_logradouro: row.endereco_logradouro ? String(row.endereco_logradouro) : null,
+      endereco_numero: row.endereco_numero ? String(row.endereco_numero) : null,
+      endereco_complemento: row.endereco_complemento ? String(row.endereco_complemento) : null,
+      endereco_bairro: row.endereco_bairro ? String(row.endereco_bairro) : null,
+      endereco_cidade: row.endereco_cidade ? String(row.endereco_cidade) : null,
+      endereco_uf: row.endereco_uf ? String(row.endereco_uf) : null
+    }
+  };
+}
+
+export function buildPayerInputFromPortalCliente(cliente: PortalClienteEmissionRow): CreateCustomerInput {
+  const email = cliente.email?.trim() || `sem-email+${cliente.id}@cobranca.local`;
+  return {
+    name: cliente.nome,
+    cpfCnpj: cliente.documento,
+    email,
+    phone: cliente.telefone ?? undefined,
+    externalReference: cliente.id,
+    endereco: mapRowToCustomerAddress(cliente.address)
+  };
+}
 
 export type PaymentEmissionProcessorDeps = {
   withTenant?: typeof withTenantTransaction;
@@ -104,33 +149,22 @@ async function loadPortalCliente(
   portalClienteId: string,
   automacaoTenantId: string | undefined
 ): Promise<PortalClienteEmissionRow> {
-  const r = automacaoTenantId
-    ? await client.query<Record<string, unknown>>(
-        `SELECT id, documento, nome, email, telefone, gateway_customer_id
-         FROM portal.cliente
-         WHERE id = $1::uuid AND tenant_id = $2
-         LIMIT 1`,
-        [portalClienteId, automacaoTenantId]
-      )
-    : await client.query<Record<string, unknown>>(
-        `SELECT id, documento, nome, email, telefone, gateway_customer_id
-         FROM portal.cliente
-         WHERE id = $1::uuid
-         LIMIT 1`,
-        [portalClienteId]
-      );
+  const tenantId = automacaoTenantId?.trim();
+  if (!tenantId) {
+    throw new UnrecoverableError("portal_automacao_tenant_id_required");
+  }
+  const r = await client.query<Record<string, unknown>>(
+    `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
+     FROM portal.cliente
+     WHERE id = $1::uuid AND tenant_id = $2
+     LIMIT 1`,
+    [portalClienteId, tenantId]
+  );
   const row = r.rows[0];
   if (!row) {
     throw new Error(`portal.cliente ${portalClienteId} nao encontrado.`);
   }
-  return {
-    id: String(row.id),
-    documento: String(row.documento),
-    nome: String(row.nome),
-    email: row.email ? String(row.email) : null,
-    telefone: row.telefone ? String(row.telefone) : null,
-    gatewayCustomerId: row.gateway_customer_id ? String(row.gateway_customer_id) : null
-  };
+  return mapPortalClienteEmissionRow(row);
 }
 
 async function insertPaymentTransaction(
@@ -233,17 +267,17 @@ async function runEmission(
       : undefined;
 
   const cliente = await loadPortalCliente(client, portalClienteId.trim(), automacaoTenantId);
+  const payer = buildPayerInputFromPortalCliente(cliente);
+
+  const providersRequiringAddress = new Set(["inter", "cora", "c6"]);
+  if (providersRequiringAddress.has(gatewayProvider) && !isCompletePayerAddress(payer.endereco)) {
+    throw new Error("portal_cliente_address_required_for_emission");
+  }
+
   let gatewayCustomerId = cliente.gatewayCustomerId;
 
   if (!gatewayCustomerId) {
-    const email = cliente.email?.trim() || `sem-email+${cliente.id}@cobranca.local`;
-    gatewayCustomerId = await adapter.createCustomer({
-      name: cliente.nome,
-      cpfCnpj: cliente.documento,
-      email,
-      phone: cliente.telefone ?? undefined,
-      externalReference: cliente.id
-    });
+    gatewayCustomerId = await adapter.createCustomer(payer);
     await client.query(
       `UPDATE portal.cliente
        SET gateway_customer_id = $2, updated_at = now()
@@ -257,7 +291,8 @@ async function runEmission(
     value: Number(charge.amount),
     dueDate: charge.dueDate,
     description: charge.reference,
-    externalReference: charge.idempotencyKey
+    externalReference: charge.idempotencyKey,
+    payer
   };
 
   let gatewayTransactionId: string;

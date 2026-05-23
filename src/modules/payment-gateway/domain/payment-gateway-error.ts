@@ -31,6 +31,16 @@ export class GatewayCredentialsMissingError extends PaymentGatewayError {
   }
 }
 
+export class GatewayCredentialsValidationError extends PaymentGatewayError {
+  readonly provider: string;
+
+  constructor(provider: string, message: string) {
+    super(message, { code: "gateway_credentials_invalid" });
+    this.name = "GatewayCredentialsValidationError";
+    this.provider = provider;
+  }
+}
+
 export class UnsupportedGatewayProviderError extends PaymentGatewayError {
   readonly provider: string;
 

@@ -125,12 +125,26 @@ export const cobrancaEditFormSchema = z.object({
 
 export type CobrancaEditFormValues = z.infer<typeof cobrancaEditFormSchema>;
 
-export function normalizeClientePayload(values: ClienteFormValues): {
+export type ClienteEnderecoPayload = {
+  cep: string;
+  logradouro: string;
+  numero?: string | null;
+  complemento?: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+};
+
+export function normalizeClientePayload(
+  values: ClienteFormValues,
+  endereco?: ClienteEnderecoPayload | null
+): {
   documento: string;
   nome: string;
   email: string;
   telefone: string | null;
   whatsapp_opt_in: boolean;
+  endereco?: ClienteEnderecoPayload | null;
 } {
   const phoneDigits = onlyDigits(values.telefone ?? "");
   return {
@@ -138,7 +152,8 @@ export function normalizeClientePayload(values: ClienteFormValues): {
     nome: values.nome.trim(),
     email: values.email.trim().toLowerCase(),
     telefone: phoneDigits.length > 0 ? phoneDigits : null,
-    whatsapp_opt_in: values.whatsapp_opt_in
+    whatsapp_opt_in: values.whatsapp_opt_in,
+    ...(endereco !== undefined ? { endereco } : {})
   };
 }
 

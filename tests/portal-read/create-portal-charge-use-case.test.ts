@@ -49,7 +49,13 @@ describe("createPortalChargeUseCase", () => {
 
   it("criacao bem-sucedida enfileira job na fila charges:emission", async () => {
     const client = {
-      query: vi.fn().mockResolvedValue({ rowCount: 1 })
+      query: vi.fn(async (sql: string) => {
+        const q = String(sql).replace(/\s+/g, " ").toLowerCase();
+        if (q.includes("escritorio_config") && q.includes("gateway_provider")) {
+          return { rows: [{ gateway_provider: "asaas" }] };
+        }
+        return { rowCount: 1, rows: [] };
+      })
     } as unknown as PoolClient;
 
     const out = await createPortalChargeUseCase(

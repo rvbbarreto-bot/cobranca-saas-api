@@ -51,7 +51,20 @@ describe("C6BankAdapter", () => {
       value: 100,
       dueDate: "2030-01-15",
       description: "Ref",
-      externalReference: "idem-1"
+      externalReference: "idem-1",
+      payer: {
+        name: "Joao",
+        cpfCnpj: "11122233344",
+        email: "a@b.com",
+        externalReference: "c1",
+        endereco: {
+          cep: "01310100",
+          logradouro: "Av Paulista",
+          bairro: "Bela Vista",
+          cidade: "Sao Paulo",
+          uf: "SP"
+        }
+      }
     });
 
     expect(result.gatewayTransactionId).toBe("c6-boleto-1");
