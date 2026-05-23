@@ -11,6 +11,9 @@ vi.mock("../lib/api", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../lib/api")>();
   return {
     ...mod,
+    fetchEscritorioConfig: vi.fn().mockResolvedValue({
+      config: { gateway_provider: "asaas" }
+    }),
     fetchPortalCobrancaDetail: vi.fn().mockResolvedValue({
       charge: {
         id: "ch-edit-1",
@@ -58,7 +61,7 @@ describe("CobrancaEditPage", () => {
     expect(await screen.findByText(/Edição do boleto/i)).toBeTruthy();
     const amountInput = (await screen.findByLabelText(/Valor/i)) as HTMLInputElement;
     expect(amountInput.value).toBe("150.00");
-    expect(await screen.findByDisplayValue("2031-06-15")).toBeTruthy();
+    expect(await screen.findByDisplayValue("15/06/2031")).toBeTruthy();
   });
 
   it("submete PATCH com valor e vencimento", async () => {

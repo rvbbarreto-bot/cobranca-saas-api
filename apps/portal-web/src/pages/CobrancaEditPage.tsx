@@ -1,15 +1,21 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BrDatePicker } from "../components/BrDatePicker";
 import { cobrancaEditFormSchema } from "../lib/schemas";
 import type { CobrancaEditFormValues } from "../lib/schemas";
-import { ApiError, fetchPortalCobrancaDetail, patchPortalCobranca } from "../lib/api";
+import { ApiError, fetchEscritorioConfig, fetchPortalCobrancaDetail, patchPortalCobranca } from "../lib/api";
+import { getPortalChargeRules } from "../lib/cobranca-form";
 import { chargeStatusLabelPortal, isChargeEditable } from "../lib/charge-status-ui";
 
 export function CobrancaEditPage(): JSX.Element {
   const { chargeId } = useParams<{ chargeId: string }>();
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
+  const gatewayKey = configQ.data?.config?.gateway_provider ?? "asaas";
+  const rules = useMemo(() => getPortalChargeRules(gatewayKey), [gatewayKey]);
 
   const detailQ = useQuery({
     queryKey: ["cobranca", chargeId],
@@ -136,16 +142,16 @@ export function CobrancaEditPage(): JSX.Element {
               />
               {fieldErrors.amount ? <span className="err">{fieldErrors.amount}</span> : null}
             </label>
-            <label>
-              Vencimento
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                disabled={m.isPending}
-              />
-              {fieldErrors.due_date ? <span className="err">{fieldErrors.due_date}</span> : null}
-            </label>
+            <BrDatePicker
+              id="cobranca-edit-due"
+              label="Vencimento"
+              valueIso={dueDate}
+              onChangeIso={setDueDate}
+              rules={rules}
+              disabled={m.isPending}
+              required
+              error={fieldErrors.due_date}
+            />
           </div>
           <div className="form-card">
             <div className="form-actions" style={{ marginTop: 0 }}>
