@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { assertPortalClienteHasEmissionAddress } from "./portal-cliente-emission-address";
 import {
   getPortalChargeRules,
   isDueDateAllowed,
@@ -89,5 +90,15 @@ export async function assertPortalChargeCreateAllowed(
     err.issues = issues;
     throw err;
   }
+
+  if (rules.requiresPayerAddress && data.portal_cliente_id?.trim()) {
+    await assertPortalClienteHasEmissionAddress(
+      client,
+      automacaoTenantId,
+      data.portal_cliente_id.trim(),
+      rules.displayName
+    );
+  }
+
   return { rules, reference: sanitizeChargeReference(data.reference, rules) };
 }

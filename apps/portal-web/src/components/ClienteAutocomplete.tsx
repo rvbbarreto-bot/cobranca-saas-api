@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ClienteRow } from "../lib/api";
 import { fetchClientes } from "../lib/api";
+import { formatDocumentoDisplay } from "../lib/format-documento";
 
 const PAGE_SIZE = 25;
 
@@ -34,7 +35,9 @@ export function ClienteAutocomplete({
 
   useEffect(() => {
     if (initialCliente && initialCliente.id === value) {
-      setSelectedLabel(`${initialCliente.nome} (${initialCliente.documento})`);
+      setSelectedLabel(
+        `${initialCliente.nome} — ${formatDocumentoDisplay(initialCliente.documento)}`
+      );
     }
   }, [initialCliente, value]);
 
@@ -70,11 +73,13 @@ export function ClienteAutocomplete({
       setSelectedLabel("");
     } else {
       onChange(c.id, c);
-      setSelectedLabel(`${c.nome} (${c.documento})`);
+      setSelectedLabel(`${c.nome} — ${formatDocumentoDisplay(c.documento)}`);
     }
     setOpen(false);
     setQuery("");
   }
+
+  const describedBy = error ? `${id}-err` : undefined;
 
   return (
     <div className="cliente-autocomplete" ref={wrapRef}>
@@ -89,14 +94,21 @@ export function ClienteAutocomplete({
         aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-invalid={Boolean(error)}
+        aria-describedby={describedBy}
         autoComplete="off"
         disabled={disabled}
         required={required && !value}
-        value={open ? query : selectedLabel || (value ? "Cliente selecionado" : "")}
-        placeholder="Buscar por nome ou documento…"
+        value={open ? query : selectedLabel}
+        placeholder="Digite o nome, CPF ou CNPJ do cliente"
         onFocus={() => {
           setOpen(true);
           setQuery("");
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setOpen(false);
+          }
         }}
         onChange={(e) => {
           setQuery(e.target.value);
@@ -107,28 +119,41 @@ export function ClienteAutocomplete({
         }}
       />
       {open ? (
-        <ul id={listId} className="cliente-autocomplete__list" role="listbox">
+        <ul id={listId} className="cliente-autocomplete__list popover-scroll" role="listbox">
           <li>
-            <button type="button" className="cliente-autocomplete__option" onClick={() => selectCliente(null)}>
-              — Nao associar —
+            <button
+              type="button"
+              className="cliente-autocomplete__option"
+              role="option"
+              onClick={() => selectCliente(null)}
+            >
+              — Não associar —
             </button>
           </li>
           {q.isLoading ? (
             <li className="cliente-autocomplete__hint">Carregando…</li>
           ) : null}
-          {options.map((c) => (
-            <li key={c.id}>
-              <button
-                type="button"
-                className="cliente-autocomplete__option"
-                role="option"
-                aria-selected={c.id === value}
-                onClick={() => selectCliente(c)}
-              >
-                {c.nome} ({c.documento})
-              </button>
-            </li>
-          ))}
+          {options.map((c) => {
+            const selected = c.id === value;
+            return (
+              <li key={c.id}>
+                <button
+                  type="button"
+                  className={
+                    selected
+                      ? "cliente-autocomplete__option cliente-autocomplete__option--selected"
+                      : "cliente-autocomplete__option"
+                  }
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => selectCliente(c)}
+                >
+                  <span className="cliente-autocomplete__nome">{c.nome}</span>
+                  <span className="cliente-autocomplete__doc">{formatDocumentoDisplay(c.documento)}</span>
+                </button>
+              </li>
+            );
+          })}
           {q.hasNextPage ? (
             <li>
               <button
@@ -146,7 +171,11 @@ export function ClienteAutocomplete({
           ) : null}
         </ul>
       ) : null}
-      {error ? <span className="err">{error}</span> : null}
+      {error ? (
+        <span id={`${id}-err`} className="err" role="alert">
+          {error}
+        </span>
+      ) : null}
     </div>
   );
 }

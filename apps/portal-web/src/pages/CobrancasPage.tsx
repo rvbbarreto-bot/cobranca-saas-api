@@ -57,10 +57,16 @@ function BoletoActions({ row }: { row: ChargeRow }): JSX.Element {
       Editar
     </Link>
   ) : null;
-  const pdf = (
+  const pdfEligible =
+    s === "emitida" || s === "enviada" || s === "pendente_pagamento" || s === "paga" || s === "vencida";
+  const pdf = pdfEligible ? (
     <Link to={`/cobrancas/${row.id}#pagamento`} className="link-inline" title="Abrir pagamento e PDF">
       Ver PDF
     </Link>
+  ) : (
+    <span className="link-inline" style={{ opacity: 0.45, cursor: "not-allowed" }} title="Disponivel apos emissao">
+      Ver PDF
+    </span>
   );
   const enviar = (
     <Link to={`/cobrancas/${row.id}#enviar`} className="link-inline" title="Compartilhar com o cliente">

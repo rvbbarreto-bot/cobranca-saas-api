@@ -6,6 +6,7 @@ import type {
   PaymentGatewayAdapter,
   PixResult
 } from "../../../modules/payment-gateway/domain/payment-gateway.interface";
+import { isCompletePayerAddress } from "../../../modules/payment-gateway/domain/require-payer-address";
 import {
   mapRowToCustomerAddress,
   type PortalClienteAddressFields
@@ -148,21 +149,17 @@ async function loadPortalCliente(
   portalClienteId: string,
   automacaoTenantId: string | undefined
 ): Promise<PortalClienteEmissionRow> {
-  const r = automacaoTenantId
-    ? await client.query<Record<string, unknown>>(
-        `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
-         FROM portal.cliente
-         WHERE id = $1::uuid AND tenant_id = $2
-         LIMIT 1`,
-        [portalClienteId, automacaoTenantId]
-      )
-    : await client.query<Record<string, unknown>>(
-        `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
-         FROM portal.cliente
-         WHERE id = $1::uuid
-         LIMIT 1`,
-        [portalClienteId]
-      );
+  const tenantId = automacaoTenantId?.trim();
+  if (!tenantId) {
+    throw new UnrecoverableError("portal_automacao_tenant_id_required");
+  }
+  const r = await client.query<Record<string, unknown>>(
+    `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
+     FROM portal.cliente
+     WHERE id = $1::uuid AND tenant_id = $2
+     LIMIT 1`,
+    [portalClienteId, tenantId]
+  );
   const row = r.rows[0];
   if (!row) {
     throw new Error(`portal.cliente ${portalClienteId} nao encontrado.`);
@@ -271,6 +268,12 @@ async function runEmission(
 
   const cliente = await loadPortalCliente(client, portalClienteId.trim(), automacaoTenantId);
   const payer = buildPayerInputFromPortalCliente(cliente);
+
+  const providersRequiringAddress = new Set(["inter", "cora", "c6"]);
+  if (providersRequiringAddress.has(gatewayProvider) && !isCompletePayerAddress(payer.endereco)) {
+    throw new Error("portal_cliente_address_required_for_emission");
+  }
+
   let gatewayCustomerId = cliente.gatewayCustomerId;
 
   if (!gatewayCustomerId) {

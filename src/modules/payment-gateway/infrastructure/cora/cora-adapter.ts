@@ -10,18 +10,10 @@ import type {
   PixResult
 } from "../../domain/payment-gateway.interface";
 import { GatewayProviderError } from "../../domain/payment-gateway-error";
+import { requirePayerAddress } from "../../domain/require-payer-address";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
 import { CoraHttpClient } from "./cora-http-client";
 import type { CoraInvoicePayload, CoraInvoiceResponse } from "./cora-types";
-
-const DEFAULT_ADDRESS: CreateCustomerInput["endereco"] = {
-  logradouro: "Nao informado",
-  numero: "S/N",
-  bairro: "Centro",
-  cidade: "Sao Paulo",
-  uf: "SP",
-  cep: "01001000"
-};
 
 function digitsOnly(value: string): string {
   return value.replace(/\D/g, "");
@@ -56,7 +48,7 @@ function buildInvoicePayload(
   paymentForms: Array<"BANK_SLIP" | "PIX">
 ): CoraInvoicePayload {
   const doc = digitsOnly(cliente.cpfCnpj);
-  const addr: NonNullable<CreateCustomerInput["endereco"]> = cliente.endereco ?? DEFAULT_ADDRESS!;
+  const addr = requirePayerAddress("cora", cliente.endereco);
   return {
     code: input.externalReference.slice(0, 64),
     customer: {

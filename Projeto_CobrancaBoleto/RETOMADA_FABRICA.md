@@ -17,12 +17,11 @@
 | Sprint L — docs gateway universal | #20 | Concluído |
 | Sprint L — factory + Inter/Cora | #21 | Concluído |
 | **Sprint M — C6 + portal dinâmico + homolog** | [#22](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/22) | **Concluído** |
-| **P2.2 endereço pagador (emissão)** | — | **PR aberto** → `feat/p2-inter-payer-address` |
-| **P2.3–P2.4 + Onda C portal (MVP)** | — | **Na mesma fila** — ver [COORDENACAO_ENTREGA_P2.md](./COORDENACAO_ENTREGA_P2.md) |
+| **P2 Inter + portal + hardening revisão** | [#24](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/24) | **Concluído** em `main` (`3ad069e`) |
 
-**Testes:** `npm test` · `portal:test` · CI `quality:gate`
+**Testes:** `npm test` · `portal:test` · CI verde no PR #24
 
-**Branch fábrica:** `feat/p2-inter-payer-address` ← `main` (P2.2 + incrementos P2.3/4/5–8)
+**Branch fábrica:** `main` — próximo item: homolog QA ([QA_P2_POS_MERGE_CHECKLIST.md](../docs/QA_P2_POS_MERGE_CHECKLIST.md)) ou P2.1 PDF (Onda B, bloqueio Inter)
 
 ---
 

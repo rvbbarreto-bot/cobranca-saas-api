@@ -9,9 +9,9 @@
 
 | Stream | Item | Dono sugerido | Status | Próximo passo |
 |--------|------|---------------|--------|----------------|
-| **Gateway** | P2.2 Endereço pagador | Backend | ✅ Código na branch `feat/p2-inter-payer-address` | Abrir/merge PR · `npm run migrate` (027) |
-| **Gateway** | P2.3 Smoke Inter OAuth | Backend/DevOps | 🟡 Em progresso | `RUN_INTER_SANDBOX=1 npm run gateway:smoke:inter` com credenciais locais |
-| **Gateway** | P2.4 PEM + Postman | DevOps/QA | 🟡 Validação PEM no save | Postman local sem commit de secrets |
+| **Gateway** | P2.2 Endereço pagador | Backend | ✅ **main** (#24) | — |
+| **Gateway** | P2.3 Smoke Inter OAuth | Backend/DevOps | ✅ Script em `main` | QA rodar smoke com credenciais locais |
+| **Gateway** | P2.4 PEM + Postman | DevOps/QA | ✅ Validação no save | Postman local sem commit de secrets |
 | **Homolog** | OAuth Inter sandbox | QA + Inter | 🔴 Bloqueado externo | `SSL alert unknown ca` — pacote certificado com o banco |
 | **Portal** | P2.8 Histórico | Frontend | 🟢 MVP | Lista → detalhe `#timeline` |
 | **Portal** | P2.6 Enviar (WhatsApp) | Frontend | 🟢 MVP | Detalhe `#enviar` · wa.me |
@@ -26,11 +26,11 @@
 ## 2. Fila paralela (esta semana)
 
 ```text
-[PR merge] feat/p2-inter-payer-address  →  main
+[Concluído] PR #24 → main
      │
-     ├─► feat/p2-inter-smoke (P2.3) — se não couber no PR acima
-     ├─► feat/p2-inter-pem-qa (P2.4)
-     └─► feat/portal-onda-c (P2.5–P2.8) — pode ser um PR UX se escopo pequeno
+     ├─► QA homolog: docs/QA_P2_POS_MERGE_CHECKLIST.md
+     ├─► Onda B: feat/p2-inter-pdf (P2.1) — após OAuth Inter ou mock
+     └─► Evolução portal: envio rastreado, PDF real, régua vencida
 ```
 
 **CI obrigatório antes de merge:** `npm run build && npm test && npm run portal:test`
@@ -77,7 +77,21 @@ npm run gateway:smoke:inter
 
 ---
 
-## 6. Definição de pronto (por PR)
+## 6. Correções pós-revisão técnica (2026-05-23)
+
+Branch `feat/p2-review-fixes`:
+
+- Q-01/Q-02: endereço obrigatório no backend (criação cobrança + worker + adapters Inter/Cora/C6; removido fallback `DEFAULT_ADDRESS`).
+- Q-03: erros PEM → HTTP 422 (`gateway_credentials_invalid`).
+- Q-04: merge de credenciais em PATCH parcial.
+- Q-05: `loadPortalCliente` exige `portal_automacao_tenant_id`.
+- U-01: WhatsApp respeita `whatsapp_opt_in`.
+- U-02: “Ver PDF” na lista só após emissão.
+- Testes: unitários + integração POST cliente com endereço.
+
+---
+
+## 7. Definição de pronto (por PR)
 
 - [ ] Migração aplicada em dev (`npm run migrate`)
 - [ ] Testes unitários/integração verdes

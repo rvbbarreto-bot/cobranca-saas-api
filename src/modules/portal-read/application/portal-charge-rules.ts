@@ -12,6 +12,8 @@ export type PortalChargeRules = {
   minDueOffsetDays: number;
   minDueBusinessDays: boolean;
   requiresPayer: boolean;
+  /** Gateways mTLS exigem endereco completo no cadastro do cliente. */
+  requiresPayerAddress: boolean;
   supportsPix: boolean;
 };
 
@@ -45,6 +47,7 @@ export function getPortalChargeRules(providerRaw: string | null | undefined): Po
       minDueOffsetDays: 1,
       minDueBusinessDays: true,
       requiresPayer: true,
+      requiresPayerAddress: true,
       supportsPix: false
     };
   }
@@ -60,6 +63,23 @@ export function getPortalChargeRules(providerRaw: string | null | undefined): Po
       minDueOffsetDays: 1,
       minDueBusinessDays: false,
       requiresPayer: true,
+      requiresPayerAddress: true,
+      supportsPix: true
+    };
+  }
+
+  if (provider === "c6") {
+    return {
+      provider,
+      displayName,
+      referenceMaxLength: 150,
+      referenceAlphanumericOnly: false,
+      amountMin: 0.01,
+      amountMax: 999_999.99,
+      minDueOffsetDays: 1,
+      minDueBusinessDays: false,
+      requiresPayer: true,
+      requiresPayerAddress: true,
       supportsPix: true
     };
   }
@@ -74,6 +94,7 @@ export function getPortalChargeRules(providerRaw: string | null | undefined): Po
     minDueOffsetDays: 0,
     minDueBusinessDays: false,
     requiresPayer: false,
+    requiresPayerAddress: false,
     supportsPix: true
   };
 }

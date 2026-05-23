@@ -127,6 +127,37 @@ describe.skipIf(!hasDb)("POST /v1/portal/clientes — integracao, validacao e ca
     expect(r.body?.error).toBe("validation_error");
   });
 
+  it("201 cria cliente com endereco completo e retorna no GET", async () => {
+    const documento = uniqueTestCnpj(Date.now() + 8888, 77);
+    const create = await request(app)
+      .post("/v1/portal/clientes")
+      .set(portalAuthHeaders(tokenPortal))
+      .send({
+        documento,
+        nome: `Cliente endereco ${documento.slice(-6)}`,
+        email: `end+${documento.slice(-6)}@test.local`,
+        whatsapp_opt_in: false,
+        endereco: {
+          cep: "01310-100",
+          logradouro: "Av Paulista",
+          numero: "1000",
+          bairro: "Bela Vista",
+          cidade: "Sao Paulo",
+          uf: "SP"
+        }
+      })
+      .expect(201);
+    const id = create.body?.cliente?.id as string;
+    expect(create.body?.cliente?.endereco?.cep).toBe("01310100");
+
+    const get = await request(app)
+      .get(`/v1/portal/clientes/${id}`)
+      .set(portalAuthHeaders(tokenPortal))
+      .expect(200);
+    expect(get.body?.cliente?.endereco?.logradouro).toBe("Av Paulista");
+    expect(get.body?.cliente?.endereco?.uf).toBe("SP");
+  });
+
   it("401 sem Bearer", async () => {
     const documento = uniqueTestCnpj(Date.now() + 5555, 22);
     await request(app)

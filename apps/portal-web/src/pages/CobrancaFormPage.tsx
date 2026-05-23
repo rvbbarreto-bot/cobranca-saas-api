@@ -219,7 +219,7 @@ export function CobrancaFormPage(): JSX.Element {
 
           <ClienteAutocomplete
             id="cobranca-cliente"
-            label={rules.requiresPayer ? "Cliente (pagador obrigatorio)" : "Cliente (opcional)"}
+            label={rules.requiresPayer ? "Cliente (pagador obrigatório)" : "Cliente (opcional)"}
             value={portalClienteId}
             onChange={(id) => setPortalClienteId(id)}
             disabled={isSubmitting}
