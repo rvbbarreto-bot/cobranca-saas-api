@@ -1,7 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import type { ChargeRow } from "../lib/api";
-import { fetchPortalCobrancaDetail } from "../lib/api";
+import { fetchEscritorioConfig, fetchPortalCobrancaDetail } from "../lib/api";
+import { getPortalChargeRules } from "../lib/gateway-charge-rules";
 import { CHARGE_DETAIL_POLL_MS, shouldPollChargeDetail } from "../lib/charge-detail-poll";
 import { ChargePaymentPanel } from "../components/ChargePaymentPanel";
 import {
@@ -88,6 +89,9 @@ function itemClass(kind: TlKind): string {
 
 export function BoletoDetalhePage(): JSX.Element {
   const { chargeId } = useParams<{ chargeId: string }>();
+
+  const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
+  const gatewayRules = getPortalChargeRules(configQ.data?.config?.gateway_provider);
 
   const detailQ = useQuery({
     queryKey: ["cobranca", chargeId],
@@ -187,6 +191,7 @@ export function BoletoDetalhePage(): JSX.Element {
               payment={payment}
               chargeStatus={charge.canonicalStatus}
               chargeType={chargeType}
+              showPixQr={gatewayRules.supportsPix}
             />
             <p className="form-note" style={{ marginTop: "0.75rem" }}>
               WhatsApp + e-mail (roadmap)

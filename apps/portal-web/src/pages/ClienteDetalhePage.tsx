@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { fetchClienteCobrancas, fetchClientes } from "../lib/api";
+import { useCliente } from "../hooks/useCliente";
+import { fetchClienteCobrancas } from "../lib/api";
 import {
   chargeStatusLabelPortal,
   chargeStatusPillClass
@@ -19,14 +20,15 @@ function formatDate(iso: string): string {
 
 export function ClienteDetalhePage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
-  const q = useQuery({ queryKey: ["clientes"], queryFn: () => fetchClientes() });
-  const cliente = id ? q.data?.data.find((c) => c.id === id) : undefined;
+  const clienteQ = useCliente(id);
 
   const cobQ = useQuery({
     queryKey: ["clienteCobrancas", id],
     queryFn: () => fetchClienteCobrancas(id!),
     enabled: Boolean(id)
   });
+
+  const cliente = clienteQ.data ?? undefined;
 
   return (
     <div className="shell-page">
@@ -54,12 +56,12 @@ export function ClienteDetalhePage(): JSX.Element {
         </div>
       </div>
 
-      {q.isLoading ? <p className="muted">Carregando…</p> : null}
-      {q.isError ? (
-        <div className="banner-err">{q.error instanceof Error ? q.error.message : "Erro"}</div>
+      {clienteQ.isLoading ? <p className="muted">Carregando…</p> : null}
+      {clienteQ.isError ? (
+        <div className="banner-err">{clienteQ.error instanceof Error ? clienteQ.error.message : "Erro"}</div>
       ) : null}
 
-      {!q.isLoading && q.data && !cliente ? (
+      {!clienteQ.isLoading && clienteQ.isSuccess && !cliente ? (
         <div className="banner-err">Cliente não encontrado neste escritório.</div>
       ) : null}
 

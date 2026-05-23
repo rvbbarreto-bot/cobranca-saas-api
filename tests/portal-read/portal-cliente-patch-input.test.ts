@@ -18,12 +18,16 @@ describe("parsePortalClientePatchBody", () => {
     }
   });
 
-  it("aceita email null e string vazia como null", () => {
-    expect(parsePortalClientePatchBody({ email: null }).ok).toBe(true);
-    const r2 = parsePortalClientePatchBody({ email: "   " });
-    expect(r2.ok).toBe(true);
-    if (r2.ok) {
-      expect(r2.value.email).toBeNull();
+  it("rejeita remover email (null ou vazio)", () => {
+    expect(parsePortalClientePatchBody({ email: null }).ok).toBe(false);
+    expect(parsePortalClientePatchBody({ email: "   " }).ok).toBe(false);
+  });
+
+  it("aceita telefone com digitos", () => {
+    const r = parsePortalClientePatchBody({ telefone: "(11) 98765-4321" });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.value.telefone).toBe("11987654321");
     }
   });
 
@@ -32,11 +36,20 @@ describe("parsePortalClientePatchBody", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("aceita whatsapp_opt_in", () => {
+  it("exige telefone ao ativar whatsapp_opt_in sem telefone no corpo", () => {
     const r = parsePortalClientePatchBody({ whatsapp_opt_in: true });
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.issues.some((i) => i.path === "telefone")).toBe(true);
+    }
+  });
+
+  it("aceita whatsapp_opt_in com telefone", () => {
+    const r = parsePortalClientePatchBody({ whatsapp_opt_in: true, telefone: "11999998888" });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value.whatsappOptIn).toBe(true);
+      expect(r.value.telefone).toBe("11999998888");
     }
   });
 

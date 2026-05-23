@@ -166,6 +166,12 @@ Checklist PO: [evidencias/SPRINT1_ACEITE_CHECKLIST.md](./evidencias/SPRINT1_ACEI
 3. Alinhar secrets (`N8N_PLATFORM_WEBHOOK_SECRET`, `WEBHOOK_INBOX_SECRET`) na API e variáveis do n8n.
 4. `npm run n8n:smoke:outbound` — envia os 6 eventos de teste.
 
+### 3.5.1 Homologação Banco Inter (API + portal)
+
+Roteiro PO/QA (credenciais sandbox, configuração PEM, emissão boleto, troca de gateway): **[QA_HOMOLOG_INTER_GATEWAY_PORTAL.md](./QA_HOMOLOG_INTER_GATEWAY_PORTAL.md)**.  
+Setup passo a passo (portal Inter, menus do SaaS, ambiente local): **[QA_INTER_SETUP_GUIA_PASSO_A_PASSO.md](./QA_INTER_SETUP_GUIA_PASSO_A_PASSO.md)**.  
+Emissão boleto + integração Inter (aceite PO): **[QA_TESTE_PO_EMISSAO_BOLETO_INTER.md](./QA_TESTE_PO_EMISSAO_BOLETO_INTER.md)**.
+
 ### 3.6 Automação Playwright E2E (BDD no repositório)
 
 Suíte em `e2e/tests/` — cobre os cenários Gherkin da secção 6 com monitorização de rede (status HTTP) e consola.

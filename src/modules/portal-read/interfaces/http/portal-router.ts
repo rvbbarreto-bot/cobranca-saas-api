@@ -331,7 +331,9 @@ async function listClientes(req: Request, res: Response): Promise<void> {
   }
   const keyset: ClienteKeysetCursor | null = parsed ? { nome: parsed.nome, id: parsed.id } : null;
 
-  const { items, has_more } = await listClientesByTenantPage(tenantId, { limit, cursor: keyset });
+  const searchRaw = firstQueryString(req.query.search);
+  const search = searchRaw && searchRaw.length >= 2 ? searchRaw.slice(0, 80) : null;
+  const { items, has_more } = await listClientesByTenantPage(tenantId, { limit, cursor: keyset, search });
   const last = items[items.length - 1];
   const next_cursor = has_more && last ? clienteCursorFromRow(last) : null;
 
@@ -414,7 +416,7 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
     });
   } catch (error: unknown) {
     const err = error as Error & { issues?: unknown };
-    if (err.message === "VALIDATION_ERROR") {
+    if (err.message === "VALIDATION_ERROR" || err.message === "PORTAL_CHARGE_VALIDATION") {
       res.status(422).json({ error: "validation_error", issues: err.issues });
       return;
     }
@@ -447,6 +449,31 @@ async function createPortalChargeHttp(req: Request, res: Response): Promise<void
     }
     throw error;
   }
+}
+
+async function getPortalClienteHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem consultar clientes."
+    });
+    return;
+  }
+
+  const automacaoTenantId = req.tenantContext?.tenantId;
+  const clienteId = typeof req.params.clienteId === "string" ? req.params.clienteId.trim() : "";
+  if (!automacaoTenantId || !clienteId || !isUuid(clienteId)) {
+    res.status(400).json({ error: "invalid_request", message: "tenant ou cliente_id invalido." });
+    return;
+  }
+
+  const cliente = await getClienteByIdForTenant(clienteId, automacaoTenantId);
+  if (!cliente) {
+    res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
+    return;
+  }
+
+  res.json({ cliente });
 }
 
 async function listClienteCobrancasHttp(req: Request, res: Response): Promise<void> {
@@ -534,13 +561,23 @@ async function patchPortalClienteHttp(req: Request, res: Response): Promise<void
     return;
   }
 
-  const row = await updateClienteForTenant(clienteId, tenantId, parsed.value);
-  if (!row) {
-    res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
-    return;
+  try {
+    const row = await updateClienteForTenant(clienteId, tenantId, parsed.value);
+    if (!row) {
+      res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
+      return;
+    }
+    res.json({ cliente: row });
+  } catch (err) {
+    if (err instanceof Error && err.message === "portal_cliente_telefone_required_for_optin") {
+      res.status(422).json({
+        error: "validation_error",
+        issues: [{ path: "telefone", message: "Telefone obrigatorio quando whatsapp_opt_in for true." }]
+      });
+      return;
+    }
+    throw err;
   }
-
-  res.json({ cliente: row });
 }
 
 async function patchPortalCobrancaHttp(req: Request, res: Response): Promise<void> {
@@ -721,6 +758,7 @@ export function createPortalRouter(): Router {
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
   protectedRoutes.patch("/cobrancas/:chargeId", asyncHandler(patchPortalCobrancaHttp));
   protectedRoutes.get("/clientes", asyncHandler(listClientes));
+  protectedRoutes.get("/clientes/:clienteId", asyncHandler(getPortalClienteHttp));
   protectedRoutes.get("/clientes/:clienteId/cobrancas", asyncHandler(listClienteCobrancasHttp));
   protectedRoutes.patch("/clientes/:clienteId", asyncHandler(patchPortalClienteHttp));
   protectedRoutes.post("/clientes", asyncHandler(createCliente));

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PortalLoadMore } from "../components/PortalLoadMore";
+import { CLIENTES_LIST_QUERY_KEY } from "../lib/cliente-query-keys";
 import { fetchClientes, fetchCobrancas } from "../lib/api";
 import type { ChargeRow, ClienteRow } from "../lib/api";
 import {
@@ -94,7 +95,7 @@ const CLIENTES_PAGE_SIZE = 50;
 
 export function ClientesPage(): JSX.Element {
   const q = useInfiniteQuery({
-    queryKey: ["clientes"],
+    queryKey: CLIENTES_LIST_QUERY_KEY,
     queryFn: ({ pageParam }) =>
       fetchClientes({
         limit: CLIENTES_PAGE_SIZE,

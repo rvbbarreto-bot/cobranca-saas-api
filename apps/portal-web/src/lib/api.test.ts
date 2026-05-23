@@ -15,7 +15,8 @@ import {
   patchPortalCobranca,
   clearSession,
   saveSession,
-  apiFetch
+  apiFetch,
+  ApiError
 } from "./api";
 import { STORAGE_ACCESS_TOKEN } from "./storageKeys";
 
@@ -50,6 +51,13 @@ describe("portalLogin", () => {
         method: "POST",
         body: JSON.stringify({ email: "a@b.co", tenant_id: "1", password: "p" })
       })
+    );
+  });
+
+  it("traduz falha de rede em mensagem acionavel", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    await expect(portalLogin({ email: "a@b.co", tenant_id: "1", password: "p" })).rejects.toSatisfy(
+      (e: unknown) => e instanceof ApiError && e.message.includes("Nao foi possivel contactar a API")
     );
   });
 });

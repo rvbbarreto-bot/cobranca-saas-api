@@ -105,6 +105,7 @@ Multi-tenant · RLS · credenciais cifradas · **nunca** commitar PEM/API keys �
 | [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md) | **Atual** |
 | [DEMANDA_SPRINT_L_UNIVERSAL_GATEWAY.md](./DEMANDA_SPRINT_L_UNIVERSAL_GATEWAY.md) | Referência L (concluído) |
 | [docs/GATEWAY_UNIVERSAL.md](../docs/GATEWAY_UNIVERSAL.md) | Arquitetura |
+| [docs/QA_HOMOLOG_INTER_GATEWAY_PORTAL.md](../docs/QA_HOMOLOG_INTER_GATEWAY_PORTAL.md) | **Homologação Inter (PO/QA)** |
 
 ---
 

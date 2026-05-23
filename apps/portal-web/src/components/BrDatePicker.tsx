@@ -1,0 +1,203 @@
+import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  brDateToIso,
+  isoToBrDate,
+  maskBrDateInput,
+  minDueDateIso,
+  parseIsoDateOnly,
+  toIsoDateOnly,
+  type PortalChargeRules
+} from "../lib/gateway-charge-rules";
+
+type Props = {
+  id: string;
+  label: string;
+  valueIso: string;
+  onChangeIso: (iso: string) => void;
+  rules: PortalChargeRules;
+  disabled?: boolean;
+  required?: boolean;
+  error?: string;
+};
+
+function buildMonthDays(
+  year: number,
+  month: number,
+  minTs: number
+): Array<{ iso: string; day: number; disabled: boolean }> {
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const out: Array<{ iso: string; day: number; disabled: boolean }> = [];
+  for (let d = 1; d <= last.getDate(); d += 1) {
+    const iso = toIsoDateOnly(new Date(year, month, d));
+    const ts = parseIsoDateOnly(iso)?.getTime() ?? 0;
+    out.push({ iso, day: d, disabled: ts < minTs });
+  }
+  const pad = first.getDay();
+  for (let i = 0; i < pad; i += 1) {
+    out.unshift({ iso: "", day: 0, disabled: true });
+  }
+  return out;
+}
+
+export function BrDatePicker({
+  id,
+  label,
+  valueIso,
+  onChangeIso,
+  rules,
+  disabled,
+  required,
+  error
+}: Props): JSX.Element {
+  const listId = useId();
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [text, setText] = useState(() => isoToBrDate(valueIso));
+  const [open, setOpen] = useState(false);
+  const minIso = useMemo(() => minDueDateIso(rules), [rules]);
+
+  useEffect(() => {
+    setText(isoToBrDate(valueIso));
+  }, [valueIso]);
+
+  useEffect(() => {
+    function onDoc(e: MouseEvent): void {
+      if (!wrapRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const parsed = parseIsoDateOnly(valueIso) ?? parseIsoDateOnly(minIso) ?? new Date();
+  const [viewYear, setViewYear] = useState(parsed.getFullYear());
+  const [viewMonth, setViewMonth] = useState(parsed.getMonth());
+  const minTs = parseIsoDateOnly(minIso)?.getTime() ?? 0;
+  const days = useMemo(() => buildMonthDays(viewYear, viewMonth, minTs), [viewYear, viewMonth, minTs]);
+
+  function pickIso(iso: string): void {
+    if (!iso) {
+      return;
+    }
+    const ts = parseIsoDateOnly(iso)?.getTime() ?? 0;
+    if (ts < minTs) {
+      return;
+    }
+    onChangeIso(iso);
+    setText(isoToBrDate(iso));
+    setOpen(false);
+  }
+
+  function onTextBlur(): void {
+    const iso = brDateToIso(text);
+    if (iso) {
+      pickIso(iso);
+    }
+  }
+
+  return (
+    <div className="br-date-picker" ref={wrapRef}>
+      <label htmlFor={id}>
+        {label}
+        {required ? <span className="field-required" aria-hidden="true"> *</span> : null}
+      </label>
+      <div className="br-date-picker__row">
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="DD/MM/AAAA"
+          value={text}
+          disabled={disabled}
+          required={required}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id}-err` : undefined}
+          onChange={(e) => {
+            const masked = maskBrDateInput(e.target.value);
+            setText(masked);
+            const iso = brDateToIso(masked);
+            if (iso) {
+              onChangeIso(iso);
+            }
+          }}
+          onBlur={onTextBlur}
+        />
+        <button
+          type="button"
+          className="btn-secondary br-date-picker__btn"
+          disabled={disabled}
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => setOpen((o) => !o)}
+        >
+          Calendario
+        </button>
+      </div>
+      {open ? (
+        <div id={listId} className="br-date-picker__popover" role="dialog" aria-label="Selecionar data">
+          <div className="br-date-picker__nav">
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                if (viewMonth === 0) {
+                  setViewYear((y) => y - 1);
+                  setViewMonth(11);
+                } else {
+                  setViewMonth((m) => m - 1);
+                }
+              }}
+            >
+              ‹
+            </button>
+            <span>
+              {String(viewMonth + 1).padStart(2, "0")}/{viewYear}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost"
+              onClick={() => {
+                if (viewMonth === 11) {
+                  setViewYear((y) => y + 1);
+                  setViewMonth(0);
+                } else {
+                  setViewMonth((m) => m + 1);
+                }
+              }}
+            >
+              ›
+            </button>
+          </div>
+          <div className="br-date-picker__grid">
+            {days.map((cell, idx) =>
+              cell.day === 0 ? (
+                <span key={`pad-${idx}`} className="br-date-picker__cell br-date-picker__cell--empty" />
+              ) : (
+                <button
+                  key={cell.iso}
+                  type="button"
+                  className={
+                    cell.iso === valueIso
+                      ? "br-date-picker__cell br-date-picker__cell--selected"
+                      : "br-date-picker__cell"
+                  }
+                  disabled={(parseIsoDateOnly(cell.iso)?.getTime() ?? 0) < minTs}
+                  onClick={() => pickIso(cell.iso)}
+                >
+                  {cell.day}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+      ) : null}
+      {error ? (
+        <span id={`${id}-err`} className="err">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
