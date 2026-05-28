@@ -19,11 +19,11 @@
 | **P2 Inter + portal + hardening** | [#24](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/24) | Concluído (`3ad069e`) |
 | **Portal UI P0 — tokens / a11y** | [#25](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/25) | Concluído (`85c5d34`) |
 | **Sprint N Onda A (parcial)** | [#26](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/26) | Concluído (`4e69efa`) |
-| **Sprint K — ops foundation (DLQ/SLI)** | PR aberto | DLQ, admin metrics, `e2e-asaas.yml` |
+| **Sprint K — ops foundation (DLQ/SLI)** | [#28](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/28) | ✅ Concluído (`e734aad`) |
 
 **Testes:** `npm test` · `portal:test` · `quality:gate` no CI de cada PR
 
-**Branch fábrica:** `main` — **Sprint N Fase 2** (Ondas B + 0 + D)
+**Branch fábrica:** `main` @ `e734aad+` — **Sprint N Fase 2** (Ondas B + 0 + D) — ver [AUTORIZACAO_INICIO_POS_SPRINT_K.md](./AUTORIZACAO_INICIO_POS_SPRINT_K.md)
 
 ---
 
@@ -116,7 +116,8 @@ Multi-tenant · RLS · credenciais cifradas · **nunca** commitar PEM/API keys �
 ## 8. SYSTEM PROMPT (colar no Cursor)
 
 ```
-Repositório: cobranca-saas-api. main @ 4e69efa (Sprint N Onda A #26 mergeado).
+Repositório: cobranca-saas-api. main @ e734aad+ (Sprint K #28 mergeado).
+Autorização: AUTORIZACAO_INICIO_POS_SPRINT_K.md — Sprint N Fase 2 Ondas B + D.
 
 SPRINT N FASE 2 — Ondas B + 0 + D em paralelo:
   Projeto_CobrancaBoleto/DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md

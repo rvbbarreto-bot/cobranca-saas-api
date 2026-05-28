@@ -1,6 +1,6 @@
 # Autorização de início — Sprint K (Maio/2026)
 
-**Status:** ✅ Aprovado para execução  
+**Status:** ✅ Concluído — merge PR [#28](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/28) em `main` (`e734aad`)  
 **PO + Lead Tech:** Ricardo Barreto  
 **Meta:** Trunk consolidado + fundação operacional (filas, SLI, CI Asaas manual)
 
@@ -8,11 +8,13 @@
 
 | ID | Item | Owner | Status |
 |----|------|-------|--------|
-| K-001 | Merge Sprint I → `main` | Dev1 | Em andamento (PR) |
-| K-010 | Higiene repositório | Dev2 | Entregue em branch |
-| K-002 | `.github/workflows/e2e-asaas.yml` | Dev2 | Entregue em branch |
-| K-005 | Hardening filas + DLQ + admin API | Dev3 | Entregue em branch |
-| K-006 | SLI/SLO + logs workers | Dev4 | Entregue em branch |
+| K-001 | Merge Sprint I → `main` | Dev1 | ✅ (#16 histórico) |
+| K-010 | Higiene repositório | Dev2 | ✅ (#28) |
+| K-002 | `.github/workflows/e2e-asaas.yml` | Dev2 | ✅ (#28) |
+| K-005 | Hardening filas + DLQ + admin API | Dev3 | ✅ (#28) |
+| K-006 | SLI/SLO + logs workers | Dev4 | ✅ (#28) |
+
+**Próximo pacote:** [AUTORIZACAO_INICIO_POS_SPRINT_K.md](./AUTORIZACAO_INICIO_POS_SPRINT_K.md)
 
 ## Checkpoint dia 5
 
