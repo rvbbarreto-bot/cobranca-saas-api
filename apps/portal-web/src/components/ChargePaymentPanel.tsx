@@ -26,6 +26,7 @@ export function ChargePaymentPanel({
   showPixQr = true
 }: Props): JSX.Element {
   const [copied, setCopied] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const awaitingEmission =
     !payment &&
@@ -133,7 +134,16 @@ export function ChargePaymentPanel({
             type="button"
             className="btn-secondary"
             aria-label="Abrir PDF do boleto"
-            onClick={() => void openPortalChargeBoletoPdf(pdfUrl, fetchPortalChargeBoletoPdfBlob)}
+            onClick={() => {
+              setPdfError(null);
+              void openPortalChargeBoletoPdf(pdfUrl, fetchPortalChargeBoletoPdfBlob).catch((err: unknown) => {
+                const msg =
+                  err instanceof Error && err.message.trim()
+                    ? err.message
+                    : "Não foi possível abrir o PDF do boleto. Tente novamente ou contate o suporte.";
+                setPdfError(msg);
+              });
+            }}
           >
             PDF do boleto
           </button>
@@ -146,6 +156,11 @@ export function ChargePaymentPanel({
       </div>
       {payment.expires_at ? (
         <p className="muted small">Validade: {new Date(payment.expires_at).toLocaleString("pt-BR")}</p>
+      ) : null}
+      {pdfError ? (
+        <p className="small" role="alert" style={{ color: "var(--color-danger, #b91c1c)", marginTop: "0.5rem" }}>
+          {pdfError}
+        </p>
       ) : null}
       {hasPix ? (
         <div className="payment-panel__pix-block" style={{ marginTop: "1rem" }}>
