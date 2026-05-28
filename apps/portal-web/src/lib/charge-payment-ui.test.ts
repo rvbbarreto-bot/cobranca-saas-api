@@ -9,4 +9,8 @@ describe("isUsableHttpUrl", () => {
   it("rejeita placeholder inter://", () => {
     expect(isUsableHttpUrl("inter://charge/abc/pdf")).toBe(false);
   });
+
+  it("aceita proxy relativo do portal Inter (/boleto.pdf)", () => {
+    expect(isUsableHttpUrl("/v1/portal/cobrancas/ch-1/boleto.pdf")).toBe(true);
+  });
 });
