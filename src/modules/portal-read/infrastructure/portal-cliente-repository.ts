@@ -2,6 +2,7 @@ import type { Pool } from "pg";
 import { getPool } from "../../../platform/persistence/pool";
 import { enderecoInputToColumns } from "../application/portal-cliente-address";
 import type { PortalClienteCreateInput, PortalClientePatchInput } from "../application/portal-cliente-input";
+import { rethrowPortalClienteSchemaError } from "./portal-cliente-schema";
 
 export type PortalClienteEnderecoDto = {
   cep: string;
@@ -67,26 +68,34 @@ export async function getClienteByIdForTenant(
   automacaoTenantId: string,
   pool: Pool = getPool()
 ): Promise<PortalClienteRow | null> {
-  const r = await pool.query<Record<string, unknown>>(
-    `SELECT ${CLIENTE_SELECT}
+  try {
+    const r = await pool.query<Record<string, unknown>>(
+      `SELECT ${CLIENTE_SELECT}
      FROM portal.cliente
      WHERE id = $1::uuid AND tenant_id = $2
      LIMIT 1`,
-    [id, automacaoTenantId]
-  );
-  const row = r.rows[0];
-  return row ? mapRow(row) : null;
+      [id, automacaoTenantId]
+    );
+    const row = r.rows[0];
+    return row ? mapRow(row) : null;
+  } catch (error) {
+    rethrowPortalClienteSchemaError(error);
+  }
 }
 
 export async function listClientesByTenant(tenantId: string, pool: Pool = getPool()): Promise<PortalClienteRow[]> {
-  const r = await pool.query<Record<string, unknown>>(
-    `SELECT ${CLIENTE_SELECT}
+  try {
+    const r = await pool.query<Record<string, unknown>>(
+      `SELECT ${CLIENTE_SELECT}
      FROM portal.cliente
      WHERE tenant_id = $1
      ORDER BY nome ASC`,
-    [tenantId]
-  );
-  return r.rows.map(mapRow);
+      [tenantId]
+    );
+    return r.rows.map(mapRow);
+  } catch (error) {
+    rethrowPortalClienteSchemaError(error);
+  }
 }
 
 export type ClienteKeysetCursor = { nome: string; id: string };
@@ -121,18 +130,22 @@ export async function listClientesByTenantPage(
     p += 2;
   }
   params.push(fetchN);
-  const r = await pool.query<Record<string, unknown>>(
-    `SELECT ${CLIENTE_SELECT}
+  try {
+    const r = await pool.query<Record<string, unknown>>(
+      `SELECT ${CLIENTE_SELECT}
      FROM portal.cliente
      ${where}
      ORDER BY nome ASC, id ASC
      LIMIT $${p}`,
-    params
-  );
-  const mapped = r.rows.map(mapRow);
-  const has_more = mapped.length > lim;
-  const items = has_more ? mapped.slice(0, lim) : mapped;
-  return { items, has_more };
+      params
+    );
+    const mapped = r.rows.map(mapRow);
+    const has_more = mapped.length > lim;
+    const items = has_more ? mapped.slice(0, lim) : mapped;
+    return { items, has_more };
+  } catch (error) {
+    rethrowPortalClienteSchemaError(error);
+  }
 }
 
 export async function insertCliente(
@@ -143,35 +156,39 @@ export async function insertCliente(
   const tipoDocumento = input.documento.length === 14 ? "cnpj" : "cpf";
   const addr = enderecoInputToColumns(input.endereco);
 
-  const r = await pool.query<Record<string, unknown>>(
-    `INSERT INTO portal.cliente (
+  try {
+    const r = await pool.query<Record<string, unknown>>(
+      `INSERT INTO portal.cliente (
        tenant_id, documento, tipo_documento, nome, email, telefone, whatsapp_opt_in, opt_in_whatsapp,
        endereco_cep, endereco_logradouro, endereco_numero, endereco_complemento, endereco_bairro, endereco_cidade, endereco_uf
      )
      VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING ${CLIENTE_SELECT}`,
-    [
-      tenantId,
-      input.documento,
-      tipoDocumento,
-      input.nome,
-      input.email,
-      input.telefone,
-      input.whatsappOptIn,
-      addr.endereco_cep,
-      addr.endereco_logradouro,
-      addr.endereco_numero,
-      addr.endereco_complemento,
-      addr.endereco_bairro,
-      addr.endereco_cidade,
-      addr.endereco_uf
-    ]
-  );
-  const row = r.rows[0];
-  if (!row) {
-    throw new Error("Falha ao inserir portal.cliente.");
+      [
+        tenantId,
+        input.documento,
+        tipoDocumento,
+        input.nome,
+        input.email,
+        input.telefone,
+        input.whatsappOptIn,
+        addr.endereco_cep,
+        addr.endereco_logradouro,
+        addr.endereco_numero,
+        addr.endereco_complemento,
+        addr.endereco_bairro,
+        addr.endereco_cidade,
+        addr.endereco_uf
+      ]
+    );
+    const row = r.rows[0];
+    if (!row) {
+      throw new Error("Falha ao inserir portal.cliente.");
+    }
+    return mapRow(row);
+  } catch (error) {
+    rethrowPortalClienteSchemaError(error);
   }
-  return mapRow(row);
 }
 
 export async function updateClienteForTenant(
@@ -213,30 +230,34 @@ export async function updateClienteForTenant(
     addrCols = enderecoInputToColumns(null);
   }
 
-  const r = await pool.query<Record<string, unknown>>(
-    `UPDATE portal.cliente
+  try {
+    const r = await pool.query<Record<string, unknown>>(
+      `UPDATE portal.cliente
      SET nome = $3, email = $4, telefone = $5, whatsapp_opt_in = $6,
          endereco_cep = $7, endereco_logradouro = $8, endereco_numero = $9,
          endereco_complemento = $10, endereco_bairro = $11, endereco_cidade = $12, endereco_uf = $13,
          updated_at = now()
      WHERE id = $1::uuid AND tenant_id = $2
      RETURNING ${CLIENTE_SELECT}`,
-    [
-      id,
-      tenantId,
-      nome,
-      email,
-      telefone,
-      whatsappOptIn,
-      addrCols.endereco_cep,
-      addrCols.endereco_logradouro,
-      addrCols.endereco_numero,
-      addrCols.endereco_complemento,
-      addrCols.endereco_bairro,
-      addrCols.endereco_cidade,
-      addrCols.endereco_uf
-    ]
-  );
-  const row = r.rows[0];
-  return row ? mapRow(row) : null;
+      [
+        id,
+        tenantId,
+        nome,
+        email,
+        telefone,
+        whatsappOptIn,
+        addrCols.endereco_cep,
+        addrCols.endereco_logradouro,
+        addrCols.endereco_numero,
+        addrCols.endereco_complemento,
+        addrCols.endereco_bairro,
+        addrCols.endereco_cidade,
+        addrCols.endereco_uf
+      ]
+    );
+    const row = r.rows[0];
+    return row ? mapRow(row) : null;
+  } catch (error) {
+    rethrowPortalClienteSchemaError(error);
+  }
 }
