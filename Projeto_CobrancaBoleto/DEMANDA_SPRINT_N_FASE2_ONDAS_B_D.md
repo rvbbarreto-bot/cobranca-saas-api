@@ -2,9 +2,10 @@
 
 **Emitido por:** PO · Tech Lead  
 **Para:** Fábrica (IA + dev)  
-**Data:** 2026-05-23 · **Base:** `main` @ `4e69efa` (PR #26 mergeado — Onda A parcial)  
+**Data:** 2026-05-28 · **Base:** `main` @ `16cf460` (pós #28 Sprint K, #29 docs autorização)  
 **Pacote mãe:** [DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md](./DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md)  
-**Governança:** [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md)
+**Governança:** [GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md)  
+**Auditoria B/D:** [AUDITORIA_SPRINT_N_ONDAS_B_D.md](./AUDITORIA_SPRINT_N_ONDAS_B_D.md)
 
 ---
 
@@ -15,155 +16,106 @@
 | Tokens P0 (#25) | #25 | ✅ `main` |
 | Onda A — detalhe boleto, BrDatePicker edição, dash/toolbar | #26 | ✅ `main` |
 | P2.2 endereço, PEM, Onda C MVP | #24 | ✅ `main` |
+| Sprint K — DLQ, SLI, admin API | #28 | ✅ `main` |
+| **Onda B — PDF Inter (proxy portal)** | **#27** | ✅ **CONCLUÍDO** |
+| **Onda D — Webhook Inter** | **#27** | ✅ **CONCLUÍDO** |
+| Gaps B/D (erro PDF portal, testes, fixture vencido) | `fix/sprint-n-b-d-gaps` | PR aberto p/ merge |
 
-**Onda A remanescente (fazer nesta fase se sobrar capacidade):** N.1.2 Clientes/Config/Login (hex legados), N.1.4 a11y residual.
-
----
-
-## 2. Objetivo desta fase (PO)
-
-Executar em **paralelo** três frentes:
-
-1. **Onda B (P1)** — PDF Inter com **testes mock HTTP** (não esperar certificado sandbox).  
-2. **Onda 0 (P0)** — Homolog humana + relatório preenchido.  
-3. **Onda D (P1)** — Webhook Inter + charge-sync (spike → implementação).
-
-**Onda C** (relatórios filtros data) entra **após** Onda B mergeada ou em PR separado se capacidade.
+**Onda A remanescente (opcional):** N.1.2 Clientes/Config/Login (hex legados), N.1.4 a11y residual.
 
 ---
 
-## 3. Bloco de autorização PO (copiar/colar no chat da fábrica)
+## 2. Objetivo atual (PO) — pós B/D
+
+| Prioridade | Onda | Status | Próxima ação |
+|------------|------|--------|--------------|
+| **P0** | **0** — Homolog humana + relatório | **EM ANDAMENTO** | Branch `docs/sprint-n-homolog` · [SPRINT_N_HOMOLOG_RELATORIO.md](../docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md) |
+| P2 | **C** — Relatórios (filtros data) | Backlog | Após Onda 0 assinada |
+| Opcional | Onda A restante | Backlog | `feat/sprint-n-portal-polish` |
+
+**Ondas B e D:** DoD técnico atendido em `main` (#27). Não reimplementar adapter/webhook.
+
+---
+
+## 3. Bloco de autorização PO (referência — B/D encerrados)
 
 ```text
-AUTORIZAÇÃO PO + TECH LEAD — Sprint N Fase 2 (Ondas B + 0 + D)
-Data: 2026-05-23
+AUTORIZAÇÃO PO + TECH LEAD — Sprint N Fase 2
+Data: 2026-05-28
 Repo: cobranca-saas-api
-Base: main (4e69efa)
+Base: main (16cf460)
 
-Pacote: Projeto_CobrancaBoleto/DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md
-Referência: DEMANDA_SPRINT_N_ENTREGA_PRODUTO.md
+Ondas B + D: CONCLUÍDAS (#27 + PR gaps se aplicável)
+Pacote vigente: Onda 0 (QA) — docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md
 
-AUTORIZADO AGORA (paralelo):
-
-ONDA B — PDF Inter (P1) — branch feat/p2-inter-pdf
-  N.2.1 GET PDF no adapter Inter + URL utilizável no portal
-  N.2.2 Ver PDF / download no detalhe (#pagamento)
-  N.2.3 Testes mock HTTP + atualizar docs/GATEWAY_UNIVERSAL.md
-  Gate merge: testes mock verdes (homolog real opcional no relatório)
-
-ONDA 0 — Homolog (P0) — branch docs/evidencias ou QA local
-  N.0.1 docs/QA_P2_POS_MERGE_CHECKLIST.md
-  N.0.2 docs/QA_PORTAL_UI_TOKENS_P0.md + prints
-  N.0.3 Preencher docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md
-
-ONDA D — Gateway (P1) — branch feat/sprint-n-inter-webhook
-  N.4.1 POST webhook Inter → charge_events
-  N.4.2 charge-sync Inter (idempotente)
-  N.4.4 Testes integração com fixtures JSON
-
-OPCIONAL (se PR B/D aguardando review):
-  Onda A restante: N.1.2 telas Clientes/Config/Login (tokens)
-
-NÃO REIMPLEMENTAR: Onda A entregue #26, P2.2, PEM, tokens P0, Onda C MVP lista.
-
-Gates por PR: quality:gate (G1–G8). Merge só Tech Lead.
+NÃO REIMPLEMENTAR: PDF Inter, webhook Inter, Onda A #26, Sprint K #28.
 ```
 
 ---
 
-## 4. Gate de entrada
+## 4. Gate de entrada (Onda 0)
 
 ```bash
 git fetch origin && git checkout main && git pull origin main
-git checkout -b feat/p2-inter-pdf          # Onda B
-# ou: git checkout -b feat/sprint-n-inter-webhook   # Onda D
+git checkout docs/sprint-n-homolog   # ou main após merge do relatório
 npm ci && npm run migrate && npm run seed:dev
 npm run build && npm test && npm run portal:test
 ```
 
 ---
 
-## 5. Onda B — especificação executável
+## 5. Onda B — status DoD (concluído)
 
-### N.2.1 Adapter PDF Inter
-
-| | |
-|--|--|
-| **Objetivo** | Substituir URL `inter://{codigo}` por PDF obtido via API Inter |
-| **Código** | `src/modules/payment-gateway/infrastructure/inter/` |
-| **Portal** | `payment.boleto_pdf_url` HTTP(S) utilizável |
-| **Testes** | Mock `fetch`/HTTP client — fixture PDF ou 302 |
-| **Fora** | E-mail (P2.6 completo) |
-
-### N.2.2 Portal
-
-- Detalhe `#pagamento`: link “PDF do boleto” quando URL real existir.
-- Erro amigável se PDF indisponível.
-- Manter regra lista: Ver PDF só pós-emissão.
-
-### N.2.3 DoD
-
-- [ ] `npm test` verde (módulo Inter)
-- [ ] `portal:test` se tocou portal
-- [ ] Doc `GATEWAY_UNIVERSAL.md` atualizada
+| ID | Critério | Status |
+|----|----------|--------|
+| N.2.1 | Adapter PDF Inter + placeholder `inter://` | ✅ #27 |
+| N.2.2 | Proxy portal + botão PDF + erro amigável | ✅ #27 + gaps PR |
+| N.2.3 | Testes mock + `GATEWAY_UNIVERSAL.md` | ✅ |
 
 ---
 
-## 6. Onda D — especificação executável
+## 6. Onda D — status DoD (concluído)
 
-### N.4.1 Webhook
+| ID | Critério | Status |
+|----|----------|--------|
+| N.4.1 | Webhook `source: inter` + fixtures | ✅ |
+| N.4.2 | charge-sync idempotente | ✅ |
+| N.4.4 | Testes integração/fixtures | ✅ |
 
-- Rota alinhada ao padrão do projeto (`/v1/webhooks/...`).
-- Payload fixture em `tests/fixtures/inter-webhook-*.json`.
-- Atualizar status cobrança + `charge_events`.
-
-### N.4.2 charge-sync
-
-- Reutilizar factory/worker existente; idempotência obrigatória.
-
-### N.4.4 Testes
-
-- `tests/integration/` sem secrets.
-- `npm run test:integration` verde (G8).
-
-**Fora desta fase:** N.4.3 estorno `estornada` → PR dedicado após B+D.
+**Fora desta fase:** N.4.3 estorno `estornada` → PR dedicado futuro.
 
 ---
 
-## 7. Onda 0 — QA (humano + dev)
+## 7. Onda 0 — QA (única frente P0 aberta)
 
-Preencher `docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md` com:
+Preencher e assinar [docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md](../docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md):
 
-- SHA `4e69efa` ou posterior  
-- Resultado checklist P2 (tabela R/C/G/U/K)  
-- Prints UI em `docs/evidencias/prints/`  
+- SHA `16cf460` ou posterior  
+- Checklist P2 (tabela R/C/G/U/K)  
+- Prints em `docs/evidencias/prints/`  
 - Bloqueio Inter cert: SIM/NÃO  
-- **Declaração:** impacto em endpoints SIM/NÃO  
+- Declaração impacto endpoints  
 
 ---
 
-## 8. PRs esperados (Tech Lead)
+## 8. PRs (histórico + abertos)
 
-| # | Branch | Conteúdo |
-|---|--------|----------|
-| 1 | `feat/p2-inter-pdf` | Onda B |
-| 2 | `feat/sprint-n-inter-webhook` | Onda D |
-| 3 | `docs/sprint-n-homolog` | Onda 0 evidências (opcional só docs) |
-| 4 | `feat/sprint-n-portal-polish` | Onda A restante (opcional) |
-
-**Regra:** 1 PR por onda; máx. ~400 linhas — split se necessário.
+| # | Branch | Conteúdo | Status |
+|---|--------|----------|--------|
+| — | `feat/sprint-n` (#27) | Ondas B + D | ✅ mergeado |
+| — | `fix/sprint-n-b-d-gaps` | Gaps auditoria | Aberto |
+| — | `docs/sprint-n-homolog` | Relatório Onda 0 pré-preenchido | Aberto |
 
 ---
 
 ## 9. SYSTEM PROMPT (fábrica)
 
 ```
-main @ 4e69efa. Sprint N Fase 2: Ondas B + D + 0 em paralelo.
-Pacote: DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md
-Não refazer PR #26 (detalhe boleto / BrDatePicker edição).
-PDF Inter: mock HTTP obrigatório; homolog real não bloqueia merge.
+main @ 16cf460. Sprint N Fase 2: Ondas B + D CONCLUÍDAS (#27).
+Pacote: DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md — foco Onda 0 (homolog).
+Não refazer PDF/webhook Inter. QA: docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md
 ```
 
 ---
 
-*Autorização vigente até nova instrução do PO.*
+*Atualizado pelo Tech Lead em 2026-05-28. Vigente até nova instrução do PO.*
