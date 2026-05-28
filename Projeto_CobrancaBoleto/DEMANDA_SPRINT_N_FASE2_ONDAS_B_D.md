@@ -27,10 +27,12 @@
 
 ## 2. Objetivo atual (PO) — pós B/D
 
+**Autorização de desenvolvimento ativa:** [AUTORIZACAO_PROXIMO_DESENVOLVIMENTO.md](./AUTORIZACAO_PROXIMO_DESENVOLVIMENTO.md)
+
 | Prioridade | Onda | Status | Próxima ação |
 |------------|------|--------|--------------|
-| **P0** | **0** — Homolog humana + relatório | **EM ANDAMENTO** | Branch `docs/sprint-n-homolog` · [SPRINT_N_HOMOLOG_RELATORIO.md](../docs/evidencias/SPRINT_N_HOMOLOG_RELATORIO.md) |
-| P2 | **C** — Relatórios (filtros data) | Backlog | Após Onda 0 assinada |
+| **P1** | **C** — Relatórios (filtros data) | **AUTORIZADO** | `feat/sprint-n-relatorios-filtros` |
+| **P0** | **0** — Homolog | Paralelo | Revalidar C1–C3 pós #33 |
 | Opcional | Onda A restante | Backlog | `feat/sprint-n-portal-polish` |
 
 **Ondas B e D:** DoD técnico atendido em `main` (#27). Não reimplementar adapter/webhook.

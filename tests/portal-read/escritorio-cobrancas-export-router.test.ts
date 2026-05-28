@@ -93,4 +93,32 @@ describe("GET /v1/portal/escritorio/cobrancas/export", () => {
       .expect(403);
     expect(streamMock).not.toHaveBeenCalled();
   });
+
+  it("repassa from/to para streamCobrancasCsvRows", async () => {
+    async function* gen() {
+      yield "id\n";
+    }
+    streamMock.mockReturnValue(gen());
+
+    const app = buildApp("admin_escritorio");
+    await request(app)
+      .get("/v1/portal/escritorio/cobrancas/export")
+      .query({ format: "csv", from: "2026-05-01", to: "2026-05-28" })
+      .expect(200);
+
+    expect(streamMock).toHaveBeenCalledWith(
+      expect.anything(),
+      publicTenantId,
+      expect.objectContaining({ dataInicio: "2026-05-01", dataFim: "2026-05-28" })
+    );
+  });
+
+  it("from invalido → 400", async () => {
+    const app = buildApp("admin_escritorio");
+    await request(app)
+      .get("/v1/portal/escritorio/cobrancas/export")
+      .query({ format: "csv", from: "invalid", to: "2026-05-28" })
+      .expect(400);
+    expect(streamMock).not.toHaveBeenCalled();
+  });
 });

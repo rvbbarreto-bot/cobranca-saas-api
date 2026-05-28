@@ -1171,8 +1171,22 @@ export async function fetchEscritorioDashboard(periodo = "30d"): Promise<Escrito
   return json as EscritorioDashboardResponse;
 }
 
-export async function downloadEscritorioCobrancasCsv(): Promise<Blob> {
-  const res = await apiFetch("/v1/portal/escritorio/cobrancas/export?format=csv", { method: "GET" });
+export type EscritorioCobrancasCsvExportParams = {
+  from?: string;
+  to?: string;
+};
+
+export async function downloadEscritorioCobrancasCsv(
+  params?: EscritorioCobrancasCsvExportParams
+): Promise<Blob> {
+  const sp = new URLSearchParams({ format: "csv" });
+  if (params?.from?.trim()) {
+    sp.set("from", params.from.trim());
+  }
+  if (params?.to?.trim()) {
+    sp.set("to", params.to.trim());
+  }
+  const res = await apiFetch(`/v1/portal/escritorio/cobrancas/export?${sp}`, { method: "GET" });
   if (!res.ok) {
     const text = await res.text();
     let json: unknown = text;

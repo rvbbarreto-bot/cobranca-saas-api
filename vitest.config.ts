@@ -59,6 +59,7 @@ export default defineConfig({
         "src/modules/portal-read/application/cliente-portal-cobrancas.ts",
         "src/modules/portal-read/application/escritorio-dashboard.ts",
         "src/modules/portal-read/application/escritorio-cobrancas-export.ts",
+        "src/modules/portal-read/application/escritorio-export-date-params.ts",
         "src/platform/jobs/application/**/*.ts",
         "src/modules/tenant-provisioning/application/provision-public-tenant.ts",
         "src/modules/saas-billing/application/**/*.ts",
