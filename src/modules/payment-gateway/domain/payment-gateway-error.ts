@@ -1,17 +1,30 @@
-export class PaymentGatewayError extends Error {
-  readonly code: string;
-  readonly httpStatus?: number;
-  readonly providerBody?: unknown;
+import {
+  GatewayError,
+  type GatewayErrorCode,
+  inferGatewayRetryable
+} from "./gateway-error";
 
+/** @deprecated Prefer GatewayError; mantido para compatibilidade com adapters existentes. */
+export class PaymentGatewayError extends GatewayError {
   constructor(
     message: string,
-    options?: { code?: string; httpStatus?: number; providerBody?: unknown; cause?: unknown }
+    options?: {
+      code?: string;
+      retryable?: boolean;
+      httpStatus?: number;
+      providerBody?: unknown;
+      cause?: unknown;
+    }
   ) {
-    super(message, { cause: options?.cause });
+    const code = (options?.code ?? "payment_gateway_error") as GatewayErrorCode;
+    super(message, {
+      code,
+      retryable: options?.retryable ?? inferGatewayRetryable(code, options?.httpStatus),
+      httpStatus: options?.httpStatus,
+      providerBody: options?.providerBody,
+      cause: options?.cause
+    });
     this.name = "PaymentGatewayError";
-    this.code = options?.code ?? "payment_gateway_error";
-    this.httpStatus = options?.httpStatus;
-    this.providerBody = options?.providerBody;
   }
 }
 

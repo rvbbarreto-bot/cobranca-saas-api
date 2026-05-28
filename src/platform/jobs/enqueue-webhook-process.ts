@@ -6,13 +6,7 @@ export type WebhookProcessJobPayload = {
   limit?: number;
 };
 
-const webhookJobOpts = {
-  ...JOB_OPTS.sync,
-  attempts: 3,
-  backoff: { type: "exponential" as const, delay: 10_000 },
-  removeOnComplete: { count: 200 },
-  removeOnFail: { count: 100 }
-};
+const webhookJobOpts = JOB_OPTS.webhook;
 
 export async function enqueueWebhookProcessJob(payload: WebhookProcessJobPayload): Promise<void> {
   if (!isJobsEnabled()) {

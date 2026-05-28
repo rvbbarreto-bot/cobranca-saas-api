@@ -6,6 +6,8 @@ import {
   processPaymentEmission,
   type PaymentEmissionJobData
 } from "../application/payment-emission-processor";
+import { attachWorkerDlqHandler } from "../dlq/handle-job-final-failure";
+import { logJobStructured } from "../logging/job-structured-log";
 
 async function onJob(job: Job<PaymentEmissionJobData>): Promise<void> {
   const { chargeId, tenantId } = job.data;
@@ -25,16 +27,34 @@ export function createPaymentEmissionWorker(): Worker<PaymentEmissionJobData> {
     if (!job) {
       return;
     }
-    const maxAttempts = job.opts.attempts ?? JOB_OPTS.emission.attempts ?? 3;
+    const maxAttempts = job.opts.attempts ?? JOB_OPTS.emission.attempts ?? 5;
     if (job.attemptsMade < maxAttempts) {
+      logJobStructured({
+        level: "warn",
+        service: "worker:charges-emission",
+        message: "job_retry_scheduled",
+        tenantId: job.data.tenantId,
+        jobId: String(job.id),
+        queue: QUEUE_PAYMENT_EMISSION,
+        extra: { attemptsMade: job.attemptsMade, maxAttempts }
+      });
       return;
     }
     void handlePaymentEmissionFailure(job.data, error).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);
-      // eslint-disable-next-line no-console
-      console.error("[payment-emission.worker] falha ao registrar erro_emissao:", msg);
+      logJobStructured({
+        level: "error",
+        service: "worker:charges-emission",
+        message: "erro_emissao_persist_failed",
+        tenantId: job.data.tenantId,
+        jobId: String(job.id),
+        queue: QUEUE_PAYMENT_EMISSION,
+        extra: { detail: msg }
+      });
     });
   });
+
+  attachWorkerDlqHandler(worker, QUEUE_PAYMENT_EMISSION);
 
   return worker;
 }

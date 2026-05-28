@@ -23,6 +23,10 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 |--------|---------|----------------|
 | GET | `/health` | Publico (liveness) |
 | GET | `/health/ready` | Readiness: ping Postgres + schema minimo; **503** se DB falhar ou TLS nao indicado em `NODE_ENV=production` |
+| GET | `/v1/admin/queues/status` | Bearer core + `x-tenant-id` + role **owner**; metricas BullMQ + snapshot SLI (Sprint K) |
+| GET | `/v1/admin/queues/dlq/:queueName` | Idem; query `limit` (max 200); lista jobs na DLQ |
+| POST | `/v1/admin/queues/dlq/:queueName/reprocess` | Idem; body `{ "jobId": "<id na DLQ>" }` |
+| GET | `/v1/admin/metrics/sli` | Idem; 7 SLIs calculados em SQL |
 | POST | `/v1/portal/auth/token/mock` | **Mock** — veja secao 3; desligavel |
 | POST | `/v1/portal/auth/login` | **Auth real** — body `email`, `tenant_id`, `password`; veja secao 3; sem mock gate |
 | GET | `/v1/portal/auth/me` | Bearer + portal middlewares; perfil `user` + `tenant` (fase 2) |
