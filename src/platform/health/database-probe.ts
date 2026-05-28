@@ -6,6 +6,7 @@ export type DatabaseProbeChecks = {
   tablePublicTenants: boolean;
   tablePublicCharges: boolean;
   tablePortalAppUser: boolean;
+  portalClienteEndereco: boolean;
 };
 
 export type DatabaseProbeResult = {
@@ -41,7 +42,8 @@ export async function probeDatabase(pool: Pool, timeoutMs: number): Promise<Data
     pgcrypto: false,
     tablePublicTenants: false,
     tablePublicCharges: false,
-    tablePortalAppUser: false
+    tablePortalAppUser: false,
+    portalClienteEndereco: false
   };
 
   try {
@@ -70,12 +72,25 @@ export async function probeDatabase(pool: Pool, timeoutMs: number): Promise<Data
     checks.tablePublicCharges = Boolean(row.charges);
     checks.tablePortalAppUser = Boolean(row.portal_app_user);
 
+    const enderecoCol = await withTimeout(
+      pool.query(
+        `SELECT EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_schema = 'portal' AND table_name = 'cliente' AND column_name = 'endereco_cep'
+         ) AS ok`
+      ),
+      timeoutMs,
+      "portal_cliente_endereco"
+    );
+    checks.portalClienteEndereco = Boolean((enderecoCol.rows[0] as { ok?: boolean } | undefined)?.ok);
+
     const ok =
       checks.selectOne &&
       checks.pgcrypto &&
       checks.tablePublicTenants &&
       checks.tablePublicCharges &&
-      checks.tablePortalAppUser;
+      checks.tablePortalAppUser &&
+      checks.portalClienteEndereco;
 
     return {
       ok,

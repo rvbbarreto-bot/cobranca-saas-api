@@ -47,7 +47,9 @@ const LEGACY_APPLIED_CHECKS: Record<string, string> = {
   "020_charges_customer_id_fk.sql": `SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'charges' AND column_name = 'customer_id' LIMIT 1`,
   "021_cliente_access_tokens.sql": `SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'cliente_access_tokens' LIMIT 1`
+    WHERE table_schema = 'public' AND table_name = 'cliente_access_tokens' LIMIT 1`,
+  "027_portal_cliente_endereco.sql": `SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'portal' AND table_name = 'cliente' AND column_name = 'endereco_cep' LIMIT 1`
 };
 
 async function listMigrationFiles(dir: string): Promise<string[]> {
