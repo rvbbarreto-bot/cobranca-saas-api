@@ -757,7 +757,8 @@ async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response):
     }
     res.status(409).json({
       error: "charge_not_reprocessable",
-      message: "Somente cobrancas em erro_emissao podem ser reprocessadas.",
+      message:
+        "Somente cobrancas em erro_emissao ou rascunho preso (sem emissao concluida) podem ser reprocessadas.",
       status: result.status
     });
     return;
