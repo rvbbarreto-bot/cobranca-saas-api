@@ -95,6 +95,32 @@ describe("escritorio cobrancas export", () => {
     expect(escapeCsvCell('valor, com "aspas"')).toBe('"valor, com ""aspas"""');
   });
 
+  it("aplica filtro de datas no DECLARE do cursor", async () => {
+    const query = vi.fn(async (sql: string) => {
+      if (sql === "BEGIN" || sql === "COMMIT" || sql.startsWith("CLOSE") || sql.startsWith("DECLARE")) {
+        return { rows: [] };
+      }
+      if (sql.startsWith("FETCH")) {
+        return { rows: [] };
+      }
+      return { rows: [] };
+    });
+
+    const chunks: string[] = [];
+    for await (const chunk of streamCobrancasCsvRows({ query } as never, tenantId, {
+      dataInicio: "2026-05-01",
+      dataFim: "2026-05-31"
+    })) {
+      chunks.push(chunk);
+    }
+
+    const declareCall = query.mock.calls.find(
+      (call) => typeof call[0] === "string" && call[0].includes("DECLARE cobrancas_export_cur")
+    );
+    expect(declareCall?.[0]).toContain("created_at::date BETWEEN");
+    expect(declareCall?.[1]).toEqual([tenantId, "2026-05-01", "2026-05-31"]);
+  });
+
   it("stream em lotes via cursor (FETCH repetido até vazio)", async () => {
     let fetchCalls = 0;
     const query = vi.fn(async (sql: string) => {

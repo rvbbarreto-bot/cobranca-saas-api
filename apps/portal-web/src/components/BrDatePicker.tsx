@@ -17,6 +17,9 @@ type Props = {
   valueIso: string;
   onChangeIso: (iso: string) => void;
   rules: PortalChargeRules;
+  /** Quando definido, substitui o minimo de vencimento das regras de cobranca (ex.: filtros de relatorio). */
+  minIso?: string;
+  maxIso?: string;
   disabled?: boolean;
   required?: boolean;
   error?: string;
@@ -25,7 +28,8 @@ type Props = {
 function buildMonthDays(
   year: number,
   month: number,
-  minTs: number
+  minTs: number,
+  maxTs: number | null
 ): Array<{ iso: string; day: number; disabled: boolean }> {
   const first = new Date(year, month, 1);
   const last = new Date(year, month + 1, 0);
@@ -33,7 +37,8 @@ function buildMonthDays(
   for (let d = 1; d <= last.getDate(); d += 1) {
     const iso = toIsoDateOnly(new Date(year, month, d));
     const ts = parseIsoDateOnly(iso)?.getTime() ?? 0;
-    out.push({ iso, day: d, disabled: ts < minTs });
+    const afterMax = maxTs != null && ts > maxTs;
+    out.push({ iso, day: d, disabled: ts < minTs || afterMax });
   }
   const pad = first.getDay();
   for (let i = 0; i < pad; i += 1) {
@@ -48,6 +53,8 @@ export function BrDatePicker({
   valueIso,
   onChangeIso,
   rules,
+  minIso,
+  maxIso,
   disabled,
   required,
   error
@@ -56,7 +63,10 @@ export function BrDatePicker({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useState(() => isoToBrDate(valueIso));
   const [open, setOpen] = useState(false);
-  const minIso = useMemo(() => minDueDateIso(rules), [rules]);
+  const effectiveMinIso = useMemo(
+    () => minIso?.trim() || minDueDateIso(rules),
+    [minIso, rules]
+  );
   const todayIso = useMemo(() => toIsoDateOnly(new Date()), []);
 
   useEffect(() => {
@@ -73,11 +83,21 @@ export function BrDatePicker({
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
 
-  const parsed = parseIsoDateOnly(valueIso) ?? parseIsoDateOnly(minIso) ?? new Date();
+  const parsed = parseIsoDateOnly(valueIso) ?? parseIsoDateOnly(effectiveMinIso) ?? new Date();
   const [viewYear, setViewYear] = useState(parsed.getFullYear());
   const [viewMonth, setViewMonth] = useState(parsed.getMonth());
-  const minTs = parseIsoDateOnly(minIso)?.getTime() ?? 0;
-  const days = useMemo(() => buildMonthDays(viewYear, viewMonth, minTs), [viewYear, viewMonth, minTs]);
+  const minTs = parseIsoDateOnly(effectiveMinIso)?.getTime() ?? 0;
+  const maxTs = useMemo(() => {
+    const m = maxIso?.trim();
+    if (!m) {
+      return null;
+    }
+    return parseIsoDateOnly(m)?.getTime() ?? null;
+  }, [maxIso]);
+  const days = useMemo(
+    () => buildMonthDays(viewYear, viewMonth, minTs, maxTs),
+    [viewYear, viewMonth, minTs, maxTs]
+  );
 
   function pickIso(iso: string): void {
     if (!iso) {
@@ -85,6 +105,9 @@ export function BrDatePicker({
     }
     const ts = parseIsoDateOnly(iso)?.getTime() ?? 0;
     if (ts < minTs) {
+      return;
+    }
+    if (maxTs != null && ts > maxTs) {
       return;
     }
     onChangeIso(iso);

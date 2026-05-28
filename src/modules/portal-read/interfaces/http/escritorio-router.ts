@@ -34,6 +34,7 @@ import {
   resolveDashboardPeriod
 } from "../../application/escritorio-dashboard";
 import { streamCobrancasCsvRows } from "../../application/escritorio-cobrancas-export";
+import { parseCobrancaExportQuery } from "../../application/escritorio-export-date-params";
 import { activatePlatformSubscription } from "../../../saas-billing/application/activate-platform-subscription";
 import { getTenantSubscriptionUseCase } from "../../../saas-billing/application/get-tenant-subscription";
 import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
@@ -455,15 +456,24 @@ export function createEscritorioRouter(): Router {
       }
       const tenantId = await resolvePublicTenant(req, res);
       if (!tenantId) return;
+
+      const parsed = parseCobrancaExportQuery({
+        status: typeof req.query.status === "string" ? req.query.status : undefined,
+        from: typeof req.query.from === "string" ? req.query.from : undefined,
+        to: typeof req.query.to === "string" ? req.query.to : undefined,
+        data_inicio: typeof req.query.data_inicio === "string" ? req.query.data_inicio : undefined,
+        data_fim: typeof req.query.data_fim === "string" ? req.query.data_fim : undefined
+      });
+      if (!parsed.ok) {
+        res.status(400).json({ error: parsed.code, message: parsed.error });
+        return;
+      }
+
       const filename = `cobrancas-${new Date().toISOString().slice(0, 10)}.csv`;
       res.setHeader("Content-Type", "text/csv; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       await withTenantTransaction(tenantId, async (client) => {
-        for await (const chunk of streamCobrancasCsvRows(client, tenantId, {
-          status: typeof req.query.status === "string" ? req.query.status : undefined,
-          dataInicio: typeof req.query.data_inicio === "string" ? req.query.data_inicio : undefined,
-          dataFim: typeof req.query.data_fim === "string" ? req.query.data_fim : undefined
-        })) {
+        for await (const chunk of streamCobrancasCsvRows(client, tenantId, parsed.filters)) {
           res.write(chunk);
         }
       });
