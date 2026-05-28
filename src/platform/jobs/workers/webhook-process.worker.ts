@@ -3,6 +3,7 @@ import { redisConnection } from "../redis-connection";
 import { QUEUE_WEBHOOK_PROCESS } from "../queues";
 import { processPendingWebhooksForTenant } from "../../../modules/inbox/application/process-webhook-inbox";
 import type { WebhookProcessJobPayload } from "../enqueue-webhook-process";
+import { attachWorkerDlqHandler } from "../dlq/handle-job-final-failure";
 
 async function onJob(job: Job<WebhookProcessJobPayload>): Promise<void> {
   const tenantId = job.data.tenantId?.trim();
@@ -14,9 +15,11 @@ async function onJob(job: Job<WebhookProcessJobPayload>): Promise<void> {
 }
 
 export function createWebhookProcessWorker(): Worker<WebhookProcessJobPayload> {
-  return new Worker<WebhookProcessJobPayload>(QUEUE_WEBHOOK_PROCESS, onJob, {
+  const worker = new Worker<WebhookProcessJobPayload>(QUEUE_WEBHOOK_PROCESS, onJob, {
     connection: redisConnection,
     concurrency: Number(process.env.WEBHOOK_PROCESS_CONCURRENCY || 3)
   });
+  attachWorkerDlqHandler(worker, QUEUE_WEBHOOK_PROCESS);
+  return worker;
 }
 

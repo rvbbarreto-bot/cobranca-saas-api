@@ -3,6 +3,7 @@ import { redisConnection } from "../redis-connection";
 import { QUEUE_NOTIFICATION_SEND } from "../queues";
 import { processNotificationSend } from "../application/notification-send-processor";
 import type { NotificationSendJobPayload } from "../enqueue-notification";
+import { attachWorkerDlqHandler } from "../dlq/handle-job-final-failure";
 
 async function onJob(job: Job<NotificationSendJobPayload>): Promise<void> {
   const { chargeId, tenantId, eventType } = job.data;
@@ -16,10 +17,12 @@ async function onJob(job: Job<NotificationSendJobPayload>): Promise<void> {
  * Worker BullMQ da fila notifications-send (email Resend + WhatsApp Z-API).
  */
 export function registerNotificationSendWorker(): Worker<NotificationSendJobPayload> {
-  return new Worker<NotificationSendJobPayload>(QUEUE_NOTIFICATION_SEND, onJob, {
+  const worker = new Worker<NotificationSendJobPayload>(QUEUE_NOTIFICATION_SEND, onJob, {
     connection: redisConnection,
     concurrency: Number(process.env.NOTIFICATION_SEND_CONCURRENCY || 5)
   });
+  attachWorkerDlqHandler(worker, QUEUE_NOTIFICATION_SEND);
+  return worker;
 }
 
 /** Processo dedicado: tsx src/platform/jobs/workers/notification-send.worker.ts */

@@ -19,6 +19,7 @@
 | **P2 Inter + portal + hardening** | [#24](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/24) | Concluído (`3ad069e`) |
 | **Portal UI P0 — tokens / a11y** | [#25](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/25) | Concluído (`85c5d34`) |
 | **Sprint N Onda A (parcial)** | [#26](https://github.com/rvbbarreto-bot/cobranca-saas-api/pull/26) | Concluído (`4e69efa`) |
+| **Sprint K — ops foundation (DLQ/SLI)** | PR aberto | DLQ, admin metrics, `e2e-asaas.yml` |
 
 **Testes:** `npm test` · `portal:test` · `quality:gate` no CI de cada PR
 

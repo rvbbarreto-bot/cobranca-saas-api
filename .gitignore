@@ -1,8 +1,23 @@
 node_modules/
+**/node_modules/
 dist/
 coverage/
+apps/portal-web/dist/
+
+# Artefatos locais / WIP
+prototype-*.html
+*.docx
+Projeto_CobrancaBoleto_v2/
+.cursor/
+
+# Robot / evidências locais
+tests/robot/evidence/screenshots/*
+!tests/robot/evidence/screenshots/.gitkeep
+tests/robot/reports/*.html
 
 # Secrets e overrides locais (nunca commitar)
+secrets/
+!secrets/README.md
 .env
 .env.local
 .env.*.local

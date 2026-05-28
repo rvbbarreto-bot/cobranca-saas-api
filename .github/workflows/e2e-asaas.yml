@@ -1,0 +1,144 @@
+# Sprint K — CI E2E Asaas manual (workflow_dispatch)
+# Spec aprovada: autorização PO Mai/2026
+
+name: E2E Asaas (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Ambiente Asaas"
+        required: true
+        type: choice
+        options:
+          - sandbox
+          - production
+        default: sandbox
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-asaas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        name: Check secrets
+        run: |
+          if [ -z "${{ secrets.ASAAS_API_KEY }}" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::ASAAS_API_KEY ausente — E2E será ignorado."
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  run-e2e:
+    needs: setup
+    if: needs.setup.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cobranca_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cobranca_e2e"
+          --health-interval 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/cobranca_e2e
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: "0123456789abcdefghijklmnopqrstuvwxyzABCD"
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      WEBHOOK_INBOX_SECRET: "whsec_e2e_example_min_32_chars___________"
+      ASAAS_API_KEY: ${{ secrets.ASAAS_API_KEY }}
+      ASAAS_API_URL: ${{ inputs.environment == 'production' && 'https://api.asaas.com/v3' || 'https://sandbox.asaas.com/api/v3' }}
+      NODE_ENV: development
+      ENABLE_MOCK_AUTH: "false"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        timeout-minutes: 10
+
+      - name: Build
+        run: npm run build
+        timeout-minutes: 10
+
+      - name: Migrate database
+        run: npm run migrate
+        timeout-minutes: 5
+
+      - name: Seed E2E data
+        run: npm run seed:dev
+        timeout-minutes: 5
+
+      - name: Run Asaas E2E evidence
+        run: npm run e2e:asaas:evidence
+        timeout-minutes: 20
+
+      - name: Prepare report artifact
+        if: always()
+        run: |
+          mkdir -p artifacts/e2e-asaas
+          cp -f docs/evidencias/asaas-e2e-*.json artifacts/e2e-asaas/ 2>/dev/null || true
+          cp -f evidencias/e2e-asaas-*.json artifacts/e2e-asaas/ 2>/dev/null || true
+          if [ -z "$(ls -A artifacts/e2e-asaas 2>/dev/null)" ]; then
+            echo '{"skipped":true,"reason":"no evidence file produced"}' > artifacts/e2e-asaas/no-evidence.json
+          fi
+
+      - name: Cleanup test data
+        if: always()
+        run: |
+          psql "$DATABASE_URL" -c "DELETE FROM webhook_inbox WHERE created_at > NOW() - INTERVAL '2 hours';" || true
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-asaas-${{ inputs.environment }}-${{ github.run_id }}
+          path: artifacts/e2e-asaas/
+          retention-days: 14
+
+  report:
+    needs: [setup, run-e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Notify on failure
+        if: needs.run-e2e.result == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = `E2E Asaas falhou: ${context.repo.owner}/${context.repo.repo} run ${context.runId}`;
+            core.setFailed(body);
