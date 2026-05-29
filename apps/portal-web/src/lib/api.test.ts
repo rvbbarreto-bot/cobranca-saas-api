@@ -6,6 +6,7 @@ import {
   fetchPortalCobrancaDetail,
   fetchPortalMe,
   activateEscritorioAssinatura,
+  downloadEscritorioCobrancasCsv,
   fetchEscritorioConfig,
   fetchChargingRules,
   shouldPatchSecret,
@@ -375,6 +376,28 @@ describe("activateEscritorioAssinatura", () => {
     const [url, init] = (fetch as ReturnType<typeof vi.fn>).mock.calls[0] as [string, RequestInit];
     expect(url).toContain("/v1/portal/escritorio/assinatura/activate");
     expect(init.method).toBe("POST");
+  });
+});
+
+describe("downloadEscritorioCobrancasCsv", () => {
+  afterEach(() => {
+    clearSession();
+    vi.unstubAllGlobals();
+  });
+
+  it("monta query from/to na URL", async () => {
+    saveSession("tok", "tenant-99", "u@x.co");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      blob: async () => new Blob(["a"], { type: "text/csv" })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await downloadEscritorioCobrancasCsv({ from: "2026-05-01", to: "2026-05-28" });
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("format=csv");
+    expect(url).toContain("from=2026-05-01");
+    expect(url).toContain("to=2026-05-28");
   });
 });
 

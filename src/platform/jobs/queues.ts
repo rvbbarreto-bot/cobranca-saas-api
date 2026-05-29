@@ -43,16 +43,38 @@ export const queues: JobQueues = new Proxy({} as JobQueues, {
   }
 });
 
+/** Backoff exponencial com teto ~8 min (Sprint K). */
+const EMISSION_BACKOFF = {
+  type: "exponential" as const,
+  delay: 30_000
+};
+
+const WEBHOOK_BACKOFF = {
+  type: "exponential" as const,
+  delay: 10_000
+};
+
 export const JOB_OPTS = {
+  /** emitir-boleto — 5 tentativas, backoff 30s→~8min */
   emission: {
-    attempts: 3,
-    backoff: { type: "exponential" as const, delay: 30_000 },
+    attempts: 5,
+    backoff: EMISSION_BACKOFF,
     removeOnComplete: { count: 100 },
     removeOnFail: { count: 50 }
   },
+  /** processar-webhook inbox */
+  webhook: {
+    attempts: 8,
+    backoff: WEBHOOK_BACKOFF,
+    removeOnComplete: { count: 200 },
+    removeOnFail: { count: 100 }
+  },
+  /** enviar-notificacao */
   notification: {
-    attempts: 3,
-    backoff: { type: "exponential" as const, delay: 120_000 }
+    attempts: 4,
+    backoff: { type: "fixed" as const, delay: 120_000 },
+    removeOnComplete: { count: 200 },
+    removeOnFail: { count: 100 }
   },
   sync: { attempts: 1 }
 } as const;

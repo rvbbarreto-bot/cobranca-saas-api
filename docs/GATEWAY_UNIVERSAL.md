@@ -42,6 +42,20 @@ sequenceDiagram
 - Portal: credenciais dinâmicas via `GATEWAY_REGISTRY`.
 - **BB:** sprint futura (credenciais sandbox PO).
 
+## Banco Inter — PDF (Sprint N)
+
+- Emissão persiste placeholder `inter://cobranca/{codigoSolicitacao}/pdf` em `payment_transactions.boleto_pdf_url`.
+- Download real: `GET /cobrancas/v2/{codigoSolicitacao}/pdf` (mTLS + OAuth), implementado em `InterAdapter.downloadBoletoPdf`.
+- Portal expõe proxy autenticado: `GET /v1/portal/cobrancas/:id/boleto.pdf` (staff JWT + tenant). O detalhe da cobrança devolve `boleto_pdf_url` como esse path relativo.
+- Testes unitários mockam `InterHttpClient.requestPdf` (sem certificado no CI).
+
+## Banco Inter — Webhook (Sprint N)
+
+- Inbox genérico: `POST /v1/webhooks` com `source: inter` ou payload `{ codigoSolicitacao, situacao, ... }`.
+- Parser: `parse-inter-webhook.ts` → `provider_charge_id` = `codigoSolicitacao`, status via `mapInterChargeStatus`.
+- Processamento: mesma fila `webhook_inbox` / `process-webhook-inbox` (atualiza `charges` + `charge_events`).
+- Fixture de exemplo: `tests/fixtures/inter-webhook-pago.json`.
+
 ## Homolog sandbox (opt-in)
 
 ```bash

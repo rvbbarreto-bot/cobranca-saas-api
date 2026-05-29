@@ -36,4 +36,7 @@ export type ChargePaymentView = {
   pix_emv: string | null;
   pix_link: string | null;
   expires_at: string | null;
+  /** Preenchido no detalhe da cobrança (servidor). */
+  gateway?: string | null;
+  gateway_transaction_id?: string | null;
 };

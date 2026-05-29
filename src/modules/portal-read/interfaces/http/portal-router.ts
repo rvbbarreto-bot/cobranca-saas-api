@@ -20,8 +20,11 @@ import {
 import { getPublicTenantIdForAutomacao } from "../../infrastructure/billing-tenant-link-repository";
 import { createPortalChargeUseCase } from "../../application/create-portal-charge";
 import { getPortalChargeDetailUseCase } from "../../application/get-portal-charge-detail";
+import { mapChargePaymentForPortal } from "../../application/portal-charge-payment-view";
+import { streamPortalChargeBoletoPdfUseCase } from "../../application/stream-portal-charge-boleto-pdf";
 import { patchPortalChargeUseCase } from "../../application/patch-portal-charge";
 import { parsePortalClienteCreateBody, parsePortalClientePatchBody } from "../../application/portal-cliente-input";
+import { PortalClienteSchemaMigrationError } from "../../infrastructure/portal-cliente-schema";
 import {
   getClienteByIdForTenant,
   insertCliente,
@@ -308,6 +311,18 @@ function isUuid(value: string): boolean {
   return UUID_RE.test(value.trim());
 }
 
+function respondPortalClienteSchemaError(res: Response, error: unknown): boolean {
+  if (error instanceof PortalClienteSchemaMigrationError) {
+    res.status(503).json({
+      error: "schema_migration_required",
+      message: error.message,
+      migration: error.migrationFile
+    });
+    return true;
+  }
+  return false;
+}
+
 async function listClientes(req: Request, res: Response): Promise<void> {
   if (!isEscritorioStaff(req)) {
     res.status(403).json({
@@ -334,16 +349,23 @@ async function listClientes(req: Request, res: Response): Promise<void> {
 
   const searchRaw = firstQueryString(req.query.search);
   const search = searchRaw && searchRaw.length >= 2 ? searchRaw.slice(0, 80) : null;
-  const { items, has_more } = await listClientesByTenantPage(tenantId, { limit, cursor: keyset, search });
-  const last = items[items.length - 1];
-  const next_cursor = has_more && last ? clienteCursorFromRow(last) : null;
+  try {
+    const { items, has_more } = await listClientesByTenantPage(tenantId, { limit, cursor: keyset, search });
+    const last = items[items.length - 1];
+    const next_cursor = has_more && last ? clienteCursorFromRow(last) : null;
 
-  res.json({
-    data: items,
-    count: items.length,
-    page_limit: limit,
-    next_cursor
-  });
+    res.json({
+      data: items,
+      count: items.length,
+      page_limit: limit,
+      next_cursor
+    });
+  } catch (error) {
+    if (respondPortalClienteSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 async function getPortalCobrancaHttp(req: Request, res: Response): Promise<void> {
@@ -377,9 +399,50 @@ async function getPortalCobrancaHttp(req: Request, res: Response): Promise<void>
 
   res.json({
     charge: detail.charge,
-    payment: detail.payment,
+    payment: mapChargePaymentForPortal(detail.payment, chargeId),
     events: detail.events
   });
+}
+
+async function getPortalCobrancaBoletoPdfHttp(req: Request, res: Response): Promise<void> {
+  const automacaoTenantId = req.tenantContext?.tenantId;
+  const chargeId = typeof req.params.chargeId === "string" ? req.params.chargeId.trim() : "";
+  if (!automacaoTenantId || !chargeId || !isUuid(chargeId)) {
+    res.status(400).json({ error: "invalid_request", message: "tenant ou charge_id invalido." });
+    return;
+  }
+
+  const publicTenantId = await getPublicTenantIdForAutomacao(automacaoTenantId);
+  if (!publicTenantId) {
+    res.status(409).json({
+      error: "billing_link_missing",
+      message: "Configure portal.billing_tenant_link antes de consultar cobranca."
+    });
+    return;
+  }
+
+  const result = await withTenantTransaction(publicTenantId, (client) =>
+    streamPortalChargeBoletoPdfUseCase(client, chargeId, publicTenantId)
+  );
+
+  if (!result.ok) {
+    const status =
+      result.reason === "not_found"
+        ? 404
+        : result.reason === "not_inter"
+          ? 409
+          : 422;
+    res.status(status).json({
+      error: "boleto_pdf_unavailable",
+      message: "PDF do boleto indisponivel para esta cobranca.",
+      reason: result.reason
+    });
+    return;
+  }
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="${result.filename}"`);
+  res.send(result.buffer);
 }
 
 async function createPortalChargeHttp(req: Request, res: Response): Promise<void> {
@@ -472,13 +535,20 @@ async function getPortalClienteHttp(req: Request, res: Response): Promise<void> 
     return;
   }
 
-  const cliente = await getClienteByIdForTenant(clienteId, automacaoTenantId);
-  if (!cliente) {
-    res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
-    return;
-  }
+  try {
+    const cliente = await getClienteByIdForTenant(clienteId, automacaoTenantId);
+    if (!cliente) {
+      res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
+      return;
+    }
 
-  res.json({ cliente });
+    res.json({ cliente });
+  } catch (error) {
+    if (respondPortalClienteSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 async function listClienteCobrancasHttp(req: Request, res: Response): Promise<void> {
@@ -497,7 +567,15 @@ async function listClienteCobrancasHttp(req: Request, res: Response): Promise<vo
     return;
   }
 
-  const cliente = await getClienteByIdForTenant(clienteId, automacaoTenantId);
+  let cliente;
+  try {
+    cliente = await getClienteByIdForTenant(clienteId, automacaoTenantId);
+  } catch (error) {
+    if (respondPortalClienteSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
   if (!cliente) {
     res.status(404).json({ error: "portal_cliente_not_found", message: "Cliente nao encontrado." });
     return;
@@ -579,6 +657,9 @@ async function patchPortalClienteHttp(req: Request, res: Response): Promise<void
         error: "validation_error",
         issues: [{ path: "telefone", message: "Telefone obrigatorio quando whatsapp_opt_in for true." }]
       });
+      return;
+    }
+    if (respondPortalClienteSchemaError(res, err)) {
       return;
     }
     throw err;
@@ -676,7 +757,8 @@ async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response):
     }
     res.status(409).json({
       error: "charge_not_reprocessable",
-      message: "Somente cobrancas em erro_emissao podem ser reprocessadas.",
+      message:
+        "Somente cobrancas em erro_emissao ou rascunho preso (sem emissao concluida) podem ser reprocessadas.",
       status: result.status
     });
     return;
@@ -793,6 +875,9 @@ async function createCliente(req: Request, res: Response): Promise<void> {
       });
       return;
     }
+    if (respondPortalClienteSchemaError(res, error)) {
+      return;
+    }
     throw error;
   }
 }
@@ -812,6 +897,7 @@ export function createPortalRouter(): Router {
   protectedRoutes.get("/notas-fiscais", asyncHandler(listNotasFiscais));
   protectedRoutes.get("/cobrancas", asyncHandler(listCobrancas));
   protectedRoutes.get("/cobrancas/:chargeId", asyncHandler(getPortalCobrancaHttp));
+  protectedRoutes.get("/cobrancas/:chargeId/boleto.pdf", asyncHandler(getPortalCobrancaBoletoPdfHttp));
   protectedRoutes.post("/cobrancas", asyncHandler(createPortalChargeHttp));
   protectedRoutes.post("/cobrancas/:chargeId/cancel", asyncHandler(cancelPortalCobrancaHttp));
   protectedRoutes.post(

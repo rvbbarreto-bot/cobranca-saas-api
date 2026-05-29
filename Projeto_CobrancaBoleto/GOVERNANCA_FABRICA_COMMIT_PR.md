@@ -148,12 +148,31 @@ Após `gh pr create`, a IA deve **entregar ao Tech Lead** (chat, Slack, ou comen
 
 ---
 
-## 8. Referências
+## 8. Artefatos ignorados (Sprint K — higiene)
+
+Nunca commitar:
+
+| Padrão | Motivo |
+|--------|--------|
+| `node_modules/`, `**/node_modules/` | Dependências |
+| `secrets/` (exceto `secrets/README.md`) | Credenciais TLS/API |
+| `.env`, `.env.local`, `.env.*.local` | Overrides locais |
+| `docs/evidencias/asaas-e2e-*.json` (exceto `EXAMPLE`) | Evidências reais de homolog |
+| `tests/robot/evidence/screenshots/*` (exceto `.gitkeep`) | Screenshots Robot locais |
+| `*.docx`, `prototype-*.html` | Estudos fora do código |
+| `Projeto_CobrancaBoleto_v2/` | Cópia acidental de workspace |
+
+Após `npm install && npm run build`, `git status` deve listar apenas alterações intencionais do dev.
+
+---
+
+## 9. Referências
 
 - [RETOMADA_FABRICA.md](./RETOMADA_FABRICA.md) §10
 - [PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md](./PROMPT_FABRICA_ATUALIZACAO_MAIO2026.md)
 - [docs/API_CONTRATO_E_SMOKE.md](../docs/API_CONTRATO_E_SMOKE.md) — bateria funcional
 - [docs/FASE2_KICKOFF_QUALIDADE.md](../docs/FASE2_KICKOFF_QUALIDADE.md) — `quality:gate`
+- [AUTORIZACAO_SPRINT_K_MAIO2026.md](./AUTORIZACAO_SPRINT_K_MAIO2026.md)
 
 ---
 

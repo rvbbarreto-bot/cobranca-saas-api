@@ -593,6 +593,22 @@ export type PatchPortalCobrancaBody = {
   metadata?: Record<string, unknown>;
 };
 
+export async function fetchPortalChargeBoletoPdfBlob(pdfPath: string): Promise<Blob> {
+  const path = pdfPath.startsWith("/") ? pdfPath : `/${pdfPath}`;
+  const res = await apiFetch(path, { method: "GET" });
+  if (!res.ok) {
+    const text = await res.text();
+    let json: unknown = text;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      /* keep text */
+    }
+    throw new ApiError("Nao foi possivel obter o PDF do boleto.", res.status, json);
+  }
+  return res.blob();
+}
+
 export async function fetchPortalCobrancaDetail(chargeId: string): Promise<PortalCobrancaDetailResponse> {
   const res = await apiFetch(`/v1/portal/cobrancas/${encodeURIComponent(chargeId)}`, { method: "GET" });
   const text = await res.text();
@@ -1155,8 +1171,22 @@ export async function fetchEscritorioDashboard(periodo = "30d"): Promise<Escrito
   return json as EscritorioDashboardResponse;
 }
 
-export async function downloadEscritorioCobrancasCsv(): Promise<Blob> {
-  const res = await apiFetch("/v1/portal/escritorio/cobrancas/export?format=csv", { method: "GET" });
+export type EscritorioCobrancasCsvExportParams = {
+  from?: string;
+  to?: string;
+};
+
+export async function downloadEscritorioCobrancasCsv(
+  params?: EscritorioCobrancasCsvExportParams
+): Promise<Blob> {
+  const sp = new URLSearchParams({ format: "csv" });
+  if (params?.from?.trim()) {
+    sp.set("from", params.from.trim());
+  }
+  if (params?.to?.trim()) {
+    sp.set("to", params.to.trim());
+  }
+  const res = await apiFetch(`/v1/portal/escritorio/cobrancas/export?${sp}`, { method: "GET" });
   if (!res.ok) {
     const text = await res.text();
     let json: unknown = text;

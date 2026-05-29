@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PortalChargePayment } from "../lib/api";
-import { isUsableHttpUrl } from "../lib/charge-payment-ui";
+import { fetchPortalChargeBoletoPdfBlob } from "../lib/api";
+import { isUsableHttpUrl, openPortalChargeBoletoPdf } from "../lib/charge-payment-ui";
 
 function pixQrSrc(base64: string): string {
   const raw = base64.trim();
@@ -25,6 +26,7 @@ export function ChargePaymentPanel({
   showPixQr = true
 }: Props): JSX.Element {
   const [copied, setCopied] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const awaitingEmission =
     !payment &&
@@ -81,7 +83,12 @@ export function ChargePaymentPanel({
         {payment.pix_emv ? (
           <div className="payment-panel__copy">
             <code className="payment-panel__emv">{payment.pix_emv}</code>
-            <button type="button" className="btn-cyan" onClick={() => void copyPix()}>
+            <button
+              type="button"
+              className="btn-cyan"
+              aria-label={copied ? "Código PIX copiado" : "Copiar código PIX copia e cola"}
+              onClick={() => void copyPix()}
+            >
               {copied ? "Copiado" : "Copiar PIX copia e cola"}
             </button>
           </div>
@@ -106,6 +113,7 @@ export function ChargePaymentPanel({
 
   const boletoUrl = isUsableHttpUrl(payment.boleto_url) ? payment.boleto_url : null;
   const pdfUrl = isUsableHttpUrl(payment.boleto_pdf_url) ? payment.boleto_pdf_url : null;
+  const pdfIsPortalProxy = Boolean(pdfUrl?.includes("/boleto.pdf"));
 
   return (
     <div id="pagamento" className="payment-panel">
@@ -116,12 +124,31 @@ export function ChargePaymentPanel({
         </p>
       ) : null}
       <div className="form-actions" style={{ marginTop: "0.75rem", flexWrap: "wrap" }}>
-        {boletoUrl ? (
+        {boletoUrl && !pdfIsPortalProxy ? (
           <a href={boletoUrl} target="_blank" rel="noreferrer" className="btn-cyan">
             Abrir boleto
           </a>
         ) : null}
-        {pdfUrl ? (
+        {pdfUrl && pdfIsPortalProxy ? (
+          <button
+            type="button"
+            className="btn-secondary"
+            aria-label="Abrir PDF do boleto"
+            onClick={() => {
+              setPdfError(null);
+              void openPortalChargeBoletoPdf(pdfUrl, fetchPortalChargeBoletoPdfBlob).catch((err: unknown) => {
+                const msg =
+                  err instanceof Error && err.message.trim()
+                    ? err.message
+                    : "Não foi possível abrir o PDF do boleto. Tente novamente ou contate o suporte.";
+                setPdfError(msg);
+              });
+            }}
+          >
+            PDF do boleto
+          </button>
+        ) : null}
+        {pdfUrl && !pdfIsPortalProxy ? (
           <a href={pdfUrl} target="_blank" rel="noreferrer" className="btn-secondary">
             PDF do boleto
           </a>
@@ -129,6 +156,11 @@ export function ChargePaymentPanel({
       </div>
       {payment.expires_at ? (
         <p className="muted small">Validade: {new Date(payment.expires_at).toLocaleString("pt-BR")}</p>
+      ) : null}
+      {pdfError ? (
+        <p className="small" role="alert" style={{ color: "var(--color-danger, #b91c1c)", marginTop: "0.5rem" }}>
+          {pdfError}
+        </p>
       ) : null}
       {hasPix ? (
         <div className="payment-panel__pix-block" style={{ marginTop: "1rem" }}>

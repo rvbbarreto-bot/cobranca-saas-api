@@ -4,25 +4,32 @@ Leia primeiro: `Projeto_CobrancaBoleto/RETOMADA_FABRICA.md`.
 
 ## Estado atual
 
-- **`main`:** Sprint L mergeado (#20 docs, #21 factory Inter/Cora).
-- **Próxima entrega:** Sprint M — [DEMANDA_SPRINT_M_GATEWAY_FASE2.md](./DEMANDA_SPRINT_M_GATEWAY_FASE2.md)
-- **Branch:** `feat/sprint-m-gateway-fase2`
+- **`main`:** até `4e69efa` (Sprint N Onda A #26 mergeado)
+- **Próxima entrega:** [DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md](./DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md)
+- **Branches:** `feat/p2-inter-pdf` · `feat/sprint-n-inter-webhook`
 
-## Sprint M — ATUAL
+## Sprint N Fase 2 — ATUAL
 
-1. Adapter **C6** + registry/factory (PO: implementar)
-2. Migration `026_gateway_change_log` + troca gateway **permitida com log**
-3. Portal **ConfiguracoesPage** — credenciais dinâmicas (Asaas/Inter/Cora/C6)
-4. **BB:** sprint futura (credenciais sandbox PO)
-5. Inter L: emissão OK; PDF/smoke opcional P2
+| Onda | Foco | Status |
+|------|------|--------|
+| **A** | Detalhe boleto + edição | ✅ #26 |
+| **0** | Homolog QA + evidências | Pendente |
+| **B** | PDF Inter (mock) | **AGORA** |
+| **D** | Webhook + charge-sync | **AGORA** |
+| **C** | Relatórios filtros | Após B |
 
-## Backlog
+## Autorização PO (colar no chat)
+
+Ver secção 3 de `DEMANDA_SPRINT_N_FASE2_ONDAS_B_D.md`.
+
+## Backlog pós–Sprint N
 
 | Item | Sprint |
 |------|--------|
-| Estorno + webhooks normalizados | N |
-| Contratos recorrentes | N+ |
+| BB sandbox adapter | O |
+| E-mail transacional completo | N+1 |
+| Playwright portal tema claro/escuro | N+1 |
 
 ## Regras
 
-[GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) · secrets fora do git.
+[GOVERNANCA_FABRICA_COMMIT_PR.md](./GOVERNANCA_FABRICA_COMMIT_PR.md) · secrets fora do git · merge só Tech Lead.

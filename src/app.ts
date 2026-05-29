@@ -12,6 +12,7 @@ import { inboxRouter } from "./modules/inbox/interfaces/http/inbox-router";
 import { createPortalRouter } from "./modules/portal-read/interfaces/http/portal-router";
 import { saasBillingRouter } from "./modules/saas-billing/interfaces/http/saas-billing-router";
 import { healthReadyHandler } from "./platform/health/readiness-http";
+import { createAdminQueuesRouter } from "./platform/http/routes/admin-queues-router";
 
 /**
  * API focada em cobranca / portal / inbox (pacote importado do desenvolvimento EmissaoNF).
@@ -37,6 +38,8 @@ export function createApp() {
   v1.use(express.json({ limit: "2mb" }));
   v1.use("/portal", createPortalRouter());
   v1.use(asyncHandler(tenantResolutionMiddleware));
+
+  v1.use("/admin", createAdminQueuesRouter());
 
   v1.use("/auth", authRouter);
   v1.use("/tenants", tenantRouter);

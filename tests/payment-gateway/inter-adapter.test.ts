@@ -5,7 +5,8 @@ import type { GatewayAdapterContext } from "../../src/modules/payment-gateway/do
 vi.mock("../../src/modules/payment-gateway/infrastructure/inter/inter-http-client", () => {
   return {
     InterHttpClient: vi.fn().mockImplementation(() => ({
-      requestJson: vi.fn()
+      requestJson: vi.fn(),
+      requestPdf: vi.fn()
     }))
   };
 });
@@ -132,6 +133,17 @@ describe("InterAdapter", () => {
     });
     const emitBody = requestJson.mock.calls[0]?.[2] as { pagador?: { cep?: string } };
     expect(emitBody?.pagador?.cep).toBe("01310100");
+  });
+
+  it("downloadBoletoPdf chama GET pdf no client", async () => {
+    const requestPdf = vi.fn().mockResolvedValue(Buffer.from("%PDF-1.4"));
+    vi.mocked(InterHttpClient).mockImplementation(
+      () => ({ requestJson: vi.fn(), requestPdf }) as unknown as InterHttpClient
+    );
+    const adapter = new InterAdapter(ctx);
+    const buf = await adapter.downloadBoletoPdf("uuid-pdf");
+    expect(buf.toString()).toContain("%PDF");
+    expect(requestPdf).toHaveBeenCalledWith("/cobrancas/v2/uuid-pdf/pdf");
   });
 
   it("createPix retorna not_supported", async () => {

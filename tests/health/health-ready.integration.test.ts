@@ -23,5 +23,6 @@ describe.skipIf(!hasDb)("GET /health/ready (readiness pack B)", () => {
     expect(r.body?.checks?.tablePublicTenants).toBe(true);
     expect(r.body?.checks?.tablePublicCharges).toBe(true);
     expect(r.body?.checks?.tablePortalAppUser).toBe(true);
+    expect(r.body?.checks?.portalClienteEndereco).toBe(true);
   });
 });

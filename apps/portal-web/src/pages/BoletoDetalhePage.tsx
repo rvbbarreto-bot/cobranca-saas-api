@@ -1,11 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { fetchEscritorioConfig, fetchPortalCobrancaDetail } from "../lib/api";
+import { fetchEscritorioConfig } from "../lib/api";
 import { ChargeShareActions } from "../components/ChargeShareActions";
 import { useHashScroll } from "../hooks/useHashScroll";
 import { useCliente } from "../hooks/useCliente";
 import { getPortalChargeRules } from "../lib/gateway-charge-rules";
-import { CHARGE_DETAIL_POLL_MS, shouldPollChargeDetail } from "../lib/charge-detail-poll";
+import { useChargeEmissionPolling } from "../hooks/useChargeEmissionPolling";
 import {
   buildTimelineFromEvents,
   extractEmissionError
@@ -65,12 +65,8 @@ export function BoletoDetalhePage(): JSX.Element {
   const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
   const gatewayRules = getPortalChargeRules(configQ.data?.config?.gateway_provider);
 
-  const detailQ = useQuery({
-    queryKey: ["cobranca", chargeId],
-    queryFn: () => fetchPortalCobrancaDetail(chargeId!),
-    enabled: Boolean(chargeId),
-    refetchInterval: (q) => (shouldPollChargeDetail(q.state.data) ? CHARGE_DETAIL_POLL_MS : false)
-  });
+  const { query: detailQ, isPolling, timeoutReached, resetPolling } =
+    useChargeEmissionPolling(chargeId);
 
   const charge = detailQ.data?.charge;
   const events = detailQ.data?.events ?? [];
@@ -97,10 +93,11 @@ export function BoletoDetalhePage(): JSX.Element {
         ? `Ref. ${charge.reference}`
         : "—";
 
-  const polling =
-    charge &&
-    charge.canonicalStatus === "rascunho" &&
-    !payment;
+  const emissionInconclusive =
+    Boolean(charge) &&
+    charge?.canonicalStatus === "rascunho" &&
+    !payment &&
+    timeoutReached;
 
   return (
     <div className="shell-page">
@@ -135,9 +132,27 @@ export function BoletoDetalhePage(): JSX.Element {
           <div className="form-card">
             <h3 className="form-card__title">Resumo do título</h3>
             {emissionError ? <div className="banner-err">{emissionError}</div> : null}
-            {polling ? (
+            {isPolling ? (
               <div className="banner-ok" style={{ marginBottom: "0.75rem" }}>
                 Emissão em andamento — a página atualiza automaticamente.
+              </div>
+            ) : null}
+            {emissionInconclusive && chargeId ? (
+              <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.5rem" }}>
+                  A emissão do boleto não foi confirmada dentro do tempo esperado. Verifique sua
+                  conexão e tente novamente.
+                </p>
+                <ReprocessEmissionButton
+                  chargeId={chargeId}
+                  className="btn-primary"
+                  label="Tentar emissão novamente"
+                  pendingLabel="Reenviando…"
+                  confirmTitle="Tentar emissão novamente?"
+                  confirmMessage="A emissão no gateway será reenviada em segundo plano e a página voltará a acompanhar o status."
+                  disabled={isPolling}
+                  onReprocessed={resetPolling}
+                />
               </div>
             ) : null}
             <dl style={{ margin: 0 }}>

@@ -33,6 +33,7 @@ Este documento resume o que entra em `main` quando o PR Sprint I for mergeado. C
 
 - `023_saas_billing_plans_subscriptions.sql`
 - `024_asaas_platform_subscription_billing.sql`
+- `025_inter_gateway_provider.sql` (providers Inter/C6 no CHECK)
 
 Comando pós-deploy: `npm run migrate`
 
