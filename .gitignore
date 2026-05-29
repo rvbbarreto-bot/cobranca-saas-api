@@ -11,6 +11,8 @@ Projeto_CobrancaBoleto_v2/
 .cursor/
 
 # Robot / evidências locais
+tests/robot/.venv/
+tests/robot/reports/robot-output/
 tests/robot/evidence/screenshots/*
 !tests/robot/evidence/screenshots/.gitkeep
 tests/robot/reports/*.html
