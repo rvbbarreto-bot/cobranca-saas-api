@@ -3,12 +3,14 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PortalLoadMore } from "../components/PortalLoadMore";
 import { CLIENTES_LIST_QUERY_KEY } from "../lib/cliente-query-keys";
-import { fetchClientes, fetchCobrancas } from "../lib/api";
+import { fetchClientes, fetchCobrancas, fetchEscritorioConfig } from "../lib/api";
 import type { ChargeRow, ClienteRow } from "../lib/api";
 import {
   chargeStatusLabelPortal,
   portalClienteIdFromMetadata
 } from "../lib/charge-status-ui";
+import { getPortalChargeRules } from "../lib/cobranca-form";
+import { resolveClienteListStatus, type ClienteListStatusPill } from "../lib/cliente-list-status";
 
 function formatDocBR(doc: string): string {
   const d = doc.replace(/\D/g, "");
@@ -33,11 +35,16 @@ type RowView = ClienteRow & {
   mensalidade: string | null;
   vencimentoDia: string | null;
   ultimoBoleto: string | null;
-  statusPill: "ativo" | "cobranca" | "atencao" | "programado";
+  statusPill: ClienteListStatusPill;
   statusLabel: string;
+  reprocessChargeId: string | null;
 };
 
-function buildRowViews(clientes: ClienteRow[], charges: ChargeRow[]): RowView[] {
+function buildRowViews(
+  clientes: ClienteRow[],
+  charges: ChargeRow[],
+  gatewayRequiresPayerAddress: boolean
+): RowView[] {
   const byCliente: Record<string, ChargeRow[]> = {};
   for (const ch of charges) {
     const pid = portalClienteIdFromMetadata(ch);
@@ -56,27 +63,23 @@ function buildRowViews(clientes: ClienteRow[], charges: ChargeRow[]): RowView[] 
     const vencimentoDia: string | null = null;
 
     let ultimoBoleto: string | null = null;
-    let statusPill: RowView["statusPill"] = "ativo";
+    let statusPill: ClienteListStatusPill = "ativo";
     let statusLabel = "Ativo";
+    let reprocessChargeId: string | null = null;
 
     if (list.length > 0) {
       const sorted = [...list].sort((a, b) => b.dueDate.localeCompare(a.dueDate));
       const top = sorted[0];
       if (top) {
         ultimoBoleto = `${chargeStatusLabelPortal(top.canonicalStatus)} ${formatDueShort(top.dueDate)}`;
-        if (top.canonicalStatus === "vencida") {
-          statusPill = "cobranca";
-          statusLabel = "Cobrança";
-        } else if (top.canonicalStatus === "erro_emissao") {
-          statusPill = "atencao";
-          statusLabel = "Atenção";
-        } else if (top.canonicalStatus === "rascunho") {
-          statusPill = "programado";
-          statusLabel = "Programado";
-        } else if (top.canonicalStatus === "cancelada") {
-          statusPill = "ativo";
-          statusLabel = "Ativo";
-        }
+        const resolved = resolveClienteListStatus({
+          cliente: c,
+          topCharge: top,
+          gatewayRequiresPayerAddress
+        });
+        statusPill = resolved.statusPill;
+        statusLabel = resolved.statusLabel;
+        reprocessChargeId = resolved.reprocessChargeId;
       }
     }
 
@@ -86,7 +89,8 @@ function buildRowViews(clientes: ClienteRow[], charges: ChargeRow[]): RowView[] 
       vencimentoDia,
       ultimoBoleto,
       statusPill,
-      statusLabel
+      statusLabel,
+      reprocessChargeId
     };
   });
 }
@@ -108,6 +112,13 @@ export function ClientesPage(): JSX.Element {
     queryKey: ["cobrancas", "forClientes"],
     queryFn: () => fetchCobrancas({ limit: 200 })
   });
+  const configQ = useQuery({
+    queryKey: ["escritorio-config"],
+    queryFn: fetchEscritorioConfig
+  });
+  const gatewayRequiresPayerAddress = getPortalChargeRules(
+    configQ.data?.config?.gateway_provider ?? "asaas"
+  ).requiresPayerAddress;
 
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "cobranca" | "atencao" | "programado">("todos");
@@ -117,7 +128,7 @@ export function ClientesPage(): JSX.Element {
   const rows = useMemo(() => {
     const data = allClientes;
     const charges = cobQ.data?.data ?? [];
-    const enriched = buildRowViews(data, charges);
+    const enriched = buildRowViews(data, charges, gatewayRequiresPayerAddress);
     return enriched.filter((r) => {
       const qn = busca.trim().toLowerCase();
       if (qn) {
@@ -133,7 +144,7 @@ export function ClientesPage(): JSX.Element {
       }
       return r.statusPill === statusFiltro;
     });
-  }, [allClientes, cobQ.data?.data, busca, statusFiltro]);
+  }, [allClientes, cobQ.data?.data, busca, statusFiltro, gatewayRequiresPayerAddress]);
 
   return (
     <div className="shell-page">
@@ -251,13 +262,23 @@ export function ClientesPage(): JSX.Element {
                               Cobrar
                             </Link>
                             <span className="sep">|</span>
-                            <span
-                              className="link-inline"
-                              style={{ opacity: 0.45, cursor: "not-allowed" }}
-                              title="Em roadmap"
-                            >
-                              Reprocessar
-                            </span>
+                            {c.reprocessChargeId ? (
+                              <Link
+                                to={`/cobrancas/${encodeURIComponent(c.reprocessChargeId)}`}
+                                className="link-inline"
+                                title="Abrir cobrança para tentar emissão novamente"
+                              >
+                                Reprocessar
+                              </Link>
+                            ) : (
+                              <span
+                                className="link-inline"
+                                style={{ opacity: 0.45, cursor: "not-allowed" }}
+                                title="Disponível quando houver cobrança em falha com cadastro pronto para reemissão"
+                              >
+                                Reprocessar
+                              </span>
+                            )}
                           </div>
                         </td>
                       </tr>
