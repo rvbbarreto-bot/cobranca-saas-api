@@ -744,7 +744,7 @@ async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response):
 
   const audit = auditContextFromRequest(req);
   const result = await withTenantTransaction(publicTenantId, (client) =>
-    reprocessPortalChargeEmissionUseCase(client, chargeId, audit)
+    reprocessPortalChargeEmissionUseCase(client, automacaoTenantId, chargeId, audit)
   );
 
   if (!result.ok) {
@@ -755,9 +755,14 @@ async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response):
       });
       return;
     }
+    if (result.kind === "validation_error" && result.issues?.length) {
+      res.status(422).json({ error: "validation_error", issues: result.issues });
+      return;
+    }
     res.status(409).json({
       error: "charge_not_reprocessable",
-      message: "Somente cobrancas em erro_emissao podem ser reprocessadas.",
+      message:
+        "Somente cobrancas em erro_emissao ou rascunho preso (sem emissao concluida) podem ser reprocessadas.",
       status: result.status
     });
     return;

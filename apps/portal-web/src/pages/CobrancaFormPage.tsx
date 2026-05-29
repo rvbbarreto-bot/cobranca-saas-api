@@ -8,8 +8,10 @@ import { CurrencyInput } from "../components/CurrencyInput";
 import { useToast } from "../components/ToastProvider";
 import { buildCobrancaFormSchema, getPortalChargeRules, normalizeCobrancaPayload } from "../lib/cobranca-form";
 import { defaultDueDateIso, sanitizeChargeReference } from "../lib/gateway-charge-rules";
+import { useCliente } from "../hooks/useCliente";
+import { isCompleteClienteEmissionAddress } from "../lib/cliente-emission-address";
 import { clienteDetailQueryKey } from "../lib/cliente-query-keys";
-import { fetchClienteById, fetchEscritorioConfig, postPortalCobranca } from "../lib/api";
+import { fetchClienteById, fetchEscritorioConfig, postPortalCobranca, PortalValidationError } from "../lib/api";
 
 function newIdempotencyKey(): string {
   const r =
@@ -59,6 +61,7 @@ export function CobrancaFormPage(): JSX.Element {
   const [amountValue, setAmountValue] = useState<number | null>(null);
   const [dueIso, setDueIso] = useState(defaultDue);
   const [portalClienteId, setPortalClienteId] = useState(preClienteId);
+  const selectedClienteQ = useCliente(portalClienteId || undefined);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -78,7 +81,21 @@ export function CobrancaFormPage(): JSX.Element {
     onError: (e: unknown) => {
       submitLockRef.current = false;
       idempotencyRef.current = null;
-      setApiError(e instanceof Error ? e.message : "Erro ao criar cobranca");
+      if (e instanceof PortalValidationError && e.issues.length > 0) {
+        const fe: Record<string, string> = {};
+        const orphans: string[] = [];
+        for (const issue of e.issues) {
+          if (issue.path && !fe[issue.path]) {
+            fe[issue.path] = issue.message;
+          } else if (!issue.path) {
+            orphans.push(issue.message);
+          }
+        }
+        setFieldErrors(fe);
+        setApiError(orphans.length > 0 ? orphans.join(" ") : null);
+      } else {
+        setApiError(e instanceof Error ? e.message : "Erro ao criar cobrança. Tente novamente.");
+      }
     },
     onSettled: () => {
       submitLockRef.current = false;
@@ -116,6 +133,16 @@ export function CobrancaFormPage(): JSX.Element {
       }
       setFieldErrors(fe);
       return;
+    }
+
+    if (rules.requiresPayerAddress && parsed.data.portal_cliente_id) {
+      const cliente = selectedClienteQ.data;
+      if (!cliente || !isCompleteClienteEmissionAddress(cliente.endereco)) {
+        setFieldErrors({
+          portal_cliente_id: `${rules.displayName} exige endereco completo do pagador (CEP, logradouro, bairro, cidade e UF). Atualize o cadastro do cliente antes de emitir.`
+        });
+        return;
+      }
     }
 
     setFieldErrors({});
@@ -185,7 +212,7 @@ export function CobrancaFormPage(): JSX.Element {
             {rules.referenceAlphanumericOnly ? " (somente letras, numeros e espacos — Banco Inter)" : ""}.
             {reference.length > 0 ? ` ${reference.length}/${rules.referenceMaxLength}` : null}
           </p>
-          {fieldErrors.reference ? <span className="err">{fieldErrors.reference}</span> : null}
+          {fieldErrors.reference ? <span className="err" role="alert">{fieldErrors.reference}</span> : null}
 
           <label htmlFor="cobranca-amount">
             Valor (R$)
@@ -204,7 +231,7 @@ export function CobrancaFormPage(): JSX.Element {
               required
             />
           </label>
-          {fieldErrors.amount ? <span className="err">{fieldErrors.amount}</span> : null}
+          {fieldErrors.amount ? <span className="err" role="alert">{fieldErrors.amount}</span> : null}
 
           <BrDatePicker
             id="cobranca-due"
@@ -229,7 +256,7 @@ export function CobrancaFormPage(): JSX.Element {
           />
         </div>
 
-        {apiError ? <div className="banner-err form-card--full">{apiError}</div> : null}
+        {apiError ? <div className="banner-err form-card--full" role="alert">{apiError}</div> : null}
 
         <div className="form-actions form-card--full">
           <button type="submit" className="btn-primary" disabled={isSubmitting} aria-busy={isSubmitting}>

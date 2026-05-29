@@ -137,6 +137,20 @@ export class ApiError extends Error {
   }
 }
 
+export type ApiValidationIssue = { path: string; message: string };
+
+/** Lançado quando o backend retorna 422 com array de `issues` por campo. */
+export class PortalValidationError extends Error {
+  constructor(
+    readonly issues: ApiValidationIssue[],
+    readonly status: number,
+    readonly body: unknown
+  ) {
+    super(issues[0]?.message ?? "Dados inválidos");
+    this.name = "PortalValidationError";
+  }
+}
+
 function readSessionHeaders(): HeadersInit {
   const token = localStorage.getItem(STORAGE_ACCESS_TOKEN);
   const tenantId = localStorage.getItem(STORAGE_TENANT_ID);
@@ -329,6 +343,16 @@ export async function fetchNotasFiscais(q?: PortalListQuery): Promise<NotasFisca
   };
 }
 
+export type ClienteEnderecoRow = {
+  cep: string;
+  logradouro: string;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string;
+  cidade: string;
+  uf: string;
+};
+
 export type ClienteRow = {
   id: string;
   tenant_id: string;
@@ -339,6 +363,7 @@ export type ClienteRow = {
   whatsapp_opt_in: boolean;
   created_at: string;
   updated_at: string;
+  endereco?: ClienteEnderecoRow | null;
 };
 
 export type ClientesListResponse = {
@@ -441,10 +466,17 @@ export async function postCliente(body: CreateClienteBody): Promise<{ cliente: C
     throw new ApiError("Resposta invalida da API", res.status, text);
   }
   if (!res.ok) {
+    const j = json as Record<string, unknown> | null;
+    if (
+      j &&
+      Array.isArray(j.issues) &&
+      j.issues.length > 0 &&
+      typeof (j.issues[0] as Record<string, unknown>).message === "string"
+    ) {
+      throw new PortalValidationError(j.issues as ApiValidationIssue[], res.status, json);
+    }
     const msg =
-      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
-        ? (json as { message: string }).message
-        : `HTTP ${res.status}`;
+      j && typeof j.message === "string" ? j.message : `Erro ${res.status} ao cadastrar cliente`;
     throw new ApiError(msg, res.status, json);
   }
   const o = json as { cliente?: ClienteRow };
@@ -525,10 +557,17 @@ export async function postPortalCobranca(body: CreatePortalCobrancaBody): Promis
     throw new ApiError("Resposta invalida da API", res.status, text);
   }
   if (!res.ok) {
+    const j = json as Record<string, unknown> | null;
+    if (
+      j &&
+      Array.isArray(j.issues) &&
+      j.issues.length > 0 &&
+      typeof (j.issues[0] as Record<string, unknown>).message === "string"
+    ) {
+      throw new PortalValidationError(j.issues as ApiValidationIssue[], res.status, json);
+    }
     const msg =
-      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
-        ? (json as { message: string }).message
-        : `HTTP ${res.status}`;
+      j && typeof j.message === "string" ? j.message : `Erro ${res.status} ao criar cobrança`;
     throw new ApiError(msg, res.status, json);
   }
   const o = json as Partial<CreatePortalCobrancaResponse>;
@@ -543,6 +582,7 @@ export type PatchPortalClienteBody = {
   email?: string;
   telefone?: string | null;
   whatsapp_opt_in?: boolean;
+  endereco?: ClienteEnderecoBody | null;
 };
 
 export async function patchPortalCliente(
@@ -562,6 +602,9 @@ export async function patchPortalCliente(
   if (body.whatsapp_opt_in !== undefined) {
     payload.whatsapp_opt_in = body.whatsapp_opt_in;
   }
+  if (body.endereco !== undefined) {
+    payload.endereco = body.endereco;
+  }
   const res = await apiFetch(`/v1/portal/clientes/${encodeURIComponent(clienteId)}`, {
     method: "PATCH",
     body: JSON.stringify(payload)
@@ -574,10 +617,17 @@ export async function patchPortalCliente(
     throw new ApiError("Resposta invalida da API", res.status, text);
   }
   if (!res.ok) {
+    const j = json as Record<string, unknown> | null;
+    if (
+      j &&
+      Array.isArray(j.issues) &&
+      j.issues.length > 0 &&
+      typeof (j.issues[0] as Record<string, unknown>).message === "string"
+    ) {
+      throw new PortalValidationError(j.issues as ApiValidationIssue[], res.status, json);
+    }
     const msg =
-      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
-        ? (json as { message: string }).message
-        : `HTTP ${res.status}`;
+      j && typeof j.message === "string" ? j.message : `Erro ${res.status} ao atualizar cliente`;
     throw new ApiError(msg, res.status, json);
   }
   const o = json as { cliente?: ClienteRow };
@@ -656,10 +706,17 @@ export async function reprocessPortalCobrancaEmission(
     throw new ApiError("Resposta invalida da API", res.status, text);
   }
   if (!res.ok) {
+    const j = json as Record<string, unknown> | null;
+    if (
+      j &&
+      Array.isArray(j.issues) &&
+      j.issues.length > 0 &&
+      typeof (j.issues[0] as Record<string, unknown>).message === "string"
+    ) {
+      throw new PortalValidationError(j.issues as ApiValidationIssue[], res.status, json);
+    }
     const msg =
-      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
-        ? (json as { message: string }).message
-        : `HTTP ${res.status}`;
+      j && typeof j.message === "string" ? j.message : `Erro ${res.status} ao reprocessar emissão`;
     throw new ApiError(msg, res.status, json);
   }
   const o = json as { charge?: ChargeRow; job_scheduled?: boolean };

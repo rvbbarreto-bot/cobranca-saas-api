@@ -6,9 +6,10 @@ import { BR_UFS } from "../lib/br-states";
 import { onlyDigits } from "../lib/br-tax-id";
 import { maskBrPhone, maskCep, maskDocumento } from "../lib/format-br";
 import { invalidateClientesQueries } from "../lib/cliente-query-keys";
+import { buildClienteEnderecoPayload } from "../lib/cliente-form-address";
 import { clienteFormSchema, normalizeClientePayload } from "../lib/schemas";
 import type { CreateClienteBody } from "../lib/api";
-import { fetchEscritorioConfig, postCliente } from "../lib/api";
+import { fetchEscritorioConfig, PortalValidationError, postCliente } from "../lib/api";
 import { fetchViaCep } from "../lib/viacep";
 
 const GATEWAY_LABELS: Record<string, string> = {
@@ -39,6 +40,7 @@ export function ClienteFormPage(): JSX.Element {
   const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const [cep, setCep] = useState("");
   const [logradouro, setLogradouro] = useState("");
+  const [bairro, setBairro] = useState("");
   const [numero, setNumero] = useState("");
   const [complemento, setComplemento] = useState("");
   const [cidade, setCidade] = useState("");
@@ -63,6 +65,17 @@ export function ClienteFormPage(): JSX.Element {
       navigate("/clientes", { replace: true });
     },
     onError: (e: unknown) => {
+      if (e instanceof PortalValidationError && e.issues.length > 0) {
+        const fe: Record<string, string> = {};
+        for (const issue of e.issues) {
+          if (issue.path && !fe[issue.path]) {
+            fe[issue.path] = issue.message;
+          }
+        }
+        setFieldErrors(fe);
+        setApiError(e.issues.map((i) => i.message).join(" "));
+        return;
+      }
       setApiError(e instanceof Error ? e.message : "Erro ao salvar");
     }
   });
@@ -110,6 +123,7 @@ export function ClienteFormPage(): JSX.Element {
         return;
       }
       setLogradouro(data.logradouro);
+      setBairro(data.bairro ?? "");
       setCidade(data.localidade);
       setUf(data.uf);
     } catch {
@@ -145,40 +159,21 @@ export function ClienteFormPage(): JSX.Element {
       setFieldErrors(fe);
       return;
     }
-    const cepDigits = onlyDigits(cep);
-    const hasAddr =
-      cepDigits.length > 0 ||
-      logradouro.trim().length > 0 ||
-      bairro.trim().length > 0 ||
-      cidade.trim().length > 0 ||
-      uf.trim().length > 0;
-    let enderecoPayload: ReturnType<typeof normalizeClientePayload>["endereco"];
-    if (hasAddr) {
-      if (
-        cepDigits.length !== 8 ||
-        !logradouro.trim() ||
-        !bairro.trim() ||
-        !cidade.trim() ||
-        uf.trim().length !== 2
-      ) {
-        setFieldErrors({
-          cep: cepDigits.length !== 8 ? "CEP com 8 digitos." : "",
-          endereco: "Preencha logradouro, bairro, cidade e UF para salvar o endereco."
-        });
-        return;
-      }
-      enderecoPayload = {
-        cep: cepDigits,
-        logradouro: logradouro.trim(),
-        numero: numero.trim() || null,
-        complemento: complemento.trim() || null,
-        bairro: bairro.trim(),
-        cidade: cidade.trim(),
-        uf: uf.trim().toUpperCase()
-      };
+    const addr = buildClienteEnderecoPayload({
+      cep,
+      logradouro,
+      numero,
+      complemento,
+      bairro,
+      cidade,
+      uf
+    });
+    if (addr.fieldErrors) {
+      setFieldErrors(addr.fieldErrors);
+      return;
     }
     setFieldErrors({});
-    m.mutate(normalizeClientePayload(parsed.data, enderecoPayload));
+    m.mutate(normalizeClientePayload(parsed.data, addr.endereco));
   }
 
   const nomeLabel = tipo === "PF" ? "Nome completo" : tipo === "PJ" ? "Razao social" : "Nome / razao social";
@@ -308,10 +303,12 @@ export function ClienteFormPage(): JSX.Element {
           </label>
         </div>
 
-        <EmBreveSection
-          title="Endereco"
-          hint="Os campos abaixo permitem consulta de CEP (ViaCEP) para testar o fluxo, mas nao sao gravados nesta versao da API."
-        >
+        <div className="form-card">
+          <h3 className="form-card__title">Endereco</h3>
+          <p className="form-note form-note--block">
+            Gravado na API quando CEP, logradouro, bairro, cidade e UF estiverem completos. Necessario para emissao de
+            boleto em bancos como Inter, Cora e C6.
+          </p>
           <label>
             CEP
             <input
@@ -329,6 +326,11 @@ export function ClienteFormPage(): JSX.Element {
             Logradouro
             <input value={logradouro} onChange={(e) => setLogradouro(e.target.value)} disabled={m.isPending} maxLength={150} />
           </label>
+          <label>
+            Bairro
+            <input value={bairro} onChange={(e) => setBairro(e.target.value)} disabled={m.isPending} maxLength={80} />
+          </label>
+          {fieldErrors.endereco ? <span className="err">{fieldErrors.endereco}</span> : null}
           <label>
             Numero
             <input value={numero} onChange={(e) => setNumero(e.target.value)} disabled={m.isPending} maxLength={20} />
@@ -361,8 +363,9 @@ export function ClienteFormPage(): JSX.Element {
               maxLength={500}
             />
             <CharCounter value={obsEndereco} max={500} />
+            <p className="form-note">Observacao interna — nao enviada a API nesta versao.</p>
           </label>
-        </EmBreveSection>
+        </div>
 
         <EmBreveSection
           title="Regra de cobranca"

@@ -139,7 +139,9 @@ async function loadGatewayProvider(client: PoolClient, tenantId: string): Promis
   );
   const row = r.rows[0];
   if (!row) {
-    throw new UnrecoverableError("escritorio_config_not_found");
+    // Erro recuperável: permite que o job seja retentado e eventualmente
+    // chegue a erro_emissao visível ao usuário, em vez de silenciar.
+    throw new Error(`escritorio_config nao encontrado para tenant ${tenantId}.`);
   }
   return String(row.gateway_provider || "asaas");
 }
@@ -151,7 +153,9 @@ async function loadPortalCliente(
 ): Promise<PortalClienteEmissionRow> {
   const tenantId = automacaoTenantId?.trim();
   if (!tenantId) {
-    throw new UnrecoverableError("portal_automacao_tenant_id_required");
+    // Sem o tenant de automação não é possível localizar o cliente.
+    // Erro recuperável: fica visível como erro_emissao após esgotar retentativas.
+    throw new Error("portal_automacao_tenant_id ausente nos metadados da cobrança.");
   }
   const r = await client.query<Record<string, unknown>>(
     `SELECT ${PORTAL_CLIENTE_EMISSION_SELECT}
@@ -253,25 +257,39 @@ async function runEmission(
 
   const oldStatus = charge.canonicalStatus;
 
-  const gatewayProvider = await loadGatewayProvider(client, data.tenantId);
-  const adapter = await resolveGatewayAdapter(client, data.tenantId, deps);
+  // O escritorio_config pertence ao automacaoTenant (tenant do escritório),
+  // não ao publicTenant (tenant de cobrança). Usar o ID errado causaria
+  // "escritorio_config_not_found" e o boleto jamais seria emitido.
+  const automacaoTenantId =
+    typeof charge.metadata.portal_automacao_tenant_id === "string"
+      ? charge.metadata.portal_automacao_tenant_id.trim()
+      : undefined;
+
+  const configTenantId = automacaoTenantId || data.tenantId;
+  const gatewayProvider = await loadGatewayProvider(client, configTenantId);
+  const adapter = await resolveGatewayAdapter(client, configTenantId, deps);
 
   const portalClienteId = charge.metadata.portal_cliente_id;
   if (typeof portalClienteId !== "string" || !portalClienteId.trim()) {
     throw new Error("charge.metadata.portal_cliente_id obrigatorio para emissao.");
   }
 
-  const automacaoTenantId =
-    typeof charge.metadata.portal_automacao_tenant_id === "string"
-      ? charge.metadata.portal_automacao_tenant_id.trim()
-      : undefined;
-
   const cliente = await loadPortalCliente(client, portalClienteId.trim(), automacaoTenantId);
   const payer = buildPayerInputFromPortalCliente(cliente);
 
   const providersRequiringAddress = new Set(["inter", "cora", "c6"]);
   if (providersRequiringAddress.has(gatewayProvider) && !isCompletePayerAddress(payer.endereco)) {
-    throw new Error("portal_cliente_address_required_for_emission");
+    const gatewayLabel =
+      gatewayProvider === "inter"
+        ? "Banco Inter"
+        : gatewayProvider === "cora"
+          ? "Cora"
+          : gatewayProvider === "c6"
+            ? "C6 Bank"
+            : gatewayProvider;
+    throw new Error(
+      `${gatewayLabel} exige endereco completo do cliente (CEP, logradouro, numero, bairro, cidade e UF).`
+    );
   }
 
   let gatewayCustomerId = cliente.gatewayCustomerId;

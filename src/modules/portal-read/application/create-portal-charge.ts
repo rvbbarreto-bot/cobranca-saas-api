@@ -72,9 +72,11 @@ export async function createPortalChargeUseCase(
   }
 
   const metadata: Record<string, unknown> = { ...(data.metadata ?? {}) };
+  // Sempre persiste o tenant de origem para que o worker de emissão possa
+  // acessar escritorio_config e portal.cliente no schema correto.
+  metadata.portal_automacao_tenant_id = automacaoTenantId;
   if (data.portal_cliente_id) {
     metadata.portal_cliente_id = data.portal_cliente_id;
-    metadata.portal_automacao_tenant_id = automacaoTenantId;
   }
 
   const result = await insertCharge(client, {

@@ -71,7 +71,7 @@ export function LoginPage(): JSX.Element {
                 disabled={isSubmitting}
                 placeholder="nome@empresa.com.br"
               />
-              {fieldErrors.email ? <span className="err">{fieldErrors.email}</span> : null}
+              {fieldErrors.email ? <span className="err" role="alert">{fieldErrors.email}</span> : null}
             </label>
             <label htmlFor="login-password">
               Senha
@@ -83,7 +83,7 @@ export function LoginPage(): JSX.Element {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={isSubmitting}
               />
-              {fieldErrors.password ? <span className="err">{fieldErrors.password}</span> : null}
+              {fieldErrors.password ? <span className="err" role="alert">{fieldErrors.password}</span> : null}
             </label>
             <label htmlFor="login-tenant">
               Tenant / Escritório
@@ -100,9 +100,9 @@ export function LoginPage(): JSX.Element {
                 <code>1</code>, <code>escritorio-demo</code>). O nome do escritório (ex. &quot;Escritório&quot;) não
                 é aceito.
               </span>
-              {fieldErrors.tenant_id ? <span className="err">{fieldErrors.tenant_id}</span> : null}
+              {fieldErrors.tenant_id ? <span className="err" role="alert">{fieldErrors.tenant_id}</span> : null}
             </label>
-            {error ? <div className="banner-err">{error}</div> : null}
+            {error ? <div className="banner-err" role="alert">{error}</div> : null}
             <button type="submit" className="btn-login-cta" disabled={isSubmitting}>
               {isSubmitting ? "Entrando…" : "Entrar no portal"}
             </button>

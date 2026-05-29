@@ -112,6 +112,17 @@ function startOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
+/**
+ * Retorna a data atual como midnight local correspondente ao dia calendário
+ * em America/Sao_Paulo, independente do timezone do dispositivo.
+ */
+function nowInBrazil(): Date {
+  const brazilIso = new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Sao_Paulo"
+  });
+  return parseIsoDateOnly(brazilIso) ?? new Date();
+}
+
 export function addCalendarDays(base: Date, days: number): Date {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
@@ -147,7 +158,7 @@ export function parseIsoDateOnly(iso: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-export function minDueDateIso(rules: PortalChargeRules, today = new Date()): string {
+export function minDueDateIso(rules: PortalChargeRules, today = nowInBrazil()): string {
   const base = startOfLocalDay(today);
   const min =
     rules.minDueBusinessDays && rules.minDueOffsetDays > 0
@@ -156,11 +167,16 @@ export function minDueDateIso(rules: PortalChargeRules, today = new Date()): str
   return toIsoDateOnly(min);
 }
 
-export function defaultDueDateIso(daysAhead = 30, today = new Date()): string {
+export function defaultDueDateIso(daysAhead = 30, today = nowInBrazil()): string {
   return toIsoDateOnly(addCalendarDays(startOfLocalDay(today), daysAhead));
 }
 
-export function isDueDateAllowed(iso: string, rules: PortalChargeRules, today = new Date()): boolean {
+/** Data de hoje no fuso America/Sao_Paulo, como string YYYY-MM-DD. */
+export function todayBrazilIso(): string {
+  return toIsoDateOnly(nowInBrazil());
+}
+
+export function isDueDateAllowed(iso: string, rules: PortalChargeRules, today = nowInBrazil()): boolean {
   const due = parseIsoDateOnly(iso);
   if (!due) {
     return false;

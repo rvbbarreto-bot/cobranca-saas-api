@@ -1,15 +1,13 @@
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { fetchEscritorioConfig, fetchPortalCobrancaDetail } from "../lib/api";
+import { fetchEscritorioConfig } from "../lib/api";
 import { ChargeShareActions } from "../components/ChargeShareActions";
 import { useHashScroll } from "../hooks/useHashScroll";
 import { useCliente } from "../hooks/useCliente";
 import { getPortalChargeRules } from "../lib/gateway-charge-rules";
-import { CHARGE_DETAIL_POLL_MS, shouldPollChargeDetail } from "../lib/charge-detail-poll";
-import {
-  buildTimelineFromEvents,
-  extractEmissionError
-} from "../lib/charge-detail-timeline";
+import { useChargeEmissionPolling } from "../hooks/useChargeEmissionPolling";
+import { buildTimelineFromEvents } from "../lib/charge-detail-timeline";
+import { resolveChargeDetailBanners } from "../lib/charge-detail-ui";
 import { ChargePaymentPanel } from "../components/ChargePaymentPanel";
 import { ReprocessEmissionButton } from "../components/ReprocessEmissionButton";
 import {
@@ -65,12 +63,8 @@ export function BoletoDetalhePage(): JSX.Element {
   const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
   const gatewayRules = getPortalChargeRules(configQ.data?.config?.gateway_provider);
 
-  const detailQ = useQuery({
-    queryKey: ["cobranca", chargeId],
-    queryFn: () => fetchPortalCobrancaDetail(chargeId!),
-    enabled: Boolean(chargeId),
-    refetchInterval: (q) => (shouldPollChargeDetail(q.state.data) ? CHARGE_DETAIL_POLL_MS : false)
-  });
+  const { query: detailQ, isPolling, timeoutReached, resetPolling } =
+    useChargeEmissionPolling(chargeId);
 
   const charge = detailQ.data?.charge;
   const events = detailQ.data?.events ?? [];
@@ -78,7 +72,13 @@ export function BoletoDetalhePage(): JSX.Element {
   const chargeMeta = charge?.metadata as Record<string, unknown> | undefined;
   const portalClienteId = portalClienteIdFromMetadata(chargeMeta);
   const clienteQ = useCliente(portalClienteId);
-  const emissionError = extractEmissionError(events);
+  const banners = resolveChargeDetailBanners({
+    events,
+    chargeStatus: charge?.canonicalStatus,
+    isPolling,
+    timeoutReached,
+    hasPayment: Boolean(payment)
+  });
   const timeline = events.length > 0 ? buildTimelineFromEvents(events) : [];
 
   const chargeType =
@@ -97,10 +97,10 @@ export function BoletoDetalhePage(): JSX.Element {
         ? `Ref. ${charge.reference}`
         : "—";
 
-  const polling =
-    charge &&
-    charge.canonicalStatus === "rascunho" &&
-    !payment;
+  const clienteEditHref =
+    portalClienteId && banners.emissionError?.toLowerCase().includes("endere")
+      ? `/clientes/${encodeURIComponent(portalClienteId)}/editar`
+      : null;
 
   return (
     <div className="shell-page">
@@ -125,7 +125,10 @@ export function BoletoDetalhePage(): JSX.Element {
 
       {showLoading ? <p className="muted">Carregando…</p> : null}
       {detailQ.isError ? (
-        <div className="banner-err">{detailQ.error instanceof Error ? detailQ.error.message : "Erro"}</div>
+        <div className="banner-err">
+          <strong>Não foi possível carregar o boleto.</strong>{" "}
+          {detailQ.error instanceof Error ? detailQ.error.message : "Tente recarregar a página."}
+        </div>
       ) : null}
 
       {chargeId && showNotFound ? <div className="banner-err">Boleto não encontrado neste escritório.</div> : null}
@@ -134,10 +137,43 @@ export function BoletoDetalhePage(): JSX.Element {
         <div className="boleto-detail-grid">
           <div className="form-card">
             <h3 className="form-card__title">Resumo do título</h3>
-            {emissionError ? <div className="banner-err">{emissionError}</div> : null}
-            {polling ? (
+            {banners.emissionError ? (
+              <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.25rem", fontWeight: 600 }}>Falha na emissão do boleto</p>
+                <p style={{ margin: 0, fontSize: "0.875rem" }}>{banners.emissionError}</p>
+                {clienteEditHref ? (
+                  <p style={{ margin: "0.5rem 0 0", fontSize: "0.875rem" }}>
+                    <Link to={clienteEditHref} className="link-inline">
+                      Atualizar cadastro do cliente
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {banners.showEmissionProgress ? (
               <div className="banner-ok" style={{ marginBottom: "0.75rem" }}>
                 Emissão em andamento — a página atualiza automaticamente.
+              </div>
+            ) : null}
+            {banners.showEmissionInconclusive && chargeId ? (
+              <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.25rem", fontWeight: 600 }}>
+                  A emissão está demorando mais que o esperado.
+                </p>
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }}>
+                  O processamento ocorre em segundo plano e pode levar alguns minutos. Se o problema
+                  persistir, use o botão abaixo para reenviar a cobrança ao banco.
+                </p>
+                <ReprocessEmissionButton
+                  chargeId={chargeId}
+                  className="btn-secondary"
+                  label="Reenviar ao banco"
+                  pendingLabel="Reenviando…"
+                  confirmTitle="Reenviar ao banco?"
+                  confirmMessage="A cobrança voltará para rascunho e a emissão no gateway será tentada novamente em segundo plano. Acompanhe o status nesta página."
+                  disabled={isPolling}
+                  onReprocessed={resetPolling}
+                />
               </div>
             ) : null}
             <dl style={{ margin: 0 }}>

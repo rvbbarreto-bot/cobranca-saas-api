@@ -13,6 +13,7 @@
     "check:db": "tsx scripts/check-db.ts",
     "check:readiness": "npm run check:prod-env -- --strict && npm run check:db",
     "seed:dev": "tsx scripts/seed-dev-portal.ts",
+    "backfill:charge-automacao-tenant": "tsx scripts/backfill-charge-automacao-tenant-id.ts",
     "db:psql": "tsx scripts/db-psql.ts",
     "db:query": "tsx scripts/db-query.ts",
     "db:portal-app-user": "tsx scripts/db-portal-app-user.ts",
