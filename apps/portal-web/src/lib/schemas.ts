@@ -157,17 +157,22 @@ export function normalizeClientePayload(
   };
 }
 
-export function normalizeClienteEditPayload(values: ClienteEditFormValues): {
+export function normalizeClienteEditPayload(
+  values: ClienteEditFormValues,
+  endereco?: ClienteEnderecoPayload | null
+): {
   nome: string;
   email: string;
   telefone: string | null;
   whatsapp_opt_in: boolean;
+  endereco?: ClienteEnderecoPayload | null;
 } {
   const phoneDigits = onlyDigits(values.telefone ?? "");
   return {
     nome: values.nome.trim(),
     email: values.email.trim().toLowerCase(),
     telefone: phoneDigits.length > 0 ? phoneDigits : null,
-    whatsapp_opt_in: values.whatsapp_opt_in
+    whatsapp_opt_in: values.whatsapp_opt_in,
+    ...(endereco !== undefined ? { endereco } : {})
   };
 }

@@ -744,7 +744,7 @@ async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response):
 
   const audit = auditContextFromRequest(req);
   const result = await withTenantTransaction(publicTenantId, (client) =>
-    reprocessPortalChargeEmissionUseCase(client, chargeId, audit)
+    reprocessPortalChargeEmissionUseCase(client, automacaoTenantId, chargeId, audit)
   );
 
   if (!result.ok) {
@@ -753,6 +753,10 @@ async function reprocessPortalCobrancaEmissionHttp(req: Request, res: Response):
         error: "charge_not_found",
         message: "Cobranca inexistente neste tenant de faturacao."
       });
+      return;
+    }
+    if (result.kind === "validation_error" && result.issues?.length) {
+      res.status(422).json({ error: "validation_error", issues: result.issues });
       return;
     }
     res.status(409).json({

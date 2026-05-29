@@ -782,13 +782,22 @@ body {
 }
 
 .link-inline {
+  background: none;
+  border: none;
+  padding: 0;
   color: #0f766e;
   font-weight: 600;
   text-decoration: none;
+  cursor: pointer;
 }
 
 .link-inline:hover {
   text-decoration: underline;
+}
+
+.link-inline:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ----- Forms (cadastro cliente 2x2) ----- */

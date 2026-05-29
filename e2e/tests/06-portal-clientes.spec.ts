@@ -53,4 +53,31 @@ test.describe("Clientes", () => {
     ]).then(([r]) => r);
     expect(patchResp.status()).toBe(200);
   });
+
+  test(bddTitle("Clientes", "Editar endereco do cliente"), async ({ page }) => {
+    const baseNome = `Cliente QA End ${Date.now()}`;
+    await page.goto("/clientes/novo");
+    await page.getByLabel(/^tipo$/i).selectOption("PJ");
+    await page.getByLabel(/cnpj/i).fill(uniqueTestCnpj(Date.now() + 2));
+    await page.getByLabel(/razão social/i).fill(baseNome);
+    await page.getByLabel(/^e-mail$/i).fill(`qa-end-${Date.now()}@test.local`);
+    const postResp = await Promise.all([
+      waitForApi(page, "/v1/portal/clientes", "POST"),
+      page.getByRole("button", { name: /salvar cliente/i }).click()
+    ]).then(([r]) => r);
+    expect(postResp.status()).toBe(201);
+    const created = (await postResp.json()) as { cliente?: { id?: string } };
+    const clienteId = created.cliente?.id;
+    test.skip(!clienteId, "POST clientes não devolveu cliente.id");
+
+    await page.goto(`/clientes/${clienteId}/editar`);
+    await page.getByLabel(/^cep$/i).fill("01310-100");
+    await page.getByLabel(/^cep$/i).blur();
+    await page.getByLabel(/^bairro$/i).fill("Bela Vista");
+    const patchResp = await Promise.all([
+      waitForApi(page, "/v1/portal/clientes/", "PATCH"),
+      page.getByRole("button", { name: /^salvar$/i }).click()
+    ]).then(([r]) => r);
+    expect(patchResp.status()).toBe(200);
+  });
 });

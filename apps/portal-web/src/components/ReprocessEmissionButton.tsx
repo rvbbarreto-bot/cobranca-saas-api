@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
-import { reprocessPortalCobrancaEmission } from "../lib/api";
+import { PortalValidationError, reprocessPortalCobrancaEmission } from "../lib/api";
 
 type Props = {
   chargeId: string;
@@ -43,6 +43,10 @@ export function ReprocessEmissionButton({
       onReprocessed?.();
     },
     onError: (err: unknown) => {
+      if (err instanceof PortalValidationError && err.issues.length > 0) {
+        showToast(err.issues.map((i) => i.message).join(" "));
+        return;
+      }
       const msg = err instanceof Error ? err.message : "Não foi possível reprocessar.";
       showToast(msg);
     }
@@ -55,7 +59,7 @@ export function ReprocessEmissionButton({
       <button
         type="button"
         className={className}
-        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: isDisabled ? "wait" : "pointer" }}
+        style={isDisabled ? { cursor: "wait" } : undefined}
         disabled={isDisabled}
         onClick={() => setOpen(true)}
       >

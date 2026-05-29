@@ -6,10 +6,8 @@ import { useHashScroll } from "../hooks/useHashScroll";
 import { useCliente } from "../hooks/useCliente";
 import { getPortalChargeRules } from "../lib/gateway-charge-rules";
 import { useChargeEmissionPolling } from "../hooks/useChargeEmissionPolling";
-import {
-  buildTimelineFromEvents,
-  extractEmissionError
-} from "../lib/charge-detail-timeline";
+import { buildTimelineFromEvents } from "../lib/charge-detail-timeline";
+import { resolveChargeDetailBanners } from "../lib/charge-detail-ui";
 import { ChargePaymentPanel } from "../components/ChargePaymentPanel";
 import { ReprocessEmissionButton } from "../components/ReprocessEmissionButton";
 import {
@@ -74,7 +72,13 @@ export function BoletoDetalhePage(): JSX.Element {
   const chargeMeta = charge?.metadata as Record<string, unknown> | undefined;
   const portalClienteId = portalClienteIdFromMetadata(chargeMeta);
   const clienteQ = useCliente(portalClienteId);
-  const emissionError = extractEmissionError(events);
+  const banners = resolveChargeDetailBanners({
+    events,
+    chargeStatus: charge?.canonicalStatus,
+    isPolling,
+    timeoutReached,
+    hasPayment: Boolean(payment)
+  });
   const timeline = events.length > 0 ? buildTimelineFromEvents(events) : [];
 
   const chargeType =
@@ -93,11 +97,10 @@ export function BoletoDetalhePage(): JSX.Element {
         ? `Ref. ${charge.reference}`
         : "—";
 
-  const emissionInconclusive =
-    Boolean(charge) &&
-    charge?.canonicalStatus === "rascunho" &&
-    !payment &&
-    timeoutReached;
+  const clienteEditHref =
+    portalClienteId && banners.emissionError?.toLowerCase().includes("endere")
+      ? `/clientes/${encodeURIComponent(portalClienteId)}/editar`
+      : null;
 
   return (
     <div className="shell-page">
@@ -122,7 +125,10 @@ export function BoletoDetalhePage(): JSX.Element {
 
       {showLoading ? <p className="muted">Carregando…</p> : null}
       {detailQ.isError ? (
-        <div className="banner-err">{detailQ.error instanceof Error ? detailQ.error.message : "Erro"}</div>
+        <div className="banner-err">
+          <strong>Não foi possível carregar o boleto.</strong>{" "}
+          {detailQ.error instanceof Error ? detailQ.error.message : "Tente recarregar a página."}
+        </div>
       ) : null}
 
       {chargeId && showNotFound ? <div className="banner-err">Boleto não encontrado neste escritório.</div> : null}
@@ -131,25 +137,40 @@ export function BoletoDetalhePage(): JSX.Element {
         <div className="boleto-detail-grid">
           <div className="form-card">
             <h3 className="form-card__title">Resumo do título</h3>
-            {emissionError ? <div className="banner-err">{emissionError}</div> : null}
-            {isPolling ? (
+            {banners.emissionError ? (
+              <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
+                <p style={{ margin: "0 0 0.25rem", fontWeight: 600 }}>Falha na emissão do boleto</p>
+                <p style={{ margin: 0, fontSize: "0.875rem" }}>{banners.emissionError}</p>
+                {clienteEditHref ? (
+                  <p style={{ margin: "0.5rem 0 0", fontSize: "0.875rem" }}>
+                    <Link to={clienteEditHref} className="link-inline">
+                      Atualizar cadastro do cliente
+                    </Link>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            {banners.showEmissionProgress ? (
               <div className="banner-ok" style={{ marginBottom: "0.75rem" }}>
                 Emissão em andamento — a página atualiza automaticamente.
               </div>
             ) : null}
-            {emissionInconclusive && chargeId ? (
+            {banners.showEmissionInconclusive && chargeId ? (
               <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
-                <p style={{ margin: "0 0 0.5rem" }}>
-                  A emissão do boleto não foi confirmada dentro do tempo esperado. Verifique sua
-                  conexão e tente novamente.
+                <p style={{ margin: "0 0 0.25rem", fontWeight: 600 }}>
+                  A emissão está demorando mais que o esperado.
+                </p>
+                <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }}>
+                  O processamento ocorre em segundo plano e pode levar alguns minutos. Se o problema
+                  persistir, use o botão abaixo para reenviar a cobrança ao banco.
                 </p>
                 <ReprocessEmissionButton
                   chargeId={chargeId}
-                  className="btn-primary"
-                  label="Tentar emissão novamente"
+                  className="btn-secondary"
+                  label="Reenviar ao banco"
                   pendingLabel="Reenviando…"
-                  confirmTitle="Tentar emissão novamente?"
-                  confirmMessage="A emissão no gateway será reenviada em segundo plano e a página voltará a acompanhar o status."
+                  confirmTitle="Reenviar ao banco?"
+                  confirmMessage="A cobrança voltará para rascunho e a emissão no gateway será tentada novamente em segundo plano. Acompanhe o status nesta página."
                   disabled={isPolling}
                   onReprocessed={resetPolling}
                 />
