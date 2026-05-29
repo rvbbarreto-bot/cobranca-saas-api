@@ -140,7 +140,7 @@ export function CobrancaEditPage(): JSX.Element {
                 onChange={(e) => setAmount(e.target.value)}
                 disabled={m.isPending}
               />
-              {fieldErrors.amount ? <span className="err">{fieldErrors.amount}</span> : null}
+              {fieldErrors.amount ? <span className="err" role="alert">{fieldErrors.amount}</span> : null}
             </label>
             <BrDatePicker
               id="cobranca-edit-due"
@@ -163,7 +163,7 @@ export function CobrancaEditPage(): JSX.Element {
               </button>
             </div>
           </div>
-          {apiError ? <div className="banner-err form-card--full">{apiError}</div> : null}
+          {apiError ? <div className="banner-err form-card--full" role="alert">{apiError}</div> : null}
         </form>
       ) : null}
     </div>
