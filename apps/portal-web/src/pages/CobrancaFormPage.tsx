@@ -185,7 +185,7 @@ export function CobrancaFormPage(): JSX.Element {
             {rules.referenceAlphanumericOnly ? " (somente letras, numeros e espacos — Banco Inter)" : ""}.
             {reference.length > 0 ? ` ${reference.length}/${rules.referenceMaxLength}` : null}
           </p>
-          {fieldErrors.reference ? <span className="err">{fieldErrors.reference}</span> : null}
+          {fieldErrors.reference ? <span className="err" role="alert">{fieldErrors.reference}</span> : null}
 
           <label htmlFor="cobranca-amount">
             Valor (R$)
@@ -204,7 +204,7 @@ export function CobrancaFormPage(): JSX.Element {
               required
             />
           </label>
-          {fieldErrors.amount ? <span className="err">{fieldErrors.amount}</span> : null}
+          {fieldErrors.amount ? <span className="err" role="alert">{fieldErrors.amount}</span> : null}
 
           <BrDatePicker
             id="cobranca-due"
@@ -229,7 +229,7 @@ export function CobrancaFormPage(): JSX.Element {
           />
         </div>
 
-        {apiError ? <div className="banner-err form-card--full">{apiError}</div> : null}
+        {apiError ? <div className="banner-err form-card--full" role="alert">{apiError}</div> : null}
 
         <div className="form-actions form-card--full">
           <button type="submit" className="btn-primary" disabled={isSubmitting} aria-busy={isSubmitting}>
