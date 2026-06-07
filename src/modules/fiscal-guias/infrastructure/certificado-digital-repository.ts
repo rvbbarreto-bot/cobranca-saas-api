@@ -1,9 +1,19 @@
 import type { Pool, PoolClient } from "pg";
-import { decryptAes256Gcm, encryptAes256Gcm } from "../../../platform/crypto/symmetric-encryption";
 import { getPool } from "../../../platform/persistence/pool";
+import {
+  decryptCertificadoBundle,
+  encryptCertificadoBundle,
+  type DecryptedCertificadoPem
+} from "./certificate-pem-crypto";
+import {
+  getActiveVaultCertForCliente,
+  getActiveVaultCertMetaForCliente,
+  insertCertificateVault,
+  resolveOrganizationIdForTenant
+} from "./certificate-vault-repository";
 import { rethrowFiscalSchemaError } from "./fiscal-schema";
 
-const BUNDLE_MARKER = "__bundled__";
+export type { DecryptedCertificadoPem } from "./certificate-pem-crypto";
 
 export type CertificadoDigitalRow = {
   id: string;
@@ -12,45 +22,31 @@ export type CertificadoDigitalRow = {
   valid_from: string;
   valid_until: string;
   ativo: boolean;
+  certificate_vault_id: string | null;
   created_at: Date;
   updated_at: Date;
 };
 
-export type DecryptedCertificadoPem = {
-  certificadoPem: string;
-  chavePrivadaPem: string;
-};
-
-function encryptCertificadoBundle(certificadoPem: string, chavePrivadaPem: string): {
-  cert_encrypted: string;
-  key_encrypted: string;
-  encryption_iv: string;
-} {
-  const payload = JSON.stringify({ cert: certificadoPem, key: chavePrivadaPem });
-  const { ciphertext, iv } = encryptAes256Gcm(payload);
+function vaultRowToCertificadoRow(vault: {
+  id: string;
+  portal_cliente_id: string | null;
+  label: string;
+  valid_from: string;
+  valid_until: string;
+  status: string;
+  created_at: Date;
+  updated_at: Date;
+}): CertificadoDigitalRow {
   return {
-    cert_encrypted: ciphertext,
-    key_encrypted: BUNDLE_MARKER,
-    encryption_iv: iv
-  };
-}
-
-function decryptCertificadoBundle(
-  certEncrypted: string,
-  keyEncrypted: string,
-  iv: string
-): DecryptedCertificadoPem {
-  if (keyEncrypted === BUNDLE_MARKER) {
-    const json = decryptAes256Gcm(certEncrypted, iv);
-    const parsed = JSON.parse(json) as { cert?: string; key?: string };
-    if (!parsed.cert?.trim() || !parsed.key?.trim()) {
-      throw new Error("Bundle certificado invalido.");
-    }
-    return { certificadoPem: parsed.cert, chavePrivadaPem: parsed.key };
-  }
-  return {
-    certificadoPem: decryptAes256Gcm(certEncrypted, iv),
-    chavePrivadaPem: decryptAes256Gcm(keyEncrypted, iv)
+    id: vault.id,
+    portal_cliente_id: vault.portal_cliente_id ?? "",
+    label: vault.label,
+    valid_from: vault.valid_from,
+    valid_until: vault.valid_until,
+    ativo: vault.status === "active" || vault.status === "expiring",
+    certificate_vault_id: vault.id,
+    created_at: vault.created_at,
+    updated_at: vault.updated_at
   };
 }
 
@@ -67,57 +63,39 @@ export async function insertCertificadoDigital(
     uploadedByUserId?: string;
   }
 ): Promise<CertificadoDigitalRow> {
-  const enc = encryptCertificadoBundle(input.certificadoPem, input.chavePrivadaPem);
-
-  await client.query(
-    `UPDATE fiscal.certificado_digital
-     SET ativo = false, updated_at = now()
-     WHERE tenant_id = $1 AND portal_cliente_id = $2::uuid AND ativo = true`,
-    [input.tenantId, input.portalClienteId]
-  );
-
-  const r = await client.query<CertificadoDigitalRow>(
-    `INSERT INTO fiscal.certificado_digital (
-       tenant_id, portal_cliente_id, label, valid_from, valid_until,
-       cert_encrypted, key_encrypted, encryption_iv, uploaded_by_user_id, ativo
-     )
-     VALUES ($1, $2::uuid, $3, $4::date, $5::date, $6, $7, $8, $9::uuid, true)
-     RETURNING
-       id::text AS id,
-       portal_cliente_id::text AS portal_cliente_id,
-       label,
-       valid_from::text AS valid_from,
-       valid_until::text AS valid_until,
-       ativo,
-       created_at,
-       updated_at`,
-    [
-      input.tenantId,
-      input.portalClienteId,
-      input.label,
-      input.validFrom,
-      input.validUntil,
-      enc.cert_encrypted,
-      enc.key_encrypted,
-      enc.encryption_iv,
-      input.uploadedByUserId ?? null
-    ]
-  );
-  const row = r.rows[0];
-  if (!row) {
-    throw new Error("Falha ao inserir certificado digital.");
+  const organizationId = await resolveOrganizationIdForTenant(client, input.tenantId);
+  if (!organizationId) {
+    throw new Error("ORGANIZATION_NOT_FOUND_FOR_TENANT");
   }
-  return row;
+
+  const vault = await insertCertificateVault(client, {
+    organizationId,
+    automacaoTenantId: input.tenantId,
+    portalClienteId: input.portalClienteId,
+    label: input.label,
+    validFrom: input.validFrom,
+    validUntil: input.validUntil,
+    certificadoPem: input.certificadoPem,
+    chavePrivadaPem: input.chavePrivadaPem,
+    uploadedByUserId: input.uploadedByUserId
+  });
+
+  return vaultRowToCertificadoRow(vault);
 }
 
-/** Metadados do certificado ativo (sem PEM) — uso portal GET. */
+/** Metadados do certificado ativo (sem PEM) — vault primário, legado fallback. */
 export async function getActiveCertificadoMetaForCliente(
   tenantId: string,
   portalClienteId: string,
   db: Pool | PoolClient = getPool()
 ): Promise<CertificadoDigitalRow | null> {
+  const vault = await getActiveVaultCertMetaForCliente(tenantId, portalClienteId, db);
+  if (vault) {
+    return vaultRowToCertificadoRow(vault);
+  }
+
   try {
-    const r = await db.query<CertificadoDigitalRow>(
+    const r = await db.query<CertificadoDigitalRow & { certificate_vault_id?: string | null }>(
       `SELECT
          id::text AS id,
          portal_cliente_id::text AS portal_cliente_id,
@@ -125,6 +103,7 @@ export async function getActiveCertificadoMetaForCliente(
          valid_from::text AS valid_from,
          valid_until::text AS valid_until,
          ativo,
+         NULL::text AS certificate_vault_id,
          created_at,
          updated_at
        FROM fiscal.certificado_digital
@@ -147,6 +126,14 @@ export async function getActiveCertificadoForCliente(
   portalClienteId: string,
   db: Pool | PoolClient = getPool()
 ): Promise<(CertificadoDigitalRow & { decrypted: DecryptedCertificadoPem }) | null> {
+  const vault = await getActiveVaultCertForCliente(tenantId, portalClienteId, db);
+  if (vault) {
+    return {
+      ...vaultRowToCertificadoRow(vault),
+      decrypted: vault.decrypted
+    };
+  }
+
   try {
     const r = await db.query<
       CertificadoDigitalRow & {
@@ -162,6 +149,7 @@ export async function getActiveCertificadoForCliente(
          valid_from::text AS valid_from,
          valid_until::text AS valid_until,
          ativo,
+         NULL::text AS certificate_vault_id,
          created_at,
          updated_at,
          cert_encrypted,
@@ -220,3 +208,6 @@ export async function getPortalClienteCnpj(
   );
   return r.rows[0]?.documento ?? null;
 }
+
+/** @deprecated Use certificate-pem-crypto — reexport para scripts legados. */
+export { encryptCertificadoBundle, decryptCertificadoBundle };

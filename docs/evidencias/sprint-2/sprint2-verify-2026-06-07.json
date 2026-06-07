@@ -1,0 +1,15 @@
+{
+  "sprint": 2,
+  "issues": ["EXEQ-FISC-020", "EXEQ-FISC-021"],
+  "verified_at": "2026-06-07T19:59:24.680Z",
+  "executor": "fabrica",
+  "branch": "feature/EXEQ-FISC-020-certificate-vault",
+  "steps": {
+    "migrate": "033_certificate_vault.sql applied",
+    "backfill_certificate_vault": "legado 4, migrados 0, ignorados 4 (ENCRYPTION_KEY legado)",
+    "vitest_sprint2": "2 passed",
+    "vitest_fiscal_certificados_regression": "6 passed"
+  },
+  "command": "npm run verify:sprint2",
+  "dod": "complete"
+}

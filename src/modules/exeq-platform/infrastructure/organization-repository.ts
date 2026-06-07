@@ -1,6 +1,8 @@
 import type { Pool, PoolClient } from "pg";
 import type { OrganizationRow } from "../domain/organization-types";
 
+type DbQuery = Pick<Pool, "query">;
+
 const SELECT_ORG = `
   SELECT
     o.id::text AS id,
@@ -55,10 +57,10 @@ export async function getOrganizationById(
 }
 
 export async function getOrganizationByAutomacaoTenantId(
-  pool: Pool,
+  db: DbQuery,
   automacaoTenantId: string
 ): Promise<OrganizationRow | null> {
-  const r = await pool.query(
+  const r = await db.query(
     `${SELECT_ORG} WHERE ot.automacao_tenant_id = $1 LIMIT 1`,
     [automacaoTenantId]
   );

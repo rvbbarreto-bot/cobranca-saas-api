@@ -47,8 +47,8 @@ export async function postPortalCertificadoDigitalUseCase(input: {
         tenantId: input.tenantId,
         userId: input.uploadedByUserId,
         action: "upload_certificado",
-        resourceType: "certificado_digital",
-        resourceId: cert.id,
+        resourceType: "certificate_vault",
+        resourceId: cert.certificate_vault_id ?? cert.id,
         newValue: {
           portal_cliente_id: parsed.value.portal_cliente_id,
           label: parsed.value.label,

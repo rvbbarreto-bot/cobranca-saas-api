@@ -41,8 +41,8 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/portal/fiscal/guias/:guiaId` | Idem; detalhe `{ guia }`; **404** `guia_not_found` |
 | GET | `/v1/portal/fiscal/guias/:guiaId/pdf-url` | Idem; **admin_escritorio** / **operador**; `{ pdf_url, expires_in_seconds }`; **404** `guia_not_found` ou `pdf_unavailable` |
 | POST | `/v1/portal/fiscal/guias/:guiaId/pagamentos` | Idem; **admin_escritorio** apenas; body `{ valor_pago, data_pagamento, meio?, comprovante_url? }`; **201** `{ pagamento, guia_status: "PAGO" }`; **409** `guia_transition_denied` |
-| POST | `/v1/portal/fiscal/certificados` | Idem; **admin_escritorio** apenas; body PEM cifrado (AES); **201** `{ certificado }`; **404** `cliente_not_found` |
-| GET | `/v1/portal/fiscal/certificados` | Idem; query **`portal_cliente_id`** (UUID); **200** `{ certificado }` ou `{ certificado: null }`; metadados sem PEM |
+| POST | `/v1/portal/fiscal/certificados` | Idem; **admin_escritorio** apenas; body PEM cifrado (AES); **201** `{ certificado }` com **`certificate_vault_id`** (S2 vault); **404** `cliente_not_found` |
+| GET | `/v1/portal/fiscal/certificados` | Idem; query **`portal_cliente_id`** (UUID); **200** `{ certificado }` ou `{ certificado: null }`; metadados sem PEM; leitura primária `fiscal.certificate_vault` |
 | POST | `/v1/portal/fiscal/procuracoes` | Idem; **admin_escritorio** apenas; **201** `{ procuracao }` |
 | GET | `/v1/portal/fiscal/procuracoes` | Idem; query **`portal_cliente_id`** (UUID); **200** `{ procuracao }` ou `{ procuracao: null }` |
 | GET | `/v1/portal/fiscal/serpro-config` | Idem; **admin_escritorio** apenas; **200** `{ serpro_config }`; migration **`032_organization_and_serpro_config.sql`** + backfill org |
