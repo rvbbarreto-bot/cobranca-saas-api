@@ -14,11 +14,10 @@
 ## Comandos pós-pull
 
 ```powershell
-npm run migrate
-npm run backfill:organization
-npm run build
-npm run test:integration
+npm run verify:sprint1
 ```
+
+Equivalente manual: `npm run migrate` → `npm run backfill:organization` → vitest sprint1.
 
 ## Critérios DoD S1
 
@@ -26,5 +25,6 @@ npm run test:integration
 - [x] Backfill idempotente
 - [x] API org EXEQ master
 - [x] API serpro-config portal admin
-- [x] Testes integração (`tests/fiscal-guias/sprint1-organization-serpro.integration.test.ts`)
-- [ ] PR merge develop
+- [x] Testes integração — **6 passed** (`npm run verify:sprint1`)
+- [x] Evidência: `docs/evidencias/sprint-1/sprint1-verify-2026-06-07.json`
+- [x] PR aberto: `feature/EXEQ-FISC-010-organization-model` → `feat/sprint-o-completude-cadastro-emissao`

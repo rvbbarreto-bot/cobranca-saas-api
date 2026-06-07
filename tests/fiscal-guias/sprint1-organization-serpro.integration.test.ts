@@ -19,15 +19,27 @@ import { closePool, getPool } from "../../src/platform/persistence/pool";
 const hasDb = Boolean(process.env.DATABASE_URL?.trim());
 const TEST_CNPJ = "11222333000181";
 
-async function orgSchemaReady(): Promise<boolean> {
+async function assertIntegrationDbReady(): Promise<void> {
+  if (!hasDb) return;
   try {
     const pool = getPool();
+    await pool.query("SELECT 1");
     const r = await pool.query<{ ok: boolean }>(
       `SELECT to_regclass('portal.organization') IS NOT NULL AS ok`
     );
-    return Boolean(r.rows[0]?.ok);
-  } catch {
-    return false;
+    if (!r.rows[0]?.ok) {
+      throw new Error(
+        "Schema portal.organization ausente. Execute: npm run migrate && npm run backfill:organization"
+      );
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes("ECONNREFUSED") || msg.includes("connect")) {
+      throw new Error(
+        "Postgres indisponivel em DATABASE_URL. Execute: npm run verify:sprint1 (sobe Docker + migrate + testes)"
+      );
+    }
+    throw error;
   }
 }
 
@@ -44,32 +56,29 @@ describe.skipIf(!hasDb)("Sprint 1 — organization + SERPRO config", () => {
     process.env.FISCAL_GUIAS_ENABLED = "true";
     process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY?.trim() || "a".repeat(64);
 
-    if (!(await orgSchemaReady())) {
-      return;
-    }
+    await assertIntegrationDbReady();
 
+    app = createApp();
+    await runSeedExeqPlatform(process.env.DATABASE_URL!.trim());
+    const seed = await runSeedPortalHappyPath(process.env.DATABASE_URL!.trim());
+    tenantId = seed.automacaoTenantId;
+
+    const client = await getPool().connect();
     try {
-      app = createApp();
-      await runSeedExeqPlatform(process.env.DATABASE_URL!.trim());
-      const seed = await runSeedPortalHappyPath(process.env.DATABASE_URL!.trim());
-      tenantId = seed.automacaoTenantId;
-
-      const client = await getPool().connect();
-      try {
-        organizationId = await ensureOrganizationForEscritorio(client, {
-          automacaoTenantId: tenantId,
-          slug: SEED_AUTOMACAO_SLUG,
-          name: "Escritorio Demo"
-        });
-      } finally {
-        client.release();
-      }
-
-      masterToken = await exeqMasterLogin(app);
-      adminToken = await portalLogin(app, tenantId);
-    } catch {
-      // DB indisponível ou seed falhou — testes individuais fazem skip via ctx.skip()
+      organizationId = await ensureOrganizationForEscritorio(client, {
+        automacaoTenantId: tenantId,
+        slug: SEED_AUTOMACAO_SLUG,
+        name: "Escritorio Demo"
+      });
+      await client.query(`DELETE FROM fiscal.serpro_config WHERE organization_id = $1::uuid`, [
+        organizationId
+      ]);
+    } finally {
+      client.release();
     }
+
+    masterToken = await exeqMasterLogin(app);
+    adminToken = await portalLogin(app, tenantId);
   });
 
   afterAll(async () => {

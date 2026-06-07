@@ -32,6 +32,7 @@ import {
   parseUpdateEscritorioModulesBody,
   updateEscritorioModules
 } from "../../application/update-escritorio-modules";
+import { mapOrganizationPublic } from "../../domain/organization-types";
 import { listOrganizations, getOrganizationById } from "../../infrastructure/organization-repository";
 import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
 
@@ -211,7 +212,8 @@ async function patchEscritorioHttp(req: Request, res: Response): Promise<void> {
 
 async function getOrganizations(_req: Request, res: Response): Promise<void> {
   const pool = getPool();
-  const data = await listOrganizations(pool);
+  const rows = await listOrganizations(pool);
+  const data = rows.map(mapOrganizationPublic);
   res.json({ data, count: data.length });
 }
 
@@ -227,7 +229,7 @@ async function getOrganization(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: "not_found", message: "Organizacao nao encontrada." });
     return;
   }
-  res.json({ organization: org });
+  res.json({ organization: mapOrganizationPublic(org) });
 }
 
 async function postEscritorioAccess(req: Request, res: Response): Promise<void> {
