@@ -1,9 +1,11 @@
 import type { Worker } from "bullmq";
+import { isFiscalGuiasEnabled } from "../config/fiscal-guias-enabled";
 import { registerRepeatableJobs } from "./register-repeatable-jobs";
 import { createPaymentEmissionWorker } from "./workers/payment-emission.worker";
 import { createWebhookProcessWorker } from "./workers/webhook-process.worker";
 import { registerChargeSyncWorker } from "./workers/charge-status-sync.worker";
 import { registerNotificationSendWorker } from "./workers/notification-send.worker";
+import { registerFiscalCaptureWorker } from "./workers/fiscal-capture.worker";
 
 const activeWorkers: Worker[] = [];
 
@@ -19,6 +21,13 @@ export function startAllWorkers(): void {
       registerChargeSyncWorker(),
       registerNotificationSendWorker()
     );
+
+    if (isFiscalGuiasEnabled()) {
+      const fiscalWorker = registerFiscalCaptureWorker();
+      if (fiscalWorker) {
+        activeWorkers.push(fiscalWorker);
+      }
+    }
 
     void registerRepeatableJobs().catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err);

@@ -27,6 +27,18 @@ export function signAccessToken(
   return jwt.sign(claims, getJwtSecret(), signOptions);
 }
 
+/** JWT do console master EXEQ (sem membership de escritório). */
+export function signPlatformMasterToken(userId: string, options?: { expiresIn?: string }): string {
+  return signAccessToken(
+    {
+      sub: userId,
+      tid: "__exeq_platform__",
+      roles: ["owner"]
+    },
+    options ?? { expiresIn: "8h" }
+  );
+}
+
 /** JWT do portal do cliente final (magic link), validade 4h. */
 export function signClientePortalToken(clienteId: string, automacaoTenantId: string): string {
   return signAccessToken(

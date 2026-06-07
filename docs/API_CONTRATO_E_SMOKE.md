@@ -37,13 +37,27 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | POST | `/v1/portal/clientes` | Idem |
 | PATCH | `/v1/portal/clientes/:clienteId` | Idem; retificação **sem** alterar documento (nome, email, whatsapp) |
 | GET | `/v1/portal/clientes/:clienteId/cobrancas` | Idem; `limit` + `cursor` (mesmo formato que cobranças globais) |
+| GET | `/v1/portal/fiscal/guias` | **Flag** `FISCAL_GUIAS_ENABLED=true`; Bearer portal; roles admin_escritorio / operador; query `limit`, `cursor`, filtros opcionais; resposta `{ guias[], count, page_limit, next_cursor }`; migration **`028_fiscal_guias_fase0.sql`** |
+| GET | `/v1/portal/fiscal/guias/:guiaId` | Idem; detalhe `{ guia }`; **404** `guia_not_found` |
+| GET | `/v1/portal/fiscal/guias/:guiaId/pdf-url` | Idem; **admin_escritorio** / **operador**; `{ pdf_url, expires_in_seconds }`; **404** `guia_not_found` ou `pdf_unavailable` |
+| POST | `/v1/portal/fiscal/guias/:guiaId/pagamentos` | Idem; **admin_escritorio** apenas; body `{ valor_pago, data_pagamento, meio?, comprovante_url? }`; **201** `{ pagamento, guia_status: "PAGO" }`; **409** `guia_transition_denied` |
+| POST | `/v1/portal/fiscal/certificados` | Idem; **admin_escritorio** apenas; body PEM cifrado (AES); **201** `{ certificado }`; **404** `cliente_not_found` |
+| GET | `/v1/portal/fiscal/certificados` | Idem; query **`portal_cliente_id`** (UUID); **200** `{ certificado }` ou `{ certificado: null }`; metadados sem PEM |
+| POST | `/v1/portal/fiscal/procuracoes` | Idem; **admin_escritorio** apenas; **201** `{ procuracao }` |
+| GET | `/v1/portal/fiscal/procuracoes` | Idem; query **`portal_cliente_id`** (UUID); **200** `{ procuracao }` ou `{ procuracao: null }` |
+| GET | `/v1/portal/fiscal/serpro-config` | Idem; **admin_escritorio** apenas; **200** `{ serpro_config }`; migration **`032_organization_and_serpro_config.sql`** + backfill org |
+| PATCH | `/v1/portal/fiscal/serpro-config` | Idem; **admin_escritorio** apenas; body `ambiente?`, `contratante_cnpj`, `consumer_key?`, `consumer_secret?`, `serpro_enabled?`; credenciais AES-256-GCM (`ENCRYPTION_KEY`); **200** `{ serpro_config }` (CNPJ mascarado; flags `consumer_*_configured`) |
+| POST | `/v1/exeq/auth/login` | Público (rate limit); body `email`, `password`; master EXEQ (`is_platform_master`); **200** `{ access_token, user }` |
+| GET | `/v1/exeq/auth/me` | Bearer master EXEQ |
+| GET | `/v1/exeq/organizations` | Bearer master; **200** `{ data[], count }` — orgs com `automacao_tenant_id` quando vinculadas |
+| GET | `/v1/exeq/organizations/:organizationId` | Bearer master; **200** `{ organization }`; **404** se ausente |
 | PATCH | `/v1/portal/cobrancas/:chargeId` | Idem; exige billing link; **não** altera cobrança `paga` ou `cancelada` |
 | POST | `/v1/auth/token/mock` | **Mock** — `x-tenant-id` core; desligavel |
 | GET | `/v1/auth/me` | Bearer + tenant core |
 | GET | `/v1/auth/admin-only` | Bearer + roles owner/admin |
 | POST | `/v1/billing/charges` | Bearer + roles |
 | GET | `/v1/billing/charges` | Bearer + roles; itens em `charges[]` usam **camelCase** (`canonicalStatus`, `idempotencyKey`, …) |
-| POST | `/v1/inbox/webhooks` | `x-tenant-id` core; em **producao** exige `WEBHOOK_INBOX_SECRET` configurado; se secret definido, header `X-Webhook-Secret` |
+| POST | `/v1/inbox/webhooks` | `x-tenant-id` core; em **producao** exige `WEBHOOK_INBOX_SECRET` configurado; se secret definido, header `X-Webhook-Secret`; aceita `event_type: fiscal.guia.reconciliation.requested` (Fase 2.6 — ver ADR sec. 17) |
 | POST | `/v1/inbox/webhooks/process-pending` | Bearer |
 | POST | `/v1/tenants/provision/mock` | **Mock** sem persistencia; JWT owner/admin; desligavel |
 | POST | `/v1/tenants/provision` | **Persistido** — JWT core owner/admin; body JSON; veja secao 3; **409** se `slug` duplicado; opcional `plano_slug` / `planoSlug` (default `basico`); cria `assinaturas` em **trial** 14 dias |
@@ -51,8 +65,10 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/saas/metrics` | Bearer core; role **owner** apenas; `{ metrics: { mrr, currency, tenants_by_status, inadimplencia, generated_at } }` |
 | GET | `/v1/portal/escritorio/assinatura` | Bearer portal + billing link; roles admin_escritorio / owner; `{ assinatura: { status, read_only, plano, uso, … } }` ou **404** sem assinatura |
 | POST | `/v1/portal/escritorio/assinatura/activate` | admin_escritorio; cria assinatura recorrente no Asaas (`gateway_subscription_id`); **503** se `ASAAS_PLATFORM_API_KEY` ausente; **409** se já ativada |
+| POST | `/v1/portal/certificates/validate` | **LLD-CERT-001** — Bearer portal + **admin_escritorio**; `multipart/form-data` (`certificate`, `private_key`); validação mTLS + store cifrado; **200** metadados + `certificate_id`; **422** catálogo ERR-*; rate limit **10/min/usuário**; OpenAPI: [openapi/portal-certificates-validate.yaml](./openapi/portal-certificates-validate.yaml) |
 
-**Portal web (Sprint B):** em `/escritorio`, admin vê botão que chama `POST …/assinatura/activate`. Listagens `/cobrancas`, `/clientes` e `/notas-fiscais` usam `limit` (50) + **Carregar mais** via `next_cursor`.
+**Fiscal guias (Fase 1.2):** captura real DAS via `RECEITA_DAS_CAPTURE_URL` (mTLS certificado A1); PDF em S3 (`S3_BUCKET`, `S3_REGION`, …) ou local (`FISCAL_PDF_STORAGE=local`); notificação WhatsApp `guia.disponivel` na fila `notifications-send` (migration **`029_fiscal_guia_disponivel_template.sql`**).
+
 
 **Escritório — configurações (Sprint C)** — prefixo `/v1/portal/escritorio`, **admin_escritorio** (403 outros papéis):
 
@@ -60,6 +76,10 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 |--------|---------|--------|
 | GET | `/config` | `{ config }` credenciais mascaradas (`gateway_api_key`, `whatsapp_token`) |
 | PATCH | `/config` | Campos opcionais: fiscal, `gateway_provider`, `gateway_api_key`, `whatsapp_*` |
+| GET | `/gateway/providers` | `{ data: providers[] }` — metadados (authType, credentialFields) |
+| GET | `/gateway/providers/:provider/schema` | `{ provider }` — schema de credenciais |
+| PATCH | `/gateway` | `{ gateway_provider, gateway_credentials?, gateway_api_key?, certificate_upload_id? }` — **LLD-CERT-001:** mTLS pode usar `certificate_upload_id` (UUID de `/certificates/validate`) em vez de PEM no JSON |
+| GET | `/gateway/history` | `{ data: changeLog[] }` |
 | GET | `/regua` | `{ data: rules[] }` |
 | POST | `/regua` | `{ days_offset, channel, template_id? }` — **409** `duplicate_rule` |
 | PATCH | `/regua/:ruleId` | `{ is_active?, channel? }` |
@@ -180,6 +200,59 @@ Corpo inclui `id` (UUID da linha em `webhook_inbox`). Unicidade: `(tenant_id, ex
 - **Body:** ao menos um de `amount` (> 0), `due_date` (`YYYY-MM-DD`), `metadata` (objeto; merge superficial com `metadata` existente).
 - **Resposta 200:** `{ "charge": { … } }` (tenant público via `billing_tenant_link`).
 - **Erros comuns:** 403 papel; 409 `billing_link_missing` ou `charge_not_editable` (cobrança paga/cancelada); 404 `charge_not_found`; 422 validação.
+
+### `POST /v1/portal/certificates/validate` (portal — LLD-CERT-001)
+
+- **Papel:** apenas `admin_escritorio`.
+- **Content-Type:** `multipart/form-data`
+- **Campos obrigatórios:**
+
+| Campo | Tipo | Descrição |
+|--------|------|-----------|
+| `certificate` | file | Certificado PEM (`.crt`, `.pem`, `.cer`); bloco `CERTIFICATE`; máx. 64 KB |
+| `private_key` | file | Chave privada PEM (`.key`, `.pem`); máx. 64 KB |
+
+- **Resposta 200:**
+
+```json
+{
+  "certificate_id": "uuid",
+  "subject_cn": "empresa.exemplo",
+  "not_after": "2027-04-02T23:59:59.000Z",
+  "days_remaining": 646,
+  "warnings": [],
+  "info": ["Certificado válido. Expira em …", "Par certificado/chave validado com sucesso."]
+}
+```
+
+- **Resposta 422:**
+
+```json
+{
+  "error_code": "ERR-007",
+  "message": "A chave privada não corresponde ao certificado enviado. …",
+  "field": "private_key"
+}
+```
+
+- **Resposta 500:** `{ "error_code": "NET-001", "message": "…" }` (timeout 10s ou erro interno).
+- **Segurança:** chave privada processada em memória; payload PEM **não** retornado ao cliente; store Redis/memória cifrado (TTL 30 min). Referência OpenAPI: [openapi/portal-certificates-validate.yaml](./openapi/portal-certificates-validate.yaml).
+- **Uso com gateway:** incluir `certificate_upload_id` no body de `PATCH /v1/portal/escritorio/gateway` junto com `client_id` / `client_secret`.
+
+### `PATCH /v1/portal/escritorio/gateway` — campo `certificate_upload_id`
+
+```json
+{
+  "gateway_provider": "inter",
+  "gateway_credentials": {
+    "client_id": "uuid-da-app-inter",
+    "client_secret": "secret"
+  },
+  "certificate_upload_id": "uuid-retornado-pelo-validate"
+}
+```
+
+- **422** `certificate_upload_expired` se o UUID expirou ou é inválido.
 
 ### `POST /v1/auth/token/mock` (core)
 

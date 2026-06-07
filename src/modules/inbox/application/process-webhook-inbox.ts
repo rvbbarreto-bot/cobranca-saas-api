@@ -14,7 +14,12 @@ import {
 import { updateChargeCanonicalStatus } from "../../billing-core/infrastructure/charge-repository";
 import { applyAsaasPlatformSubscriptionWebhook } from "../../saas-billing/application/process-asaas-platform-subscription-webhook";
 import { applyAsaasWebhookEvent } from "./process-asaas-webhook-event";
+import type { PoolClient } from "pg";
 import { parseWebhookChargeInstruction } from "./parse-webhook-charge-instruction";
+import { handleFiscalCaptureInboxPayload } from "../../fiscal-guias/application/handle-fiscal-capture-inbox";
+import { handleFiscalGuiaReconciliationInboxPayload } from "../../fiscal-guias/application/handle-fiscal-guia-reconciliation-inbox";
+import { scheduleFiscalCaptureJob } from "../../../platform/jobs/enqueue-fiscal-capture";
+import type { FiscalCaptureJobPayload } from "../../../platform/jobs/application/fiscal-capture-processor";
 
 export type ProcessWebhookInboxResult = {
   scanned: number;
@@ -39,6 +44,7 @@ export async function processPendingWebhooksForTenant(
   limit: number
 ): Promise<ProcessWebhookInboxResult> {
   const sideEffects: WebhookSideEffectPlan[] = [];
+  const fiscalJobs: FiscalCaptureJobPayload[] = [];
 
   const result = await withTenantTransaction(tenantUuid, async (client) => {
     const rows = await listPendingWebhookInbox(client, limit);
@@ -52,6 +58,91 @@ export async function processPendingWebhooksForTenant(
     for (const row of rows) {
       if (row.processedAt || (await isWebhookInboxProcessed(client, row.id))) {
         skippedAlready += 1;
+        continue;
+      }
+
+      const fiscalHandled = await handleFiscalCaptureInboxPayload(tenantUuid, row.payload, client);
+      if (fiscalHandled.kind !== "not_fiscal") {
+        if (fiscalHandled.kind === "disabled") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_GUIAS_DISABLED");
+          dead += 1;
+          deadParse += 1;
+          continue;
+        }
+        if (fiscalHandled.kind === "invalid") {
+          await markWebhookInboxDead(client, row.id, summarizeIssues(fiscalHandled.issues));
+          dead += 1;
+          deadParse += 1;
+          continue;
+        }
+        if (fiscalHandled.kind === "cliente_not_found") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_CLIENTE_NOT_LINKED");
+          deadNotFound += 1;
+          dead += 1;
+          continue;
+        }
+
+        fiscalJobs.push(fiscalHandled.job);
+        await markWebhookInboxProcessed(client, row.id);
+        updated += 1;
+        continue;
+      }
+
+      const fiscalReconciliation = await handleFiscalGuiaReconciliationInboxPayload(
+        tenantUuid,
+        row.payload,
+        client
+      );
+      if (fiscalReconciliation.kind !== "not_fiscal") {
+        if (fiscalReconciliation.kind === "disabled") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_GUIAS_DISABLED");
+          dead += 1;
+          deadParse += 1;
+          continue;
+        }
+        if (fiscalReconciliation.kind === "invalid") {
+          await markWebhookInboxDead(client, row.id, summarizeIssues(fiscalReconciliation.issues));
+          dead += 1;
+          deadParse += 1;
+          continue;
+        }
+        if (fiscalReconciliation.kind === "tenant_not_linked") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_TENANT_NOT_LINKED");
+          deadNotFound += 1;
+          dead += 1;
+          continue;
+        }
+        if (fiscalReconciliation.kind === "guia_not_found") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_GUIA_NOT_FOUND");
+          deadNotFound += 1;
+          dead += 1;
+          continue;
+        }
+        if (fiscalReconciliation.kind === "guia_ambiguous") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_GUIA_AMBIGUOUS");
+          deadNotFound += 1;
+          dead += 1;
+          continue;
+        }
+        if (fiscalReconciliation.kind === "valor_mismatch") {
+          await markWebhookInboxDead(client, row.id, "FISCAL_VALOR_MISMATCH");
+          dead += 1;
+          deadParse += 1;
+          continue;
+        }
+        if (fiscalReconciliation.kind === "transition_denied") {
+          await markWebhookInboxDead(
+            client,
+            row.id,
+            `FISCAL_TRANSITION_DENIED:${fiscalReconciliation.message}`
+          );
+          deadIllegal += 1;
+          dead += 1;
+          continue;
+        }
+
+        await markWebhookInboxProcessed(client, row.id);
+        updated += 1;
         continue;
       }
 
@@ -210,6 +301,10 @@ export async function processPendingWebhooksForTenant(
 
   for (const plan of sideEffects) {
     await applyWebhookSideEffectPlan(plan);
+  }
+
+  for (const job of fiscalJobs) {
+    scheduleFiscalCaptureJob(job);
   }
 
   return result;
