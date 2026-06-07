@@ -45,60 +45,54 @@ import {
   parseNfListCursor,
   parsePortalListLimit
 } from "../../application/portal-list-cursor";
-import { verifyPortalPassword } from "../../application/portal-password";
 import { recordPortalLoginAuditInTransaction } from "../../application/record-portal-login-audit";
+import { unifiedPortalLogin } from "../../application/unified-portal-login";
 import { authRateLimit } from "../../../../platform/http/middleware/rate-limit.middleware";
 import { createEscritorioRouter } from "./escritorio-router";
+import { createCertificateValidationRouter } from "./certificate-validation-router";
 import { createClientePortalRouter } from "./cliente-portal-router";
+import { isFiscalGuiasEnabled } from "../../../../platform/config/fiscal-guias-enabled";
+import { createFiscalPortalRouter } from "../../../fiscal-guias/interfaces/http/fiscal-portal-router";
+import { getTenantModuleFlags } from "../../../exeq-platform/infrastructure/tenant-module-repository";
+import { PORTAL_MODULE_LABELS } from "../../../exeq-platform/domain/portal-module-keys";
 import { SaasBillingError } from "../../../saas-billing/domain/saas-billing-error";
 import { assertTenantCanMutate } from "../../../saas-billing/application/assert-tenant-can-mutate";
 import { resolveAutomacaoTenantId } from "../../../../platform/tenancy/resolve-automacao-tenant-id";
 
 /**
- * Login portal com senha (Sprint A). Disponivel em producao — nao passa por mockAuthRoutesGate.
- * Requer `password_hash` no usuario (migracao 011 + seed ou script admin).
+ * Login unificado (portal + master EXEQ). `tenant_id` opcional:
+ * - omitido + master → console EXEQ
+ * - omitido + 1 escritório → entra direto
+ * - omitido + N escritórios → lista para escolha
+ * - informado → portal naquele tenant
  */
 async function portalLoginWithPassword(req: Request, res: Response): Promise<void> {
   const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
   const tenantId = typeof req.body?.tenant_id === "string" ? req.body.tenant_id.trim() : "";
   const password = typeof req.body?.password === "string" ? req.body.password : "";
-  if (!email || !tenantId || !password) {
+  if (!email || !password) {
     res.status(400).json({
       error: "invalid_body",
-      message: "Informe email, tenant_id e password."
-    });
-    return;
-  }
-
-  const automacaoTenantId = await resolveAutomacaoTenantId(tenantId);
-  if (!automacaoTenantId) {
-    res.status(403).json({
-      error: "portal_auth_forbidden",
-      message: "Email, tenant ou senha invalidos."
+      message: "Informe email e password."
     });
     return;
   }
 
   const pool = getPool();
-  const q = await pool.query<{ app_user_id: string; tenant_id: string; password_hash: string | null }>(
-    `SELECT u.id::text AS app_user_id, m.tenant_id, u.password_hash
-     FROM portal.app_user u
-     INNER JOIN portal.membership m ON m.app_user_id = u.id
-     WHERE lower(u.email) = lower($1) AND m.tenant_id = $2
-     LIMIT 1`,
-    [email, automacaoTenantId]
-  );
+  const result = await unifiedPortalLogin(pool, {
+    email,
+    password,
+    tenantId: tenantId || undefined
+  });
 
-  const row = q.rows[0];
-  if (!row) {
-    res.status(403).json({
-      error: "portal_auth_forbidden",
-      message: "Email, tenant ou senha invalidos."
+  if (result === "invalid_credentials") {
+    res.status(401).json({
+      error: "invalid_credentials",
+      message: "E-mail, escritório ou senha invalidos."
     });
     return;
   }
-
-  if (!row.password_hash) {
+  if (result === "password_not_set") {
     res.status(422).json({
       error: "portal_password_not_set",
       message:
@@ -106,32 +100,55 @@ async function portalLoginWithPassword(req: Request, res: Response): Promise<voi
     });
     return;
   }
+  if (result === "tenant_inactive") {
+    res.status(403).json({
+      error: "tenant_inactive",
+      message: "Escritorio inativo. Contate o suporte EXEQ para reativacao."
+    });
+    return;
+  }
 
-  const ok = await verifyPortalPassword(password, row.password_hash);
-  if (!ok) {
-    res.status(401).json({
-      error: "invalid_credentials",
-      message: "Email, tenant ou senha invalidos."
+  if (result.kind === "tenant_selection_required") {
+    res.status(200).json({
+      login_kind: "tenant_selection_required",
+      tenants: result.tenants.map((t) => ({
+        automacao_tenant_id: t.automacaoTenantId,
+        slug: t.slug,
+        name: t.name,
+        role: t.role
+      }))
+    });
+    return;
+  }
+
+  if (result.kind === "platform_master") {
+    res.json({
+      login_kind: "platform_master",
+      access_token: result.accessToken,
+      token_type: "Bearer",
+      expires_in: result.expiresIn,
+      user: {
+        id: result.appUserId,
+        email: result.email,
+        full_name: result.fullName
+      }
     });
     return;
   }
 
   await recordPortalLoginAuditInTransaction(pool, {
-    automacaoTenantId: row.tenant_id,
-    appUserId: row.app_user_id,
+    automacaoTenantId: result.automacaoTenantId,
+    appUserId: result.appUserId,
     audit: auditContextFromRequest(req)
   });
 
-  const token = signAccessToken({
-    sub: row.app_user_id,
-    tid: row.tenant_id,
-    roles: ["owner"]
-  });
-
   res.json({
-    access_token: token,
+    login_kind: "portal",
+    access_token: result.accessToken,
     token_type: "Bearer",
-    expires_in: 900
+    expires_in: result.expiresIn,
+    tenant_id: result.automacaoTenantId,
+    tenant_slug: result.tenantSlug
   });
 }
 
@@ -237,6 +254,7 @@ async function portalAuthMe(req: Request, res: Response): Promise<void> {
     [auth.userId]
   );
   const row = u.rows[0];
+  const modules = await getTenantModuleFlags(pool, tenant.tenantId);
   res.json({
     user: {
       id: auth.userId,
@@ -248,7 +266,9 @@ async function portalAuthMe(req: Request, res: Response): Promise<void> {
     tenant: {
       id: tenant.tenantId,
       slug: tenant.tenantSlug ?? null
-    }
+    },
+    modules,
+    module_labels: PORTAL_MODULE_LABELS
   });
 }
 
@@ -915,6 +935,11 @@ export function createPortalRouter(): Router {
   protectedRoutes.patch("/clientes/:clienteId", asyncHandler(patchPortalClienteHttp));
   protectedRoutes.post("/clientes", asyncHandler(createCliente));
   protectedRoutes.use("/escritorio", createEscritorioRouter());
+  protectedRoutes.use("/certificates", createCertificateValidationRouter());
+
+  if (isFiscalGuiasEnabled()) {
+    protectedRoutes.use("/fiscal", createFiscalPortalRouter());
+  }
 
   router.use(protectedRoutes);
   return router;

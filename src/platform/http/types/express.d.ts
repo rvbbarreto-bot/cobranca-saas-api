@@ -16,6 +16,10 @@ declare global {
       correlationId?: string;
       portalMembership?: PortalMembershipContext;
       portalCliente?: PortalClienteContext;
+      platformMasterUser?: {
+        email: string;
+        fullName: string | null;
+      };
     }
   }
 }

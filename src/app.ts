@@ -13,6 +13,7 @@ import { createPortalRouter } from "./modules/portal-read/interfaces/http/portal
 import { saasBillingRouter } from "./modules/saas-billing/interfaces/http/saas-billing-router";
 import { healthReadyHandler } from "./platform/health/readiness-http";
 import { createAdminQueuesRouter } from "./platform/http/routes/admin-queues-router";
+import { createExeqPlatformRouter } from "./modules/exeq-platform/interfaces/http/exeq-platform-router";
 
 /**
  * API focada em cobranca / portal / inbox (pacote importado do desenvolvimento EmissaoNF).
@@ -28,7 +29,7 @@ export function createApp() {
   app.get("/health", (_req, res) => {
     res.json({
       status: "ok",
-      service: "cobranca-saas-api"
+      service: "cobranca-exeq"
     });
   });
 
@@ -37,6 +38,7 @@ export function createApp() {
   const v1 = express.Router();
   v1.use(express.json({ limit: "2mb" }));
   v1.use("/portal", createPortalRouter());
+  v1.use("/exeq", createExeqPlatformRouter());
   v1.use(asyncHandler(tenantResolutionMiddleware));
 
   v1.use("/admin", createAdminQueuesRouter());

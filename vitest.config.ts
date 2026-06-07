@@ -22,6 +22,7 @@ export default defineConfig({
       "tests/payment-gateway/**/*.test.ts",
       "tests/notifications/**/*.test.ts",
       "tests/saas-billing/**/*.test.ts",
+      "tests/fiscal-guias/**/*.test.ts",
       "tests/platform/jobs/**/*.test.ts",
       "tests/health/**/*.test.ts",
       "tests/cross-tenant.integration.test.ts",
