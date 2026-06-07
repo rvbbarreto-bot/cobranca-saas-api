@@ -10,6 +10,7 @@ export const QUEUE_WEBHOOK_PROCESS = "inbox-process";
 export const QUEUE_CHARGE_SYNC = "charges-sync";
 export const QUEUE_NOTIFICATION_SEND = "notifications-send";
 export const QUEUE_FISCAL_CAPTURE = "fiscal-capture";
+export const QUEUE_FISCAL_INGEST_VALIDATE = "fiscal-ingest-validate";
 
 export type JobQueues = {
   paymentEmission: Queue;
@@ -17,6 +18,7 @@ export type JobQueues = {
   chargeSync: Queue;
   notificationSend: Queue;
   fiscalCapture: Queue;
+  fiscalIngestValidate: Queue;
 };
 
 let queuesCache: JobQueues | null = null;
@@ -27,7 +29,8 @@ function createQueues(): JobQueues {
     webhookProcess: new Queue(QUEUE_WEBHOOK_PROCESS, { connection: redisConnection }),
     chargeSync: new Queue(QUEUE_CHARGE_SYNC, { connection: redisConnection }),
     notificationSend: new Queue(QUEUE_NOTIFICATION_SEND, { connection: redisConnection }),
-    fiscalCapture: new Queue(QUEUE_FISCAL_CAPTURE, { connection: redisConnection })
+    fiscalCapture: new Queue(QUEUE_FISCAL_CAPTURE, { connection: redisConnection }),
+    fiscalIngestValidate: new Queue(QUEUE_FISCAL_INGEST_VALIDATE, { connection: redisConnection })
   };
 }
 
@@ -107,4 +110,8 @@ export function getNotificationSendQueue(): Queue {
 
 export function getFiscalCaptureQueue(): Queue {
   return getQueues().fiscalCapture;
+}
+
+export function getFiscalIngestValidateQueue(): Queue {
+  return getQueues().fiscalIngestValidate;
 }

@@ -6,6 +6,7 @@ import { createWebhookProcessWorker } from "./workers/webhook-process.worker";
 import { registerChargeSyncWorker } from "./workers/charge-status-sync.worker";
 import { registerNotificationSendWorker } from "./workers/notification-send.worker";
 import { registerFiscalCaptureWorker } from "./workers/fiscal-capture.worker";
+import { registerFiscalIngestValidateWorker } from "./workers/fiscal-ingest-validate.worker";
 
 const activeWorkers: Worker[] = [];
 
@@ -26,6 +27,10 @@ export function startAllWorkers(): void {
       const fiscalWorker = registerFiscalCaptureWorker();
       if (fiscalWorker) {
         activeWorkers.push(fiscalWorker);
+      }
+      const ingestWorker = registerFiscalIngestValidateWorker();
+      if (ingestWorker) {
+        activeWorkers.push(ingestWorker);
       }
     }
 

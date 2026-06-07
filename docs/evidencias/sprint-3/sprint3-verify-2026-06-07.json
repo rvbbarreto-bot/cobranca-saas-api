@@ -1,0 +1,14 @@
+{
+  "sprint": 3,
+  "issues": ["EXEQ-FISC-030", "EXEQ-FISC-031", "EXEQ-FISC-032"],
+  "verified_at": "2026-06-07T20:10:48.264Z",
+  "executor": "fabrica",
+  "branch": "feature/EXEQ-FISC-030-csv-ingestion",
+  "steps": {
+    "migrate": "034_fiscal_ingest.sql applied",
+    "unit_tests": "3 passed",
+    "integration_tests": "2 passed"
+  },
+  "command": "npm run verify:sprint3",
+  "dod": "complete"
+}

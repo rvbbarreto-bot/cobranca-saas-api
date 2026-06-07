@@ -1,5 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
+import multer from "multer";
 import { asyncHandler } from "../../../../platform/http/async-handler";
 import { FiscalGuiasSchemaMigrationError } from "../../infrastructure/fiscal-schema";
 import { getPortalCertificadoDigitalUseCase } from "../../application/get-portal-certificado-digital";
@@ -15,6 +16,16 @@ import {
   getPortalSerproConfigUseCase,
   patchPortalSerproConfigUseCase
 } from "../../application/portal-serpro-config";
+import {
+  getPortalIngestStatusUseCase,
+  mapIngestPublic,
+  postPortalIngestCsvUseCase
+} from "../../../fiscal-ingestion/application/portal-fiscal-ingest";
+
+const csvUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 }
+});
 
 function isEscritorioStaff(req: Request): boolean {
   const role = req.portalMembership?.role;
@@ -450,6 +461,87 @@ async function patchSerproConfigHttp(req: Request, res: Response): Promise<void>
   }
 }
 
+async function postIngestCsvHttp(req: Request, res: Response): Promise<void> {
+  if (!isAdminEscritorio(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio pode enviar CSV PGDASD."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(500).json({ error: "internal_error", message: "Tenant portal ausente." });
+    return;
+  }
+
+  const file = req.file;
+  if (!file?.buffer?.length) {
+    res.status(400).json({ error: "invalid_body", message: "Campo multipart 'file' obrigatorio." });
+    return;
+  }
+
+  try {
+    const result = await postPortalIngestCsvUseCase({
+      automacaoTenantId: tenantId,
+      uploadedByUserId: req.authContext?.userId,
+      originalFilename: file.originalname,
+      rawContent: file.buffer.toString("utf8")
+    });
+
+    if (!result.ok) {
+      if (result.kind === "empty_file") {
+        res.status(400).json({ error: "empty_file", message: "Arquivo CSV vazio." });
+        return;
+      }
+      res.status(404).json({
+        error: "organization_not_found",
+        message: "Organizacao nao vinculada. Execute backfill organization."
+      });
+      return;
+    }
+
+    res.status(202).json({ ingest: mapIngestPublic(result.ingest) });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function getIngestStatusHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem consultar ingestao."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  const ingestId = typeof req.params.ingestId === "string" ? req.params.ingestId.trim() : "";
+  if (!tenantId || !ingestId) {
+    res.status(400).json({ error: "invalid_param", message: "ingestId obrigatorio." });
+    return;
+  }
+
+  try {
+    const result = await getPortalIngestStatusUseCase(tenantId, ingestId);
+    if (!result.ok) {
+      res.status(404).json({ error: "not_found", message: "Ingestao nao encontrada." });
+      return;
+    }
+    res.json({ ingest: mapIngestPublic(result.ingest) });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
 /**
  * Rotas portal fiscal — montadas em `/v1/portal/fiscal` quando FISCAL_GUIAS_ENABLED=true.
  * Middlewares portal (tenant, JWT, membership) aplicados pelo router pai.
@@ -466,5 +558,7 @@ export function createFiscalPortalRouter(): Router {
   router.post("/procuracoes", asyncHandler(postProcuracaoHttp));
   router.get("/serpro-config", asyncHandler(getSerproConfigHttp));
   router.patch("/serpro-config", asyncHandler(patchSerproConfigHttp));
+  router.post("/ingest/csv", csvUpload.single("file"), asyncHandler(postIngestCsvHttp));
+  router.get("/ingest/:ingestId", asyncHandler(getIngestStatusHttp));
   return router;
 }
