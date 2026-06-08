@@ -63,7 +63,7 @@ export function BoletoDetalhePage(): JSX.Element {
   const configQ = useQuery({ queryKey: ["escritorio-config"], queryFn: fetchEscritorioConfig });
   const gatewayRules = getPortalChargeRules(configQ.data?.config?.gateway_provider);
 
-  const { query: detailQ, isPolling, timeoutReached, resetPolling } =
+  const { query: detailQ, isPolling, slowEmissionWarning, resetPolling } =
     useChargeEmissionPolling(chargeId);
 
   const charge = detailQ.data?.charge;
@@ -76,7 +76,7 @@ export function BoletoDetalhePage(): JSX.Element {
     events,
     chargeStatus: charge?.canonicalStatus,
     isPolling,
-    timeoutReached,
+    slowEmissionWarning,
     hasPayment: Boolean(payment)
   });
   const timeline = events.length > 0 ? buildTimelineFromEvents(events) : [];
@@ -155,14 +155,16 @@ export function BoletoDetalhePage(): JSX.Element {
                 Emissão em andamento — a página atualiza automaticamente.
               </div>
             ) : null}
-            {banners.showEmissionInconclusive && chargeId ? (
+            {banners.showEmissionSlowWarning && chargeId ? (
               <div className="banner-err" style={{ marginBottom: "0.75rem" }}>
                 <p style={{ margin: "0 0 0.25rem", fontWeight: 600 }}>
-                  A emissão está demorando mais que o esperado.
+                  A emissão no banco está demorando.
                 </p>
                 <p style={{ margin: "0 0 0.75rem", fontSize: "0.875rem" }}>
-                  O processamento ocorre em segundo plano e pode levar alguns minutos. Se o problema
-                  persistir, use o botão abaixo para reenviar a cobrança ao banco.
+                  Esta página continua atualizando automaticamente — o processamento em segundo plano
+                  pode levar alguns minutos. Se o status não mudar, confira o gateway em{" "}
+                  <Link to="/configuracoes">Configurações</Link> ou use o botão abaixo para tentar
+                  novamente.
                 </p>
                 <ReprocessEmissionButton
                   chargeId={chargeId}
@@ -171,7 +173,6 @@ export function BoletoDetalhePage(): JSX.Element {
                   pendingLabel="Reenviando…"
                   confirmTitle="Reenviar ao banco?"
                   confirmMessage="A cobrança voltará para rascunho e a emissão no gateway será tentada novamente em segundo plano. Acompanhe o status nesta página."
-                  disabled={isPolling}
                   onReprocessed={resetPolling}
                 />
               </div>

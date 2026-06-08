@@ -6,15 +6,16 @@ import { TEST_INTER_GATEWAY_CREDENTIALS } from "../fixtures/mtls-test-pem";
 describe("mergeGatewayCredentialsPatch", () => {
   it("mescla patch parcial com credenciais existentes e valida PEM", () => {
     const existing = {
-      client_id: "old-id",
+      client_id: TEST_INTER_GATEWAY_CREDENTIALS.client_id,
       client_secret: "old-secret",
       certificate_pem: TEST_INTER_GATEWAY_CREDENTIALS.certificate_pem,
       private_key_pem: TEST_INTER_GATEWAY_CREDENTIALS.private_key_pem
     };
+    const newClientId = "11111111-1111-4111-8111-111111111111";
     const merged = mergeGatewayCredentialsPatch("inter", existing, {
-      client_id: "new-id"
+      client_id: newClientId
     });
-    expect(merged.client_id).toBe("new-id");
+    expect(merged.client_id).toBe(newClientId);
     expect(merged.client_secret).toBe("old-secret");
     expect(merged.certificate_pem).toContain("BEGIN CERTIFICATE");
   });
@@ -23,7 +24,12 @@ describe("mergeGatewayCredentialsPatch", () => {
     expect(() =>
       mergeGatewayCredentialsPatch(
         "inter",
-        { client_id: "a", client_secret: "b", certificate_pem: "bad", private_key_pem: "bad" },
+        {
+          client_id: "22222222-2222-4222-8222-222222222222",
+          client_secret: "b",
+          certificate_pem: "bad",
+          private_key_pem: "bad"
+        },
         { certificate_pem: "-----BEGIN CERTIFICATE-----\nX\n-----END CERTIFICATE-----" }
       )
     ).toThrow(GatewayCredentialsValidationError);

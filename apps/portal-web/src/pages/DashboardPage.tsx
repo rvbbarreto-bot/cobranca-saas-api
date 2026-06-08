@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { ShellPageHeader } from "../components/ShellPageHeader";
 import { fetchEscritorioDashboard } from "../lib/api";
 
 function fmtBrl(n: number): string {
@@ -17,14 +18,12 @@ export function DashboardPage(): JSX.Element {
 
   return (
     <div>
-      <div className="shell-page__head" style={{ marginBottom: "1rem" }}>
-        <h2 className="shell-page__title">Dashboard do escritório</h2>
-        {q.data ? (
-          <p className="muted small">
-            Período: {q.data.periodo.inicio} — {q.data.periodo.fim}
-          </p>
-        ) : null}
-      </div>
+      <ShellPageHeader
+        title="Dashboard do escritório"
+        description={
+          q.data ? `Período: ${q.data.periodo.inicio} — ${q.data.periodo.fim}` : undefined
+        }
+      />
 
       {q.isLoading ? <p className="muted">A carregar indicadores…</p> : null}
       {q.isError ? <div className="banner-err">{q.error instanceof Error ? q.error.message : "Erro"}</div> : null}

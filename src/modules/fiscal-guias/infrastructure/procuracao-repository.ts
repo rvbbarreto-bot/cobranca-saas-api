@@ -96,6 +96,32 @@ export async function getActiveProcuracaoForCliente(
   }
 }
 
+export async function updateProcuracaoMetadata(
+  client: PoolClient,
+  procuracaoId: string,
+  tenantId: string,
+  metadataPatch: Record<string, unknown>
+): Promise<ProcuracaoRow | null> {
+  const r = await client.query<ProcuracaoRow>(
+    `UPDATE fiscal.procuracao
+     SET metadata = metadata || $3::jsonb, updated_at = now()
+     WHERE id = $1::uuid AND tenant_id = $2
+     RETURNING
+       id::text AS id,
+       portal_cliente_id::text AS portal_cliente_id,
+       tipo,
+       procurador_documento,
+       validade_inicio::text AS validade_inicio,
+       validade_fim::text AS validade_fim,
+       ativa,
+       metadata,
+       created_at,
+       updated_at`,
+    [procuracaoId, tenantId, JSON.stringify(metadataPatch)]
+  );
+  return r.rows[0] ?? null;
+}
+
 export function mapProcuracaoRowToResponse(row: ProcuracaoRow) {
   return {
     id: row.id,

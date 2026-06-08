@@ -11,6 +11,10 @@ export const QUEUE_CHARGE_SYNC = "charges-sync";
 export const QUEUE_NOTIFICATION_SEND = "notifications-send";
 export const QUEUE_FISCAL_CAPTURE = "fiscal-capture";
 export const QUEUE_FISCAL_INGEST_VALIDATE = "fiscal-ingest-validate";
+export const QUEUE_SERPRO_TRANSMIT = "fiscal-serpro-transmit";
+export const QUEUE_SERPRO_RECIBO = "fiscal-serpro-recibo";
+export const QUEUE_SERPRO_EMIT_DAS = "fiscal-serpro-emit-das";
+export const QUEUE_CERTIFICATE_EXPIRY = "fiscal-certificate-expiry";
 
 export type JobQueues = {
   paymentEmission: Queue;
@@ -19,6 +23,10 @@ export type JobQueues = {
   notificationSend: Queue;
   fiscalCapture: Queue;
   fiscalIngestValidate: Queue;
+  serproTransmit: Queue;
+  serproRecibo: Queue;
+  serproEmitDas: Queue;
+  certificateExpiry: Queue;
 };
 
 let queuesCache: JobQueues | null = null;
@@ -30,7 +38,11 @@ function createQueues(): JobQueues {
     chargeSync: new Queue(QUEUE_CHARGE_SYNC, { connection: redisConnection }),
     notificationSend: new Queue(QUEUE_NOTIFICATION_SEND, { connection: redisConnection }),
     fiscalCapture: new Queue(QUEUE_FISCAL_CAPTURE, { connection: redisConnection }),
-    fiscalIngestValidate: new Queue(QUEUE_FISCAL_INGEST_VALIDATE, { connection: redisConnection })
+    fiscalIngestValidate: new Queue(QUEUE_FISCAL_INGEST_VALIDATE, { connection: redisConnection }),
+    serproTransmit: new Queue(QUEUE_SERPRO_TRANSMIT, { connection: redisConnection }),
+    serproRecibo: new Queue(QUEUE_SERPRO_RECIBO, { connection: redisConnection }),
+    serproEmitDas: new Queue(QUEUE_SERPRO_EMIT_DAS, { connection: redisConnection }),
+    certificateExpiry: new Queue(QUEUE_CERTIFICATE_EXPIRY, { connection: redisConnection })
   };
 }
 

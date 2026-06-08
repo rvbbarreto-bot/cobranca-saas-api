@@ -5,7 +5,13 @@ import { isValidPartyName } from "./format-br";
 
 export const loginFormSchema = z.object({
   email: z.string().trim().email("E-mail invalido"),
-  tenant_id: z.string().trim().min(1, "Tenant obrigatorio"),
+  tenant_id: z.string().trim().optional(),
+  password: z.string().min(1, "Senha obrigatoria")
+});
+
+/** Valida e-mail + senha; tenant opcional (master ou auto-resolucao). */
+export const loginFormBaseSchema = z.object({
+  email: z.string().trim().email("E-mail invalido"),
   password: z.string().min(1, "Senha obrigatoria")
 });
 

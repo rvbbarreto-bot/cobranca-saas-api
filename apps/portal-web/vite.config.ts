@@ -16,6 +16,24 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.ts", "src/**/*.test.tsx"]
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    coverage: {
+      provider: "v8",
+      all: false,
+      reporter: ["text", "text-summary"],
+      include: [
+        "src/lib/cliente-fiscal-indicators.ts",
+        "src/components/ClienteFiscalIndicatorsCell.tsx",
+        "src/hooks/useClienteFiscalIndicators.ts",
+        "src/lib/fiscal-audit-ui.ts",
+        "src/pages/FiscalAuditoriaPage.tsx"
+      ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        statements: 80,
+        branches: 75
+      }
+    }
   }
 });

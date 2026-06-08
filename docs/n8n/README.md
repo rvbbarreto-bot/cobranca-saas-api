@@ -13,8 +13,10 @@ Workflows versionados para importar no orquestrador e testar a integração **bi
 
 ```
 docs/n8n/workflows/
-├── cobranca-saas-events.workflow.json      ← outbound (API → n8n) — PRINCIPAL
-└── cobranca-saas-inbox-homolog.workflow.json ← inbound (n8n → API) — homolog manual
+├── cobranca-saas-events.workflow.json           ← outbound (API → n8n) — PRINCIPAL
+├── cobranca-saas-inbox-homolog.workflow.json    ← inbound cobrança — homolog manual
+├── fiscal-capture-stub-homolog.workflow.json      ← inbound fiscal DAS (stub) — homolog manual
+└── fiscal-capture-darf-stub-homolog.workflow.json ← inbound fiscal DARF (stub) — Fase 2.5
 ```
 
 **Importar:** n8n → Workflows → **Import from file** → escolher o `.json` acima → **Activate** (workflow outbound).
@@ -84,7 +86,28 @@ Na instância n8n (Settings → Variables ou `.env` do container):
 | `charge.overdue` | Inadimplência |
 | `charge.cancelled` | Cancelamento |
 | `notification.regua_enqueued` | Observabilidade régua |
+| `fiscal.guia_disponivel_enqueued` | Guia DAS disponível (outbound) |
 | `subscription.past_due` | Retenção SaaS |
+
+## Fiscal DAS (stub homolog)
+
+1. API: `FISCAL_GUIAS_ENABLED=true`, `FISCAL_CAPTURE_STUB=true`, Redis + workers.
+2. Importar `fiscal-capture-stub-homolog.workflow.json`.
+3. Variáveis n8n: `FISCAL_PORTAL_CLIENTE_ID`, `FISCAL_COMPETENCIA` (YYYY-MM).
+4. Executar manualmente → inbox 202 → worker grava guia DISPONIVEL.
+
+## Fiscal DARF (stub homolog — Fase 2.5)
+
+1. Mesmos requisitos da API que DAS (`FISCAL_GUIAS_ENABLED=true`).
+2. Importar `fiscal-capture-darf-stub-homolog.workflow.json`.
+3. Variáveis n8n adicionais:
+   - `FISCAL_DARF_CODIGO_RECEITA` — ex. `0561` (default no workflow)
+   - `FISCAL_DARF_PERIODO_APURACAO` — `YYYY-MM-DD` (default: `{FISCAL_COMPETENCIA}-30`)
+4. Payload inbox inclui `tipo_guia: DARF`, `codigo_receita`, `periodo_apuracao`.
+5. Com `FISCAL_CAPTURE_STUB=true`: worker grava guia DARF sem HTTP Receita.
+6. Com mock gateway: `RECEITA_DAS_CAPTURE_URL=http://127.0.0.1:19443` + `FISCAL_CAPTURE_STUB=false` → `POST /darf/capture`.
+
+Treinamento: [../FISCAL_TREINAMENTO_ESCRITORIO.md](../FISCAL_TREINAMENTO_ESCRITORIO.md).
 
 ## Segurança (PO)
 

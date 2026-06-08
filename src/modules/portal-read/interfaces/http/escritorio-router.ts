@@ -161,6 +161,13 @@ export function createEscritorioRouter(): Router {
           res.status(422).json({ error: "credentials_required" });
           return;
         }
+        if (err.message === "CERTIFICATE_UPLOAD_EXPIRED") {
+          res.status(422).json({
+            error: "certificate_upload_expired",
+            message: "Upload de certificado expirado ou inválido. Valide os arquivos novamente."
+          });
+          return;
+        }
         if (respondGatewayCredentialError(res, error)) {
           return;
         }

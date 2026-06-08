@@ -1,0 +1,18 @@
+{
+  "run_at": "2026-06-06T20:47:17.162Z",
+  "api_base": "http://localhost:3333",
+  "tenant": "escritorio-demo",
+  "validate": {
+    "certificate_id": "dfdd9c75-0d7b-4d64-903e-534fb5f5ac9b",
+    "subject_cn": "local-test",
+    "not_after": "2027-05-23T03:58:44.000Z",
+    "days_remaining": 350,
+    "warnings": [],
+    "info": [
+      "Certificado válido. Expira em 2027-05-23 · CN: local-test · Emitido por: local-test.",
+      "Par certificado/chave validado com sucesso."
+    ]
+  },
+  "gateway_patch_status": 200,
+  "gateway_provider": "inter"
+}

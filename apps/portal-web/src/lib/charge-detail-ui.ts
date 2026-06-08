@@ -6,7 +6,9 @@ export type ChargeDetailBannerState = {
   emissionError: string | null;
   /** Polling ativo — emissão em andamento. */
   showEmissionProgress: boolean;
-  /** Timeout do polling sem confirmação — emissão inconclusiva. */
+  /** Emissão demorando (worker ainda pode concluir; polling segue). */
+  showEmissionSlowWarning: boolean;
+  /** @deprecated use showEmissionSlowWarning */
   showEmissionInconclusive: boolean;
 };
 
@@ -18,21 +20,26 @@ export function resolveChargeDetailBanners(input: {
   events: ChargeEventRow[];
   chargeStatus: string | undefined;
   isPolling: boolean;
-  timeoutReached: boolean;
+  slowEmissionWarning: boolean;
+  /** @deprecated use slowEmissionWarning */
+  timeoutReached?: boolean;
   hasPayment: boolean;
 }): ChargeDetailBannerState {
-  const { events, chargeStatus, isPolling, timeoutReached, hasPayment } = input;
+  const slowWarning = input.slowEmissionWarning ?? input.timeoutReached ?? false;
+  const { events, chargeStatus, isPolling, hasPayment } = input;
 
   const emissionError = extractEmissionError(events, { chargeStatus });
 
-  const showEmissionProgress = Boolean(chargeStatus) && isPolling && !emissionError;
+  const showEmissionProgress =
+    Boolean(chargeStatus) && isPolling && !emissionError && !slowWarning;
 
-  const showEmissionInconclusive =
-    chargeStatus === "rascunho" &&
-    !hasPayment &&
-    timeoutReached &&
-    !isPolling &&
-    !emissionError;
+  const showEmissionSlowWarning =
+    chargeStatus === "rascunho" && !hasPayment && slowWarning && !emissionError;
 
-  return { emissionError, showEmissionProgress, showEmissionInconclusive };
+  return {
+    emissionError,
+    showEmissionProgress,
+    showEmissionSlowWarning,
+    showEmissionInconclusive: showEmissionSlowWarning
+  };
 }

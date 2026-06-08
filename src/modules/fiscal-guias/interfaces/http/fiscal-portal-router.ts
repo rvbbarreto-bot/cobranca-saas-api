@@ -21,6 +21,19 @@ import {
   mapIngestPublic,
   postPortalIngestCsvUseCase
 } from "../../../fiscal-ingestion/application/portal-fiscal-ingest";
+import {
+  createProcessamentosFromIngestUseCase,
+  mapProcessamentoPublic
+} from "../../../fiscal-processamento/application/create-processamentos-from-ingest";
+import {
+  getPortalProcessamentoDetailUseCase,
+  listPortalProcessamentosUseCase
+} from "../../../fiscal-processamento/application/portal-processamentos-read";
+import { getPortalProcessamentoReciboUrlUseCase } from "../../../fiscal-processamento/application/get-portal-processamento-recibo-url";
+import { listPortalExpiringCertificatesUseCase } from "../../application/list-portal-expiring-certificates";
+import { validarProcuracaoSerproUseCase } from "../../application/validar-procuracao-serpro";
+import { getPortalClienteCnpj } from "../../infrastructure/certificado-digital-repository";
+import { listPortalFiscalAuditUseCase } from "../../application/list-portal-fiscal-audit";
 
 const csvUpload = multer({
   storage: multer.memoryStorage(),
@@ -542,6 +555,298 @@ async function getIngestStatusHttp(req: Request, res: Response): Promise<void> {
   }
 }
 
+async function postProcessamentosHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem criar processamentos."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: "invalid_tenant", message: "Tenant obrigatorio." });
+    return;
+  }
+
+  const body = req.body as { fiscal_ingest_id?: string };
+  const fiscalIngestId =
+    typeof body.fiscal_ingest_id === "string" ? body.fiscal_ingest_id.trim() : "";
+  if (!fiscalIngestId) {
+    res.status(400).json({
+      error: "invalid_body",
+      message: "fiscal_ingest_id obrigatorio."
+    });
+    return;
+  }
+
+  try {
+    const result = await createProcessamentosFromIngestUseCase({
+      automacaoTenantId: tenantId,
+      fiscalIngestId
+    });
+    if (!result.ok) {
+      if (result.kind === "ingest_not_found") {
+        res.status(404).json({ error: "not_found", message: "Ingestao nao encontrada." });
+        return;
+      }
+      if (result.kind === "ingest_not_validado") {
+        res.status(409).json({
+          error: "ingest_not_validated",
+          message: "Ingestao ainda nao validada (status deve ser VALIDADO)."
+        });
+        return;
+      }
+      res.status(404).json({
+        error: "organization_not_found",
+        message: "Organizacao nao vinculada."
+      });
+      return;
+    }
+
+    res.status(201).json({
+      processamentos: result.processamentos.map(mapProcessamentoPublic)
+    });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function listProcessamentosHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem listar processamentos."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: "invalid_tenant", message: "Tenant obrigatorio." });
+    return;
+  }
+
+  try {
+    const rows = await listPortalProcessamentosUseCase(tenantId);
+    res.json({ processamentos: rows.map(mapProcessamentoPublic) });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function getProcessamentoHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem consultar processamento."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  const processamentoId =
+    typeof req.params.processamentoId === "string" ? req.params.processamentoId.trim() : "";
+  if (!tenantId || !processamentoId) {
+    res.status(400).json({ error: "invalid_param", message: "processamentoId obrigatorio." });
+    return;
+  }
+
+  try {
+    const result = await getPortalProcessamentoDetailUseCase(tenantId, processamentoId);
+    if (!result.ok) {
+      res.status(404).json({ error: "not_found", message: "Processamento nao encontrado." });
+      return;
+    }
+    res.json({
+      processamento: mapProcessamentoPublic(result.processamento),
+      eventos: result.eventos.map((e) => ({
+        id: e.id,
+        evento: e.evento,
+        payload: e.payload,
+        created_at: e.createdAt
+      }))
+    });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
+async function listExpiringCertificatesHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem consultar certificados."
+    });
+    return;
+  }
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(500).json({ error: "internal_error", message: "Tenant portal ausente." });
+    return;
+  }
+  try {
+    const certificados = await listPortalExpiringCertificatesUseCase(tenantId);
+    res.json({ certificados, count: certificados.length });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) return;
+    throw error;
+  }
+}
+
+async function postValidarProcuracaoSerproHttp(req: Request, res: Response): Promise<void> {
+  if (!isAdminEscritorio(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio pode validar procuracao na SERPRO."
+    });
+    return;
+  }
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(500).json({ error: "internal_error", message: "Tenant portal ausente." });
+    return;
+  }
+  const body = req.body as { portal_cliente_id?: string; contribuinte_cnpj?: string };
+  const portalClienteId =
+    typeof body.portal_cliente_id === "string" ? body.portal_cliente_id.trim() : "";
+  if (!portalClienteId) {
+    res.status(400).json({ error: "invalid_body", message: "portal_cliente_id obrigatorio." });
+    return;
+  }
+  let contribuinteCnpj =
+    typeof body.contribuinte_cnpj === "string" ? body.contribuinte_cnpj.replace(/\D/g, "") : "";
+  if (!contribuinteCnpj) {
+    contribuinteCnpj = (await getPortalClienteCnpj(tenantId, portalClienteId)) ?? "";
+  }
+  if (!contribuinteCnpj) {
+    res.status(400).json({ error: "cnpj_ausente", message: "Cliente sem CNPJ cadastrado." });
+    return;
+  }
+  try {
+    const result = await validarProcuracaoSerproUseCase({
+      tenantId,
+      portalClienteId,
+      contribuinteCnpj,
+      userId: req.authContext?.userId
+    });
+    if (!result.ok) {
+      if (result.kind === "procuracao_not_found") {
+        res.status(404).json({ error: "procuracao_not_found", message: "Procuracao ativa nao encontrada." });
+        return;
+      }
+      if (result.kind === "cliente_not_found") {
+        res.status(404).json({ error: "cliente_not_found", message: "Cliente portal nao encontrado." });
+        return;
+      }
+      if (result.kind === "organization_not_found") {
+        res.status(404).json({ error: "organization_not_found", message: "Organizacao nao vinculada." });
+        return;
+      }
+      res.status(422).json({ error: "validation_error", issues: result.issues });
+      return;
+    }
+    res.json({
+      situacao: result.situacao,
+      mensagem: result.mensagem,
+      procuracao: result.procuracao
+    });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) return;
+    throw error;
+  }
+}
+
+async function getProcessamentoReciboUrlHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem baixar recibo."
+    });
+    return;
+  }
+  const tenantId = req.tenantContext?.tenantId;
+  const processamentoId =
+    typeof req.params.processamentoId === "string" ? req.params.processamentoId.trim() : "";
+  if (!tenantId || !processamentoId || !UUID_RE.test(processamentoId)) {
+    res.status(400).json({ error: "invalid_param", message: "processamentoId UUID invalido." });
+    return;
+  }
+  try {
+    const result = await getPortalProcessamentoReciboUrlUseCase(tenantId, processamentoId, {
+      userId: req.authContext?.userId,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent") ?? undefined
+    });
+    if (!result.ok) {
+      if (result.kind === "not_found") {
+        res.status(404).json({ error: "not_found", message: "Processamento nao encontrado." });
+        return;
+      }
+      res.status(409).json({ error: "recibo_unavailable", message: "Recibo ainda nao disponivel." });
+      return;
+    }
+    res.json({ pdf_url: result.pdf_url, expires_in_seconds: result.expires_in_seconds });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) return;
+    throw error;
+  }
+}
+
+async function listFiscalAuditHttp(req: Request, res: Response): Promise<void> {
+  if (!isAdminEscritorio(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio pode consultar auditoria fiscal."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(500).json({ error: "internal_error", message: "Tenant portal ausente." });
+    return;
+  }
+
+  try {
+    const pool = getPool();
+    const result = await listPortalFiscalAuditUseCase(pool, tenantId, req.query as Record<string, unknown>);
+    if (!result.ok) {
+      if (result.kind === "invalid_cursor") {
+        res.status(400).json({ error: "invalid_cursor", message: "Cursor de paginação inválido." });
+        return;
+      }
+      res.status(400).json({
+        error: "validation_error",
+        message: "Parâmetros de consulta inválidos.",
+        issues: result.issues
+      });
+      return;
+    }
+    res.json({
+      entries: result.entries,
+      count: result.count,
+      page_limit: result.page_limit,
+      next_cursor: result.next_cursor
+    });
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
 /**
  * Rotas portal fiscal — montadas em `/v1/portal/fiscal` quando FISCAL_GUIAS_ENABLED=true.
  * Middlewares portal (tenant, JWT, membership) aplicados pelo router pai.
@@ -552,13 +857,20 @@ export function createFiscalPortalRouter(): Router {
   router.get("/guias/:guiaId", asyncHandler(getGuiaFiscalHttp));
   router.get("/guias/:guiaId/pdf-url", asyncHandler(getGuiaFiscalPdfUrlHttp));
   router.post("/guias/:guiaId/pagamentos", asyncHandler(postGuiaPagamentoHttp));
+  router.get("/certificados/expiring", asyncHandler(listExpiringCertificatesHttp));
   router.get("/certificados", asyncHandler(getCertificadoDigitalHttp));
   router.post("/certificados", asyncHandler(postCertificadoDigitalHttp));
   router.get("/procuracoes", asyncHandler(getProcuracaoHttp));
+  router.post("/procuracoes/validar-serpro", asyncHandler(postValidarProcuracaoSerproHttp));
   router.post("/procuracoes", asyncHandler(postProcuracaoHttp));
   router.get("/serpro-config", asyncHandler(getSerproConfigHttp));
   router.patch("/serpro-config", asyncHandler(patchSerproConfigHttp));
   router.post("/ingest/csv", csvUpload.single("file"), asyncHandler(postIngestCsvHttp));
   router.get("/ingest/:ingestId", asyncHandler(getIngestStatusHttp));
+  router.post("/processamentos", asyncHandler(postProcessamentosHttp));
+  router.get("/processamentos", asyncHandler(listProcessamentosHttp));
+  router.get("/processamentos/:processamentoId/recibo/url", asyncHandler(getProcessamentoReciboUrlHttp));
+  router.get("/processamentos/:processamentoId", asyncHandler(getProcessamentoHttp));
+  router.get("/audit", asyncHandler(listFiscalAuditHttp));
   return router;
 }

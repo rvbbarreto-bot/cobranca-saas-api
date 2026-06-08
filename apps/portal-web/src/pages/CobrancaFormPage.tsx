@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BrDatePicker } from "../components/BrDatePicker";
 import { ClienteAutocomplete } from "../components/ClienteAutocomplete";
@@ -9,7 +9,10 @@ import { useToast } from "../components/ToastProvider";
 import { buildCobrancaFormSchema, getPortalChargeRules, normalizeCobrancaPayload } from "../lib/cobranca-form";
 import { defaultDueDateIso, sanitizeChargeReference } from "../lib/gateway-charge-rules";
 import { useCliente } from "../hooks/useCliente";
-import { isCompleteClienteEmissionAddress } from "../lib/cliente-emission-address";
+import {
+  emissionAddressBlockMessage,
+  isCompleteClienteEmissionAddress
+} from "../lib/cliente-emission-address";
 import { clienteDetailQueryKey } from "../lib/cliente-query-keys";
 import { fetchClienteById, fetchEscritorioConfig, postPortalCobranca, PortalValidationError } from "../lib/api";
 
@@ -104,6 +107,28 @@ export function CobrancaFormPage(): JSX.Element {
 
   const isSubmitting = m.isPending || submitLockRef.current;
 
+  const addressBlockMessage = useMemo(() => {
+    if (!rules.requiresPayerAddress || !portalClienteId.trim()) {
+      return null;
+    }
+    if (selectedClienteQ.isLoading) {
+      return null;
+    }
+    const cliente = selectedClienteQ.data;
+    if (!cliente || isCompleteClienteEmissionAddress(cliente.endereco)) {
+      return null;
+    }
+    return emissionAddressBlockMessage(rules.displayName);
+  }, [
+    portalClienteId,
+    rules.displayName,
+    rules.requiresPayerAddress,
+    selectedClienteQ.data,
+    selectedClienteQ.isLoading
+  ]);
+
+  const submitBlockedByAddress = addressBlockMessage !== null;
+
   function onReferenceChange(raw: string): void {
     setReference(sanitizeChargeReference(raw, rules));
   }
@@ -139,7 +164,7 @@ export function CobrancaFormPage(): JSX.Element {
       const cliente = selectedClienteQ.data;
       if (!cliente || !isCompleteClienteEmissionAddress(cliente.endereco)) {
         setFieldErrors({
-          portal_cliente_id: `${rules.displayName} exige endereco completo do pagador (CEP, logradouro, bairro, cidade e UF). Atualize o cadastro do cliente antes de emitir.`
+          portal_cliente_id: emissionAddressBlockMessage(rules.displayName)
         });
         return;
       }
@@ -256,10 +281,25 @@ export function CobrancaFormPage(): JSX.Element {
           />
         </div>
 
+        {addressBlockMessage && portalClienteId ? (
+          <div className="banner-warn form-card--full" role="status">
+            {addressBlockMessage}{" "}
+            <Link to={`/clientes/${encodeURIComponent(portalClienteId)}/editar`} className="link-inline">
+              Completar endereco do cliente
+            </Link>
+          </div>
+        ) : null}
+
         {apiError ? <div className="banner-err form-card--full" role="alert">{apiError}</div> : null}
 
         <div className="form-actions form-card--full">
-          <button type="submit" className="btn-primary" disabled={isSubmitting} aria-busy={isSubmitting}>
+          <button
+            type="submit"
+            className="btn-primary"
+            disabled={isSubmitting || submitBlockedByAddress}
+            aria-busy={isSubmitting}
+            title={submitBlockedByAddress ? addressBlockMessage ?? undefined : undefined}
+          >
             {isSubmitting ? "Criando…" : "Criar cobranca"}
           </button>
           <button type="button" className="btn-ghost" onClick={requestCancel} disabled={isSubmitting}>

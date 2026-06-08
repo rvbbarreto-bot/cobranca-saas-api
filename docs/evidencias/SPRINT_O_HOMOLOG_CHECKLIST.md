@@ -13,7 +13,7 @@
 | 4   | Cadastro cliente — só identificação + contato        | OK      |                           | Salva e lista                                      |
 | 5   | Cadastro cliente — com CEP + bairro                  | OK      |                           | Endereço gravado                                   |
 | 6   | Edição cliente — incluir endereço (O.1)              | OK      |                           | PATCH 200                                          |
-| 7   | Nova cobrança — cliente sem endereço (Inter/Cora/C6) | ☐       |                           | Bloqueio preventivo (O.2.2)                        |
+| 7   | Nova cobrança — cliente sem endereço (Inter/Cora/C6) | ☐       |                           | Bloqueio preventivo UI + API 422 (O.2.2)           |
 
 
 **Aprovado PO:** _______________ **Data:** ___________

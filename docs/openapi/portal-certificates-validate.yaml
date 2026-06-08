@@ -1,0 +1,143 @@
+openapi: 3.0.3
+info:
+  title: Portal — Validação de certificados mTLS (LLD-CERT-001)
+  version: 1.0.0
+  description: |
+    Upload e validação de par certificado/chave PEM para gateways mTLS (Inter, Cora, C6).
+    O PEM nunca retorna ao cliente após validação; use `certificate_upload_id` no PATCH do gateway.
+
+servers:
+  - url: http://localhost:3333
+    description: API local (Docker dev)
+
+paths:
+  /v1/portal/certificates/validate:
+    post:
+      operationId: validateCertificateUpload
+      summary: Validar par certificado/chave PEM
+      tags: [Portal, Certificados]
+      security:
+        - bearerAuth: []
+        - tenantHeader: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [certificate, private_key]
+              properties:
+                certificate:
+                  type: string
+                  format: binary
+                  description: Arquivo PEM do certificado (.crt, .pem, .cer)
+                private_key:
+                  type: string
+                  format: binary
+                  description: Arquivo PEM da chave privada (.key, .pem)
+      responses:
+        "200":
+          description: Par válido; certificado armazenado temporariamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateValidateSuccess"
+        "403":
+          description: Apenas admin_escritorio
+        "422":
+          description: Erro de validação (catálogo ERR-*)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateValidateError"
+        "429":
+          description: Rate limit excedido (10 req/min por usuário)
+        "500":
+          description: Erro interno ou timeout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateValidateError"
+
+  /v1/portal/escritorio/gateway:
+    patch:
+      operationId: patchGatewayWithCertificateUpload
+      summary: Configurar gateway (com certificate_upload_id opcional)
+      tags: [Portal, Escritório]
+      security:
+        - bearerAuth: []
+        - tenantHeader: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateway_provider]
+              properties:
+                gateway_provider:
+                  type: string
+                  enum: [asaas, pagarme, inter, cora, bb, c6]
+                gateway_credentials:
+                  type: object
+                  additionalProperties:
+                    type: string
+                gateway_api_key:
+                  type: string
+                certificate_upload_id:
+                  type: string
+                  format: uuid
+                  description: UUID retornado por POST /v1/portal/certificates/validate (TTL 30 min)
+      responses:
+        "200":
+          description: Configuração atualizada (credenciais mascaradas)
+        "422":
+          description: Validação ou certificate_upload_expired
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    tenantHeader:
+      type: apiKey
+      in: header
+      name: x-tenant-id
+
+  schemas:
+    CertificateValidateSuccess:
+      type: object
+      required: [certificate_id, subject_cn, not_after, days_remaining, warnings, info]
+      properties:
+        certificate_id:
+          type: string
+          format: uuid
+        subject_cn:
+          type: string
+        not_after:
+          type: string
+          format: date-time
+        days_remaining:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+            example: WARN-001
+        info:
+          type: array
+          items:
+            type: string
+
+    CertificateValidateError:
+      type: object
+      required: [error_code, message]
+      properties:
+        error_code:
+          type: string
+          example: ERR-007
+        message:
+          type: string
+        field:
+          type: string
+          enum: [certificate, private_key]

@@ -1,0 +1,59 @@
+Epic Name,Issue Type,Summary,Description,Story Points,Priority,Labels,Components,Sprint Target
+EXEQ-FISC-E00,Spike,EXEQ-FISC-001 Credenciais Loja SERPRO e ambiente demo,"Obter contrato Loja SERPRO consumer key/secret demo CNPJ contratante. Documentar docs/SERPRO_CREDENCIAIS_HOMOLOG.md. Chamada swagger demo OK. PO confirma modelo comercial.",3,Highest,"fase-1-mvp serpro blocker-externo","pm architecture",S0
+EXEQ-FISC-E00,Story,EXEQ-FISC-002 Layout CSV PGDASD MVP especificacao contabil,"Template CSV v1 mapeamento CanonicalApuracao docs/templates/pgdasd-import-v1.csv validacao contabil assinada PO.",5,Highest,"fase-1-mvp pgdasd blocker-externo","architecture pm",S0
+EXEQ-FISC-E00,Story,EXEQ-FISC-003 Wireframes UX fluxo CSV para DAS,"Wireframes Dashboard Upload Stepper Historico Central Erros mobile desktop aprovacao PO.",8,High,"fase-1-mvp mobile-first",ux-ui,S0
+EXEQ-FISC-E00,Task,EXEQ-FISC-004 ADR Arquitetura SERPRO MVP,"Publicar docs/ADR_SERPRO_FISCAL_MVP.md adapter filas org vault feature flags revisao tech lead.",3,High,fase-1-mvp,architecture,S0
+EXEQ-FISC-E01,Story,EXEQ-FISC-010 Migration portal.organization backfill,"032_organization.sql backfill escritorios teste cross-org. Tabelas organization organization_membership.",8,High,"fase-1-mvp new","database backend",S1
+EXEQ-FISC-E01,Story,EXEQ-FISC-011 API gestao organizacao EXEQ console,"GET POST PATCH organizations tipos exeq escritorio bpo console EXEQ OpenAPI.",5,High,"fase-1-mvp reuse","backend frontend",S1
+EXEQ-FISC-E01,Story,EXEQ-FISC-012 Configuracao SERPRO por organizacao,"fiscal.serpro_config credenciais cifradas API serpro-config feature flag FISCAL_SERPRO_ENABLED admin only.",8,Highest,"fase-1-mvp serpro security","backend database",S1
+EXEQ-FISC-E02,Story,EXEQ-FISC-020 Migration fiscal.certificate_vault,"033_certificate_vault.sql owner_type indices validade status.",5,High,"fase-1-mvp security",database,S2
+EXEQ-FISC-E02,Story,EXEQ-FISC-021 Migrar certificados existentes para vault,"Script idempotente APIs vault_id deprecated certificado_digital testes PEM regressao.",5,High,"refactor security","backend database",S2
+EXEQ-FISC-E02,Story,EXEQ-FISC-022 Alertas expiracao certificado 30 15 7 dias,"Job diario status expiring audit certificado_expirando.",3,Medium,fase-1-mvp,backend,S2
+EXEQ-FISC-E02,Story,EXEQ-FISC-023 Procuracao consulta SERPRO OBTERPROCURACAO41,"POST procuracoes/validar-serpro situacao valida expirada bloqueio transmissao mensagem suporte.",8,High,"serpro reuse",backend,S2
+EXEQ-FISC-E03,Story,EXEQ-FISC-030 Modelo canonico CanonicalApuracao Zod,"Schema fiscal-ingestion testes 90porcento regras SN mapeamento CSV documentado.",5,Highest,"pgdasd new",backend,S3
+EXEQ-FISC-E03,Story,EXEQ-FISC-031 CsvIngestionAdapter parser,"Interface IngestionAdapter parser UTF-8 erros linha a linha.",8,High,fase-1-mvp,backend,S3
+EXEQ-FISC-E03,Story,EXEQ-FISC-032 API upload CSV validacao assincrona,"POST ingest/csv fila fiscal-ingest-validate GET status relatorio erros.",8,High,fase-1-mvp,backend,S3
+EXEQ-FISC-E03,Task,EXEQ-FISC-033 Stub adapters Excel API ERP futuro,"Interfaces documentadas not_implemented ADR Fase 2.",2,Low,fase-1-mvp,architecture,S3
+EXEQ-FISC-E04,Story,EXEQ-FISC-040 Modulo serpro-integra-contador client HTTP,"OAuth Redis mTLS vault error mapper paths Apoiar Consultar Declarar Emitir spike CONSULTIMADECREC14 demo.",13,Highest,"serpro new",backend,S4
+EXEQ-FISC-E04,Story,EXEQ-FISC-041 SerproFiscalGateway factory provider,"RECEITA_GATEWAY_PROVIDER serpro exeq mock testes mapper ReceitaCaptureResult.",5,High,"serpro reuse",backend,S4
+EXEQ-FISC-E05,Story,EXEQ-FISC-050 Migration processamento_fiscal eventos,"034_processamento_fiscal.sql status machine processamento_evento timeline.",5,High,fase-1-mvp,database,S5
+EXEQ-FISC-E05,Story,EXEQ-FISC-051 Worker fiscal-serpro-transmit TRANSDECLARACAO11,"Fila BullMQ idempotency protocolo pre-checks cert procuracao nunca sync portal SERPRO.",13,Highest,"pgdasd serpro",backend,S5
+EXEQ-FISC-E05,Story,EXEQ-FISC-052 API processamentos fiscal CRUD timeline,"POST GET list GET detail timeline eventos RBAC operador admin.",8,High,fase-1-mvp,backend,S5
+EXEQ-FISC-E05,Task,EXEQ-FISC-053 Audit trail apuracao SERPRO,"fiscal.audit_log apuracao_iniciada transmitida erro_serpro correlation_id.",3,Medium,reuse,backend,S5
+EXEQ-FISC-E06,Story,EXEQ-FISC-060 Worker recibo CONSDECREC15,"Job pos TRANSMITIDA PDF recibo storage RECIBO_OK ou ERRO.",8,High,"serpro pgdasd",backend,S6
+EXEQ-FISC-E06,Story,EXEQ-FISC-061 Worker emissao DAS GERARDAS12,"Fila fiscal-serpro-emit-das guia_fiscal PDF valores CONCLUIDO notificacao WhatsApp opcional.",13,Highest,"serpro reuse",backend,S7
+EXEQ-FISC-E06,Task,EXEQ-FISC-062 Download DAS recibo presigned URLs,"GET recibo/url reuse guia pdf url audit download.",3,High,reuse,backend,S7
+EXEQ-FISC-E07,Story,EXEQ-FISC-070 Design system fiscal shell mobile-first,"Sidebar drawer mobile tokens CSS cards AppShell refatorado.",13,High,"mobile-first refactor","ux-ui frontend",S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-071 Tela Dashboard Operacional Fiscal,"KPIs processamentos erros certs expirando mobile cards link upload.",8,High,fase-1-mvp,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-072 Tela Upload CSV relatorio validacao,"Drag-drop progresso erros linha botao iniciar transmissao se VALIDADO.",8,High,fase-1-mvp,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-073 Stepper transmissao tempo real,"Steps Validado Transmitindo Recibo DAS Concluido polling linguagem simples mobile vertical.",8,High,fase-1-mvp,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-074 Historico Processamentos Central Erros,"Filtros competencia status erro codigos SERPRO traduzidos acao sugerida.",8,High,fase-1-mvp,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-075 Gestao Certificados refator ConfigFiscal,"Lista certs badges expiracao upload PEM rota fiscal/certificados.",5,High,"refactor reuse",frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-076 Gestao Procuracoes diagnostico SERPRO,"Botao validar SERPRO semaforo verde amarelo vermelho.",5,High,fase-1-mvp,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-077 Tela Configuracao SERPRO,"Form demo prod contratante admin only.",5,High,fase-1-mvp,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-078 Download DAS extensao GuiaFiscalDetalhe,"Link processamento guia PDF mobile friendly.",3,High,reuse,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-079 Gestao Empresas extensao ClientesPage,"Indicadores fiscal cert procuracao ultimo processamento atalho nova apuracao.",5,Medium,reuse,frontend,S8
+EXEQ-FISC-E07,Story,EXEQ-FISC-080 Auditoria fiscal admin,"GET fiscal/audit paginado tela read-only filtros.",5,Low,fase-1-mvp,"frontend backend",S8
+EXEQ-FISC-E08,Story,EXEQ-FISC-090 Script E2E homolog SERPRO demo,"scripts/fiscal-serpro-homolog-e2e.ts evidencia docs/evidencias fluxo completo demo.",8,Highest,fase-1-mvp,"qa backend",S9
+EXEQ-FISC-E08,Story,EXEQ-FISC-091 Testes integracao cross-tenant processamento,"tests/fiscal-serpro/cross-tenant CI verde.",5,High,fase-1-mvp,"qa backend",S9
+EXEQ-FISC-E08,Story,EXEQ-FISC-092 Playwright E2E portal fiscal,"Upload stepper download mock CI job opcional.",8,High,fase-1-mvp,"qa frontend",S9
+EXEQ-FISC-E08,Story,EXEQ-FISC-093 DevOps secrets SERPRO CI job fiscal,"env.example check-prod-env GitHub Actions fixtures runbook feature flag.",5,High,fase-1-mvp,devops,S9
+EXEQ-FISC-E08,Story,EXEQ-FISC-094 Observabilidade SLI fiscal,"Metricas fila p95 transmit taxa erro doc sli-fiscal-definitions.",5,Medium,fase-1-mvp,"devops backend",S10
+EXEQ-FISC-E08,Story,EXEQ-FISC-095 Hardening seguranca checklist go-live,"Rate limits rollback flag checklist assinado PO Tech.",5,High,"security fase-1-mvp","architecture devops qa",S10
+EXEQ-FISC-E08,Task,EXEQ-FISC-096 Gestao projeto marcos riscos continuo,"Dashboard Jira riscos R1-R8 retros S0-S10.",13,Medium,fase-1-mvp,pm,S0-S10
+EXEQ-FISC-E09,Story,EXEQ-FISC-100 Fase2 WebhookIngestionAdapter ERP,"Receber apuracao ERP webhook autenticado.",8,Medium,fase-2-erp,backend,Fase2
+EXEQ-FISC-E09,Story,EXEQ-FISC-101 Fase2 RestIngestionAdapter API parceiro,"OpenAPI ingestao REST documentada.",8,Medium,fase-2-erp,backend,Fase2
+EXEQ-FISC-E09,Story,EXEQ-FISC-102 Fase2 Auth API key por organizacao,"Rate limit credenciais portal.",5,Medium,fase-2-erp,backend,Fase2
+EXEQ-FISC-E09,Story,EXEQ-FISC-103 Fase2 Portal credenciais API webhook logs,"UI admin integracoes.",5,Low,fase-2-erp,frontend,Fase2
+EXEQ-FISC-E09,Story,EXEQ-FISC-104 Fase2 Testes contrato sandbox ERP mock,"CI contrato adapters.",5,Medium,fase-2-erp,qa,Fase2
+EXEQ-FISC-E10,Story,EXEQ-FISC-110 Fase3 Cliente DCTFWeb TRANSDECLARACAO310,"Integracao SERPRO DCTFWeb transmissao.",13,Medium,fase-3-dctfweb,backend,Fase3
+EXEQ-FISC-E10,Story,EXEQ-FISC-111 Fase3 Consulta recibo CONSRECIBO32,"Recibo declaracao DCTFWeb.",8,Medium,fase-3-dctfweb,backend,Fase3
+EXEQ-FISC-E10,Story,EXEQ-FISC-112 Fase3 Emissao guia GERARGUIA31 DARF MAED,"Guia declaracao DCTFWeb.",13,Medium,fase-3-dctfweb,backend,Fase3
+EXEQ-FISC-E10,Story,EXEQ-FISC-113 Fase3 Modelo canonico DCTF validacao,"Schema DCTF extensao ingestion.",8,Medium,fase-3-dctfweb,backend,Fase3
+EXEQ-FISC-E10,Story,EXEQ-FISC-114 Fase3 Portal fluxo DCTFWeb UX,"Telas regime LP LR.",13,Medium,fase-3-dctfweb,frontend,Fase3
+EXEQ-FISC-E10,Story,EXEQ-FISC-115 Fase3 Homolog E2E DCTFWeb,"Script evidencias homolog.",8,Medium,fase-3-dctfweb,qa,Fase3
+EXEQ-FISC-E11,Story,EXEQ-FISC-120 Fase4 Billing franquia parceiro por org,"Modelo comercial multi org billing.",8,Low,fase-4-future,backend,Fase4
+EXEQ-FISC-E11,Story,EXEQ-FISC-121 Fase4 MIT apuracao ENCAPURACAO314,"Integracao MIT SERPRO.",13,Low,fase-4-future,backend,Fase4
+EXEQ-FISC-E11,Story,EXEQ-FISC-122 Fase4 Parcelamentos SN PARCSN,"Emissao DAS parcelamento.",8,Low,fase-4-future,backend,Fase4
+EXEQ-FISC-E11,Story,EXEQ-FISC-123 Fase4 Analytics fiscal dashboard avancado,"BI processamentos erros receita.",8,Low,fase-4-future,frontend,Fase4
+EXEQ-FISC-E11,Story,EXEQ-FISC-124 Fase4 Workers fiscal servico separado scale,"Extrair BullMQ fiscal microservico.",8,Low,fase-4-future,devops,Fase4

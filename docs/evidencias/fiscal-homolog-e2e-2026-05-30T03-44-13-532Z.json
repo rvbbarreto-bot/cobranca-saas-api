@@ -1,0 +1,197 @@
+{
+  "executedAt": "2026-05-30T03:44:13.532Z",
+  "git": {
+    "branch": "unknown",
+    "commit": "unknown"
+  },
+  "environment": {
+    "nodeEnv": "development",
+    "databaseUrl": "postgres://app:***@localhost:5434/cobranca_saas",
+    "receitaDasCaptureUrl": "http://127.0.0.1:19443",
+    "fiscalCaptureStub": false,
+    "fiscalPdfStorage": "local",
+    "hasEncryptionKey": true,
+    "hasWebhookSecret": true
+  },
+  "tenantPublicId": "00000000-0000-4000-8000-000000000001",
+  "automacaoTenantId": "1",
+  "correlationId": "fiscal-e2e-1780112653532",
+  "steps": {
+    "portalClienteId": "4f8a2016-03fa-4d68-aea0-b39a70904f0f",
+    "certificadoId": "005dafce-feed-48bf-a02f-3a4953a834fd",
+    "procuracaoId": "6a837026-4952-484f-ae89-84e0c3c57645",
+    "das_webhookInboxInsert": {
+      "inserted": true,
+      "row": {
+        "id": "b5c7932a-582d-408c-93df-a4b1a8b5397e",
+        "tenantId": "00000000-0000-4000-8000-000000000001",
+        "source": "n8n",
+        "externalEventId": "homolog-e2e-das-fiscal-e2e-1780112653532",
+        "createdAt": "2026-05-30T03:44:14.070Z",
+        "processedAt": null
+      },
+      "alreadyProcessed": false
+    },
+    "das_webhookProcess": {
+      "scanned": 1,
+      "updated": 1,
+      "dead": 0,
+      "dead_parse": 0,
+      "dead_not_found": 0,
+      "dead_illegal_transition": 0,
+      "skipped_already_processed": 0
+    },
+    "das_inboxHandle": {
+      "kind": "queued",
+      "job": {
+        "publicTenantUuid": "00000000-0000-4000-8000-000000000001",
+        "automacaoTenantId": "1",
+        "portalClienteId": "4f8a2016-03fa-4d68-aea0-b39a70904f0f",
+        "tipoGuia": "DAS",
+        "competencia": "2098-09",
+        "idempotencyKey": "homolog-e2e-das-fiscal-e2e-1780112653532",
+        "correlationId": "fiscal-e2e-1780112653532-das"
+      }
+    },
+    "das_guia": {
+      "id": "a68154ad-1648-4047-a2c8-933a56a15b32",
+      "status": "DISPONIVEL",
+      "tipo_guia": "DAS",
+      "compliance_status": "aprovado",
+      "pdf_url": "file://local/fiscal/1/a68154ad-1648-4047-a2c8-933a56a15b32/v1.pdf",
+      "pdf_storage_key": "fiscal/1/a68154ad-1648-4047-a2c8-933a56a15b32/v1.pdf",
+      "valor_total": "181.00"
+    },
+    "guiaDas": {
+      "id": "a68154ad-1648-4047-a2c8-933a56a15b32",
+      "status": "DISPONIVEL",
+      "tipo_guia": "DAS",
+      "compliance_status": "aprovado",
+      "pdf_url": "file://local/fiscal/1/a68154ad-1648-4047-a2c8-933a56a15b32/v1.pdf",
+      "pdf_storage_key": "fiscal/1/a68154ad-1648-4047-a2c8-933a56a15b32/v1.pdf",
+      "valor_total": "181.00"
+    },
+    "darf_webhookInboxInsert": {
+      "inserted": true,
+      "row": {
+        "id": "5c82dfff-5b21-47aa-ab5b-3551448d373d",
+        "tenantId": "00000000-0000-4000-8000-000000000001",
+        "source": "n8n",
+        "externalEventId": "homolog-e2e-darf-fiscal-e2e-1780112653532",
+        "createdAt": "2026-05-30T03:44:14.217Z",
+        "processedAt": null
+      },
+      "alreadyProcessed": false
+    },
+    "darf_webhookProcess": {
+      "scanned": 1,
+      "updated": 1,
+      "dead": 0,
+      "dead_parse": 0,
+      "dead_not_found": 0,
+      "dead_illegal_transition": 0,
+      "skipped_already_processed": 0
+    },
+    "darf_inboxHandle": {
+      "kind": "queued",
+      "job": {
+        "publicTenantUuid": "00000000-0000-4000-8000-000000000001",
+        "automacaoTenantId": "1",
+        "portalClienteId": "4f8a2016-03fa-4d68-aea0-b39a70904f0f",
+        "tipoGuia": "DARF",
+        "competencia": "2089-10",
+        "idempotencyKey": "homolog-e2e-darf-fiscal-e2e-1780112653532",
+        "codigoReceita": "0561",
+        "periodoApuracao": "2089-10-31",
+        "correlationId": "fiscal-e2e-1780112653532-darf"
+      }
+    },
+    "darf_guia": {
+      "id": "dfb7d680-4d27-4251-a0d8-a4a9299ccec2",
+      "status": "DISPONIVEL",
+      "tipo_guia": "DARF",
+      "compliance_status": "aprovado",
+      "pdf_url": "file://local/fiscal/1/dfb7d680-4d27-4251-a0d8-a4a9299ccec2/v1.pdf",
+      "pdf_storage_key": "fiscal/1/dfb7d680-4d27-4251-a0d8-a4a9299ccec2/v1.pdf",
+      "valor_total": "351.00"
+    },
+    "guiaDarf": {
+      "id": "dfb7d680-4d27-4251-a0d8-a4a9299ccec2",
+      "status": "DISPONIVEL",
+      "tipo_guia": "DARF",
+      "compliance_status": "aprovado",
+      "pdf_url": "file://local/fiscal/1/dfb7d680-4d27-4251-a0d8-a4a9299ccec2/v1.pdf",
+      "pdf_storage_key": "fiscal/1/dfb7d680-4d27-4251-a0d8-a4a9299ccec2/v1.pdf",
+      "valor_total": "351.00"
+    },
+    "darfGatewayPath": "/darf/capture"
+  },
+  "assertions": [
+    {
+      "name": "ambiente_receita_configurado",
+      "ok": true,
+      "detail": "http://127.0.0.1:19443"
+    },
+    {
+      "name": "certificado_cadastrado",
+      "ok": true,
+      "detail": "005dafce-feed-48bf-a02f-3a4953a834fd"
+    },
+    {
+      "name": "procuracao_cadastrada",
+      "ok": true,
+      "detail": "6a837026-4952-484f-ae89-84e0c3c57645"
+    },
+    {
+      "name": "das_inbox_fiscal_processado",
+      "ok": true,
+      "detail": "updated=1"
+    },
+    {
+      "name": "das_guia_disponivel_compliance",
+      "ok": true,
+      "detail": "tipo=DAS; status=DISPONIVEL; compliance=aprovado"
+    },
+    {
+      "name": "das_pdf_persistido",
+      "ok": true,
+      "detail": "pdf_url=file://local/fiscal/1/a68154ad-1648-4047-a2c8-933a56a15b32/v1.pdf"
+    },
+    {
+      "name": "das_audit_guia_disponibilizada",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "das_whatsapp_guia_disponivel",
+      "ok": true,
+      "detail": "communication_events sent=3; min=1"
+    },
+    {
+      "name": "darf_inbox_fiscal_processado",
+      "ok": true,
+      "detail": "updated=1"
+    },
+    {
+      "name": "darf_guia_disponivel_compliance",
+      "ok": true,
+      "detail": "tipo=DARF; status=DISPONIVEL; compliance=aprovado"
+    },
+    {
+      "name": "darf_pdf_persistido",
+      "ok": true,
+      "detail": "pdf_url=file://local/fiscal/1/dfb7d680-4d27-4251-a0d8-a4a9299ccec2/v1.pdf"
+    },
+    {
+      "name": "darf_audit_guia_disponibilizada",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "darf_whatsapp_guia_disponivel",
+      "ok": true,
+      "detail": "communication_events sent=4; min=2"
+    }
+  ],
+  "automatedTestsNote": "Reproducao homolog fiscal DAS + DARF:\n  Terminal 1: npm run receita:mock:gateway  (POST /das/capture e /darf/capture)\n  Terminal 2: npm run migrate && npm run seed:dev\n  Terminal 3: npm run dev  (workers BullMQ + Redis — opcional para script E2E)\n  Terminal 4: RUN_FISCAL_HOMOLOG_E2E=1 RECEITA_DAS_CAPTURE_URL=http://127.0.0.1:19443 npm run fiscal:homolog:e2e\nDocs: docs/FISCAL_HOMOLOG_E2E.md"
+}

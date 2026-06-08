@@ -9,7 +9,9 @@ export type FiscalAuditAction =
   | "guia_disponibilizada"
   | "compliance_bloqueio"
   | "capture_requested"
-  | "capture_failed";
+  | "capture_failed"
+  | "certificado_expirando"
+  | "procuracao_validada_serpro";
 
 export type FiscalAuditEntry = {
   tenantId: string;

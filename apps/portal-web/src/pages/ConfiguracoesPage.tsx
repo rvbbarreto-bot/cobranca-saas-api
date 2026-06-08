@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ApiError,
@@ -18,11 +18,25 @@ import {
   postChargingRule,
   previewNotificationTemplate,
   shouldPatchSecret,
+  type EscritorioConfig,
   type GatewayProviderMeta,
   type PatchEscritorioConfigBody
 } from "../lib/api";
+import {
+  credentialFieldDisplayValue,
+  isGatewayIntegrationConfigured,
+  maskedSecretDisplay,
+  shouldStartGatewayViewMode
+} from "../lib/gateway-config-form";
+import { sanitizeGatewayCredentials } from "../lib/pem-sanitize";
+import {
+  PemCertificatePairUploader,
+  type PemPairValidationState
+} from "../components/PemCertificatePairUploader";
 
 type TabId = "gateway" | "regua" | "templates";
+
+const GATEWAY_CONFIG_FORM_ID = "escritorio-gateway-config-form";
 
 function channelLabel(ch: string): string {
   if (ch === "both") return "E-mail + WhatsApp";
@@ -49,8 +63,17 @@ export function ConfiguracoesPage(): JSX.Element {
   const [gatewayProvider, setGatewayProvider] = useState("");
   const [gatewayApiKey, setGatewayApiKey] = useState("");
   const [gatewayCredentials, setGatewayCredentials] = useState<Record<string, string>>({});
+  const [pemUploadState, setPemUploadState] = useState<PemPairValidationState>({
+    ready: false,
+    certificateUploadId: null,
+    warnings: [],
+    info: []
+  });
   const [whatsappProvider, setWhatsappProvider] = useState<"zapi" | "twilio" | "">("");
   const [whatsappToken, setWhatsappToken] = useState("");
+  /** false = campos mascarados/desabilitados após gravação (PO). */
+  const [isGatewayEditing, setIsGatewayEditing] = useState(true);
+  const viewModeInitialized = useRef(false);
 
   const providersQ = useQuery({
     queryKey: ["gatewayProviders"],
@@ -73,22 +96,46 @@ export function ConfiguracoesPage(): JSX.Element {
   const selectedMeta: GatewayProviderMeta | undefined =
     providersQ.data?.data.find((p) => p.id === gatewayProvider) ?? schemaQ.data?.provider;
 
-  useEffect(() => {
-    const c = configQ.data?.config;
-    if (!c) return;
+  function applyConfigToForm(c: EscritorioConfig): void {
     setRazaoSocial(c.razao_social ?? "");
     setGatewayProvider(c.gateway_provider ?? "");
     setGatewayApiKey("");
     setGatewayCredentials({});
     setWhatsappProvider((c.whatsapp_provider as "zapi" | "twilio") ?? "");
-    setWhatsappToken(c.whatsapp_token ?? "");
-  }, [configQ.data?.config]);
+    setWhatsappToken("");
+  }
+
+  useEffect(() => {
+    const c = configQ.data?.config;
+    if (!c) return;
+    if (!viewModeInitialized.current) {
+      viewModeInitialized.current = true;
+      applyConfigToForm(c);
+      setIsGatewayEditing(!shouldStartGatewayViewMode(c));
+      return;
+    }
+    if (!isGatewayEditing) {
+      applyConfigToForm(c);
+    }
+  }, [configQ.data?.config, isGatewayEditing]);
+
+  const gatewayConfigured = isGatewayIntegrationConfigured(configQ.data?.config);
+  const integrationFieldsDisabled = gatewayConfigured && !isGatewayEditing;
+  const usesMtlsPem =
+    selectedMeta?.authType === "mtls_oauth" &&
+    (selectedMeta.credentialFields.some((f) => f.key === "certificate_pem") ?? false);
+  const pemUploadRequired =
+    usesMtlsPem && isGatewayEditing && !configQ.data?.config?.gateway_credentials_configured;
+  const gatewaySubmitBlocked = pemUploadRequired && !pemUploadState.ready;
 
   const saveConfig = useMutation({
     mutationFn: (body: PatchEscritorioConfigBody) => patchEscritorioConfig(body),
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       setSaveErr(null);
       setSaveMsg("Configurações guardadas.");
+      if (data.config) {
+        qc.setQueryData(["escritorioConfig"], { config: data.config });
+      }
       await qc.invalidateQueries({ queryKey: ["escritorioConfig"] });
     },
     onError: (e: unknown) => {
@@ -98,9 +145,11 @@ export function ConfiguracoesPage(): JSX.Element {
   });
 
   const saveGateway = useMutation({
-    mutationFn: async () => {
-      if (!gatewayProvider) throw new Error("Selecione um gateway.");
-      const meta = selectedMeta;
+    mutationFn: async (providerId: string) => {
+      if (!providerId) throw new Error("Selecione um gateway.");
+      const meta =
+        providersQ.data?.data.find((p) => p.id === providerId) ??
+        (await fetchGatewayProviderSchema(providerId)).provider;
       if (meta?.authType === "api_key") {
         const maskedKey = configQ.data?.config?.gateway_api_key;
         const apiKey = gatewayCredentials.api_key?.trim() || gatewayApiKey.trim();
@@ -108,26 +157,49 @@ export function ConfiguracoesPage(): JSX.Element {
           throw new Error("Informe a API key do gateway.");
         }
         return patchGatewayProvider({
-          gateway_provider: gatewayProvider,
+          gateway_provider: providerId,
           ...(shouldPatchSecret(apiKey, maskedKey) ? { gateway_api_key: apiKey } : {}),
-          ...(Object.keys(gatewayCredentials).length > 0
+          ...(Object.keys(gatewayCredentials).length > 0 || shouldPatchSecret(apiKey, maskedKey)
             ? { gateway_credentials: { api_key: apiKey, ...gatewayCredentials } }
             : {})
         });
       }
-      const creds = { ...gatewayCredentials };
+      const creds = sanitizeGatewayCredentials(
+        Object.fromEntries(
+          Object.entries({ ...gatewayCredentials })
+            .filter(([k]) => k !== "certificate_pem" && k !== "private_key_pem")
+            .map(([k, v]) => [k, v.trim()])
+        )
+      );
       const filled = Object.entries(creds).filter(([, v]) => v.trim());
-      if (filled.length === 0 && !configQ.data?.config?.gateway_credentials_configured) {
-        throw new Error("Preencha as credenciais do gateway.");
+      const hasPemUpload = Boolean(pemUploadState.certificateUploadId);
+      if (filled.length === 0 && !hasPemUpload) {
+        if (!configQ.data?.config?.gateway_credentials_configured) {
+          throw new Error("Preencha as credenciais do gateway.");
+        }
+        const currentProvider = configQ.data?.config?.gateway_provider;
+        if (currentProvider === providerId) {
+          return { config: configQ.data!.config! };
+        }
+        return patchGatewayProvider({ gateway_provider: providerId });
+      }
+      if (hasPemUpload && pemUploadRequired && !pemUploadState.ready) {
+        throw new Error("Aguarde a validação do certificado ou corrija os erros.");
       }
       return patchGatewayProvider({
-        gateway_provider: gatewayProvider,
-        gateway_credentials: Object.fromEntries(filled.map(([k, v]) => [k, v.trim()]))
+        gateway_provider: providerId,
+        ...(hasPemUpload ? { certificate_upload_id: pemUploadState.certificateUploadId! } : {}),
+        ...(filled.length > 0 ? { gateway_credentials: Object.fromEntries(filled) } : {})
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       setSaveErr(null);
       setSaveMsg("Configurações guardadas.");
+      if (data.config) {
+        qc.setQueryData(["escritorioConfig"], { config: data.config });
+        applyConfigToForm(data.config);
+        setIsGatewayEditing(false);
+      }
       await qc.invalidateQueries({ queryKey: ["escritorioConfig"] });
       await qc.invalidateQueries({ queryKey: ["gatewayHistory"] });
     },
@@ -137,11 +209,12 @@ export function ConfiguracoesPage(): JSX.Element {
     }
   });
 
-  function onSaveGateway(e: FormEvent): void {
+  async function onSaveGateway(e: FormEvent): Promise<void> {
     e.preventDefault();
     if (!isAdmin) return;
     setSaveMsg(null);
     setSaveErr(null);
+    const providerSnapshot = gatewayProvider;
     const maskedWa = configQ.data?.config?.whatsapp_token;
     const body: PatchEscritorioConfigBody = {};
     if (razaoSocial.trim()) body.razao_social = razaoSocial.trim();
@@ -149,7 +222,7 @@ export function ConfiguracoesPage(): JSX.Element {
     if (shouldPatchSecret(whatsappToken, maskedWa)) body.whatsapp_token = whatsappToken.trim();
 
     const saveWhatsappOnly =
-      !gatewayProvider &&
+      !providerSnapshot &&
       (body.razao_social !== undefined ||
         body.whatsapp_provider !== undefined ||
         body.whatsapp_token !== undefined);
@@ -158,10 +231,51 @@ export function ConfiguracoesPage(): JSX.Element {
       saveConfig.mutate(body);
       return;
     }
-    saveGateway.mutate();
-    if (Object.keys(body).length > 0) {
-      saveConfig.mutate(body);
+
+    const credsTouched =
+      gatewayApiKey.trim().length > 0 ||
+      Object.values(gatewayCredentials).some((v) => v.trim().length > 0) ||
+      Boolean(pemUploadState.certificateUploadId);
+    const providerChanged = providerSnapshot !== configQ.data?.config?.gateway_provider;
+    const needsGatewaySave =
+      Boolean(providerSnapshot) &&
+      (providerChanged || credsTouched || !configQ.data?.config?.gateway_credentials_configured);
+
+    try {
+      if (needsGatewaySave) {
+        await saveGateway.mutateAsync(providerSnapshot);
+      }
+      if (Object.keys(body).length > 0) {
+        await saveConfig.mutateAsync(body);
+      }
+      if (needsGatewaySave || (gatewayConfigured && credsTouched)) {
+        setIsGatewayEditing(false);
+      }
+    } catch (err) {
+      setSaveMsg(null);
+      setSaveErr(err instanceof Error ? err.message : "Erro ao guardar");
     }
+  }
+
+  function onCancelGatewayEdit(): void {
+    const c = configQ.data?.config;
+    if (c) {
+      applyConfigToForm(c);
+    }
+    setIsGatewayEditing(false);
+    setSaveErr(null);
+    setSaveMsg(null);
+  }
+
+  function onStartGatewayEdit(e?: { preventDefault?: () => void }): void {
+    e?.preventDefault?.();
+    setIsGatewayEditing(true);
+    setGatewayCredentials({});
+    setGatewayApiKey("");
+    setPemUploadState({ ready: false, certificateUploadId: null, warnings: [], info: [] });
+    setWhatsappToken("");
+    setSaveErr(null);
+    setSaveMsg(null);
   }
 
   const reguaQ = useQuery({
@@ -306,7 +420,8 @@ export function ConfiguracoesPage(): JSX.Element {
       </div>
 
       {tab === "gateway" ? (
-        <form className="form-card form-card--full" onSubmit={onSaveGateway}>
+        <div className="form-card form-card--full">
+        <form id={GATEWAY_CONFIG_FORM_ID} onSubmit={onSaveGateway}>
           <h3 className="form-card__title">Gateway e integrações</h3>
           {configQ.isLoading ? <p className="muted">A carregar…</p> : null}
           {configQ.isError ? (
@@ -321,10 +436,12 @@ export function ConfiguracoesPage(): JSX.Element {
               Gateway
               <select
                 value={gatewayProvider}
+                disabled={integrationFieldsDisabled}
                 onChange={(e) => {
                   setGatewayProvider(e.target.value);
                   setGatewayCredentials({});
                   setGatewayApiKey("");
+                  setPemUploadState({ ready: false, certificateUploadId: null, warnings: [], info: [] });
                 }}
               >
                 <option value="">—</option>
@@ -339,37 +456,68 @@ export function ConfiguracoesPage(): JSX.Element {
               <label className="field-label">
                 API key
                 <input
-                  type="password"
-                  value={gatewayCredentials.api_key ?? gatewayApiKey}
-                  placeholder={
-                    configQ.data?.config?.gateway_api_key
-                      ? "Deixe em branco para manter"
-                      : "Mín. 10 caracteres"
+                  type={integrationFieldsDisabled ? "text" : "password"}
+                  readOnly={integrationFieldsDisabled}
+                  disabled={integrationFieldsDisabled}
+                  value={
+                    integrationFieldsDisabled
+                      ? maskedSecretDisplay(configQ.data?.config?.gateway_api_key)
+                      : (gatewayCredentials.api_key ?? gatewayApiKey)
                   }
+                  placeholder={integrationFieldsDisabled ? undefined : "Mín. 10 caracteres"}
                   onChange={(e) =>
                     setGatewayCredentials((prev) => ({ ...prev, api_key: e.target.value }))
                   }
                 />
-                {configQ.data?.config?.gateway_api_key ? (
-                  <span className="muted small">Atual: {configQ.data.config.gateway_api_key}</span>
-                ) : null}
               </label>
+            ) : null}
+            {selectedMeta?.authType === "mtls_oauth" || selectedMeta?.authType === "oauth_basic" ? (
+              usesMtlsPem && !integrationFieldsDisabled ? (
+                <p className="muted small" style={{ gridColumn: "1 / -1" }}>
+                  Envie o <strong>certificado digital</strong> e a <strong>chave privada</strong> como arquivos
+                  (.crt, .pem, .cer, .key). A validação ocorre automaticamente após a seleção dos dois arquivos.
+                </p>
+              ) : (
+                <p className="muted small" style={{ gridColumn: "1 / -1" }}>
+                  Cole somente o conteúdo do arquivo <strong>.crt/.pem</strong> e <strong>.key</strong> (bloco
+                  completo com <code>-----BEGIN</code> e <code>-----END</code>). Não inclua linhas do PowerShell
+                  ou caminhos de pasta.
+                </p>
+              )
+            ) : null}
+            {usesMtlsPem && !integrationFieldsDisabled ? (
+              <PemCertificatePairUploader
+                disabled={integrationFieldsDisabled}
+                onStateChange={setPemUploadState}
+              />
             ) : null}
             {(selectedMeta?.credentialFields ?? [])
               .filter((f) => f.key !== "api_key")
+              .filter((f) => !(usesMtlsPem && !integrationFieldsDisabled && (f.key === "certificate_pem" || f.key === "private_key_pem")))
               .map((field) => (
                 <label key={field.key} className="field-label">
                   {field.label}
                   {field.secret && (field.key.includes("pem") || field.key.includes("certificate")) ? (
                     <textarea
                       rows={4}
-                      value={gatewayCredentials[field.key] ?? ""}
+                      readOnly={integrationFieldsDisabled}
+                      disabled={integrationFieldsDisabled}
+                      value={
+                        integrationFieldsDisabled
+                          ? credentialFieldDisplayValue(
+                              Boolean(configQ.data?.config?.gateway_credentials_configured),
+                              field.secret
+                            )
+                          : (gatewayCredentials[field.key] ?? "")
+                      }
                       placeholder={
-                        configQ.data?.config?.gateway_credentials_configured
-                          ? "Deixe em branco para manter"
-                          : field.required
-                            ? "Obrigatório"
-                            : ""
+                        integrationFieldsDisabled
+                          ? undefined
+                          : configQ.data?.config?.gateway_credentials_configured
+                            ? "Deixe em branco para manter"
+                            : field.required
+                              ? "Obrigatório"
+                              : ""
                       }
                       onChange={(e) =>
                         setGatewayCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))
@@ -377,12 +525,23 @@ export function ConfiguracoesPage(): JSX.Element {
                     />
                   ) : (
                     <input
-                      type={field.secret ? "password" : "text"}
-                      value={gatewayCredentials[field.key] ?? ""}
+                      type={integrationFieldsDisabled ? "text" : field.secret ? "password" : "text"}
+                      readOnly={integrationFieldsDisabled}
+                      disabled={integrationFieldsDisabled}
+                      value={
+                        integrationFieldsDisabled
+                          ? credentialFieldDisplayValue(
+                              Boolean(configQ.data?.config?.gateway_credentials_configured),
+                              field.secret
+                            )
+                          : (gatewayCredentials[field.key] ?? "")
+                      }
                       placeholder={
-                        configQ.data?.config?.gateway_credentials_configured
-                          ? "Deixe em branco para manter"
-                          : ""
+                        integrationFieldsDisabled
+                          ? undefined
+                          : configQ.data?.config?.gateway_credentials_configured
+                            ? "Deixe em branco para manter"
+                            : ""
                       }
                       onChange={(e) =>
                         setGatewayCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))
@@ -391,8 +550,10 @@ export function ConfiguracoesPage(): JSX.Element {
                   )}
                 </label>
               ))}
-            {configQ.data?.config?.gateway_credentials_configured ? (
-              <p className="muted small">Credenciais já configuradas (valores mascarados no servidor).</p>
+            {integrationFieldsDisabled ? (
+              <p className="muted small" style={{ gridColumn: "1 / -1" }}>
+                Credenciais guardadas. Clique em <strong>Editar</strong> para alterar o gateway ou as chaves.
+              </p>
             ) : null}
             {gatewayHistoryQ.data?.data.length ? (
               <div className="muted small" style={{ gridColumn: "1 / -1" }}>
@@ -410,6 +571,7 @@ export function ConfiguracoesPage(): JSX.Element {
               WhatsApp (provedor)
               <select
                 value={whatsappProvider}
+                disabled={integrationFieldsDisabled}
                 onChange={(e) => setWhatsappProvider(e.target.value as "zapi" | "twilio" | "")}
               >
                 <option value="">—</option>
@@ -420,25 +582,61 @@ export function ConfiguracoesPage(): JSX.Element {
             <label className="field-label">
               Token WhatsApp
               <input
-                type="password"
-                value={whatsappToken}
+                type={integrationFieldsDisabled ? "text" : "password"}
+                readOnly={integrationFieldsDisabled}
+                disabled={integrationFieldsDisabled}
+                value={
+                  integrationFieldsDisabled
+                    ? maskedSecretDisplay(configQ.data?.config?.whatsapp_token)
+                    : whatsappToken
+                }
                 onChange={(e) => setWhatsappToken(e.target.value)}
-                placeholder={configQ.data?.config?.whatsapp_token ? "Deixe em branco para manter" : ""}
+                placeholder={
+                  integrationFieldsDisabled
+                    ? undefined
+                    : configQ.data?.config?.whatsapp_token
+                      ? "Deixe em branco para manter"
+                      : ""
+                }
               />
             </label>
           </div>
           {saveMsg ? <div className="banner-ok">{saveMsg}</div> : null}
           {saveErr ? <div className="banner-err">{saveErr}</div> : null}
-          <p style={{ marginTop: "1rem" }}>
-            <button
-              type="submit"
-              className="btn-primary"
-              disabled={saveConfig.isPending || saveGateway.isPending}
-            >
-              {saveConfig.isPending || saveGateway.isPending ? "A guardar…" : "Guardar configurações"}
-            </button>
-          </p>
         </form>
+        <div className="proto-toolbar" style={{ marginTop: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
+          {integrationFieldsDisabled ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={(ev) => onStartGatewayEdit(ev)}
+            >
+              Editar
+            </button>
+          ) : (
+            <>
+              <button
+                type="submit"
+                form={GATEWAY_CONFIG_FORM_ID}
+                className="btn-primary"
+                disabled={saveConfig.isPending || saveGateway.isPending || gatewaySubmitBlocked}
+              >
+                {saveConfig.isPending || saveGateway.isPending ? "A guardar…" : "Guardar configurações"}
+              </button>
+              {gatewayConfigured ? (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={saveConfig.isPending || saveGateway.isPending}
+                  onClick={onCancelGatewayEdit}
+                >
+                  Cancelar
+                </button>
+              ) : null}
+            </>
+          )}
+        </div>
+        </div>
       ) : null}
 
       {tab === "regua" ? (

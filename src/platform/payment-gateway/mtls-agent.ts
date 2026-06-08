@@ -3,6 +3,8 @@ import https from "node:https";
 export type MtlsAgentInput = {
   certPem: string;
   keyPem: string;
+  /** Apenas homolog/mock Receita — NUNCA em producao. */
+  rejectUnauthorized?: boolean;
 };
 
 /** Monta Agent HTTPS com certificado mTLS (PEM apenas em memoria). */
@@ -15,6 +17,6 @@ export function buildMtlsAgent(input: MtlsAgentInput): https.Agent {
   return new https.Agent({
     cert: certPem,
     key: keyPem,
-    rejectUnauthorized: true
+    rejectUnauthorized: input.rejectUnauthorized ?? true
   });
 }

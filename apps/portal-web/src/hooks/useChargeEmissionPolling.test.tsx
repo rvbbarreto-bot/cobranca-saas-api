@@ -11,7 +11,7 @@ vi.mock("../lib/api", () => ({
 
 import {
   useChargeEmissionPolling,
-  CHARGE_EMISSION_TIMEOUT_MS
+  CHARGE_EMISSION_SLOW_WARNING_MS
 } from "./useChargeEmissionPolling";
 
 const draftNoPayment = {
@@ -54,7 +54,7 @@ describe("useChargeEmissionPolling", () => {
     vi.useRealTimers();
   });
 
-  it("para o polling e marca timeout após o orçamento sem confirmação", async () => {
+  it("marca aviso lento após o orçamento mas mantém polling", async () => {
     fetchPortalCobrancaDetail.mockResolvedValue(draftNoPayment);
 
     const { result } = renderHook(() => useChargeEmissionPolling("c1"), {
@@ -65,14 +65,14 @@ describe("useChargeEmissionPolling", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(result.current.isPolling).toBe(true);
-    expect(result.current.timeoutReached).toBe(false);
+    expect(result.current.slowEmissionWarning).toBe(false);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_TIMEOUT_MS + 50);
+      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_SLOW_WARNING_MS + 50);
     });
 
-    expect(result.current.timeoutReached).toBe(true);
-    expect(result.current.isPolling).toBe(false);
+    expect(result.current.slowEmissionWarning).toBe(true);
+    expect(result.current.isPolling).toBe(true);
   });
 
   it("resetPolling reinicia um novo ciclo de timeout", async () => {
@@ -83,20 +83,20 @@ describe("useChargeEmissionPolling", () => {
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_TIMEOUT_MS + 50);
+      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_SLOW_WARNING_MS + 50);
     });
-    expect(result.current.timeoutReached).toBe(true);
+    expect(result.current.slowEmissionWarning).toBe(true);
 
     act(() => {
       result.current.resetPolling();
     });
-    expect(result.current.timeoutReached).toBe(false);
+    expect(result.current.slowEmissionWarning).toBe(false);
     expect(result.current.isPolling).toBe(true);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_TIMEOUT_MS + 50);
+      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_SLOW_WARNING_MS + 50);
     });
-    expect(result.current.timeoutReached).toBe(true);
+    expect(result.current.slowEmissionWarning).toBe(true);
   });
 
   it("não marca timeout quando a emissão é confirmada (payment presente)", async () => {
@@ -107,10 +107,10 @@ describe("useChargeEmissionPolling", () => {
     });
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_TIMEOUT_MS + 50);
+      await vi.advanceTimersByTimeAsync(CHARGE_EMISSION_SLOW_WARNING_MS + 50);
     });
 
     expect(result.current.isPolling).toBe(false);
-    expect(result.current.timeoutReached).toBe(false);
+    expect(result.current.slowEmissionWarning).toBe(false);
   });
 });

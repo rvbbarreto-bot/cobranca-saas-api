@@ -1,4 +1,5 @@
 import type { PoolClient } from "pg";
+import { resolveEscritorioConfigTenantId } from "../infrastructure/billing-tenant-link-repository";
 import { assertPortalClienteHasEmissionAddress } from "./portal-cliente-emission-address";
 import {
   getPortalChargeRules,
@@ -16,10 +17,10 @@ export type PortalChargeCreateFields = {
   portal_cliente_id?: string;
 };
 
-async function loadGatewayProvider(client: PoolClient, automacaoTenantId: string): Promise<string> {
+async function loadGatewayProvider(client: PoolClient, configTenantId: string): Promise<string> {
   const r = await client.query<Record<string, unknown>>(
     `SELECT gateway_provider FROM escritorio_config WHERE tenant_id = $1 LIMIT 1`,
-    [automacaoTenantId]
+    [configTenantId]
   );
   const row = r.rows[0];
   return row ? String(row.gateway_provider || "asaas") : "asaas";
@@ -29,7 +30,8 @@ export async function resolvePortalChargeRules(
   client: PoolClient,
   automacaoTenantId: string
 ): Promise<PortalChargeRules> {
-  const provider = await loadGatewayProvider(client, automacaoTenantId);
+  const configTenantId = await resolveEscritorioConfigTenantId(client, automacaoTenantId);
+  const provider = await loadGatewayProvider(client, configTenantId);
   return getPortalChargeRules(provider);
 }
 

@@ -39,6 +39,7 @@ type MockState = {
   chargeStatus: string;
   events: Array<Record<string, unknown>>;
   lastPaymentInsert: Record<string, unknown> | null;
+  escritorioConfigTenantQueries: string[];
 };
 
 function createMockClient(state: MockState): PoolClient {
@@ -74,15 +75,31 @@ function createMockClient(state: MockState): PoolClient {
       }
 
       if (q.includes("from escritorio_config")) {
-        return {
-          rows: [
-            {
-              gateway_provider: "asaas",
-              gateway_api_key_encrypted: "cipher",
-              encryption_iv: "iv"
-            }
-          ]
-        };
+        const configTenant = String(params?.[0] ?? "");
+        state.escritorioConfigTenantQueries.push(configTenant);
+        if (configTenant === automacaoTenantId) {
+          return {
+            rows: [
+              {
+                gateway_provider: "asaas",
+                gateway_api_key_encrypted: null,
+                encryption_iv: null
+              }
+            ]
+          };
+        }
+        if (configTenant === tenantId) {
+          return {
+            rows: [
+              {
+                gateway_provider: "asaas",
+                gateway_api_key_encrypted: "cipher",
+                encryption_iv: "iv"
+              }
+            ]
+          };
+        }
+        return { rows: [] };
       }
 
       if (q.includes("from portal.cliente")) {
@@ -184,7 +201,8 @@ describe("processPaymentEmission", () => {
       },
       chargeStatus: "rascunho",
       events: [],
-      lastPaymentInsert: null
+      lastPaymentInsert: null,
+      escritorioConfigTenantQueries: []
     };
     adapter = createAdapterMock();
   });
@@ -271,6 +289,16 @@ describe("processPaymentEmission", () => {
     await expect(processPaymentEmission({ chargeId, tenantId }, deps())).rejects.toThrow(
       "portal_automacao_tenant_id ausente nos metadados da cobrança."
     );
+  });
+
+  it("escritorio_config usa tenant publico da charge, nao automacao", async () => {
+    await processPaymentEmission({ chargeId, tenantId }, deps());
+    expect(state.escritorioConfigTenantQueries.length).toBeGreaterThan(0);
+    expect(state.escritorioConfigTenantQueries.every((id) => id === tenantId)).toBe(true);
+    expect(state.escritorioConfigTenantQueries.some((id) => id === automacaoTenantId)).toBe(
+      false
+    );
+    expect(state.chargeStatus).toBe("emitida");
   });
 
   it("charge de outro tenant → charge_not_found sem processar", async () => {

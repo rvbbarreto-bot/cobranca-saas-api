@@ -16,6 +16,19 @@ type CommEvent = {
   error_message?: string | null;
 };
 
+type GuiaDisponivelCtx = {
+  cliente_nome: string;
+  cliente_telefone: string | null;
+  opt_in_whatsapp: boolean;
+  razao_social: string | null;
+  tipo_guia: string;
+  competencia: string;
+  valor_total: string;
+  data_vencimento: string | null;
+  linha_digitavel: string | null;
+  pdf_url: string | null;
+};
+
 type MockState = {
   charge: {
     canonical_status: string;
@@ -33,6 +46,7 @@ type MockState = {
   whatsappTemplate: { subject: string | null; body_template: string } | null;
   payment: { boleto_url: string | null; pix_link: string | null; pix_emv: string | null } | null;
   communicationEvents: CommEvent[];
+  guiaDisponivel?: GuiaDisponivelCtx | null;
 };
 
 function createMockClient(state: MockState): PoolClient {
@@ -65,6 +79,27 @@ function createMockClient(state: MockState): PoolClient {
 
       if (q.startsWith("select channel") && q.includes("charging_rules")) {
         return { rows: [] };
+      }
+
+      if (q.includes("from fiscal.guia_fiscal g")) {
+        if (!state.guiaDisponivel) return { rows: [] };
+        const g = state.guiaDisponivel;
+        return {
+          rows: [
+            {
+              cliente_nome: g.cliente_nome,
+              cliente_telefone: g.cliente_telefone,
+              opt_in_whatsapp: g.opt_in_whatsapp,
+              razao_social: g.razao_social,
+              tipo_guia: g.tipo_guia,
+              competencia: g.competencia,
+              valor_total: g.valor_total,
+              data_vencimento: g.data_vencimento,
+              linha_digitavel: g.linha_digitavel,
+              pdf_url: g.pdf_url
+            }
+          ]
+        };
       }
 
       if (q.includes("from payment_transactions")) {
@@ -372,5 +407,109 @@ describe("processNotificationSend", () => {
         }
       )
     ).rejects.toBeInstanceOf(UnrecoverableError);
+  });
+
+  it("guia.disponivel DARF inclui tipo_guia no WhatsApp", async () => {
+    const state: MockState = {
+      charge: null,
+      emailTemplate: null,
+      whatsappTemplate: {
+        subject: null,
+        body_template:
+          "Guia {{tipo_guia}} {{competencia}} valor {{valor}} venc {{data_vencimento}}"
+      },
+      payment: null,
+      communicationEvents: [],
+      guiaDisponivel: {
+        cliente_nome: "Empresa Beta",
+        cliente_telefone: "11988887777",
+        opt_in_whatsapp: true,
+        razao_social: "Contabilidade X",
+        tipo_guia: "DARF",
+        competencia: "2030-06",
+        valor_total: "1500.00",
+        data_vencimento: "2030-06-20",
+        linha_digitavel: "123",
+        pdf_url: "https://pdf.example/guia.pdf"
+      }
+    };
+
+    const sendWhatsApp = vi.fn().mockResolvedValue({ messageId: "zapi-guia" });
+
+    await processNotificationSend(
+      {
+        tenantId,
+        eventType: "guia.disponivel",
+        forceChannel: "whatsapp",
+        metadata: {
+          guia_id: "550e8400-e29b-41d4-a716-446655440000",
+          portal_cliente_id: "660e8400-e29b-41d4-a716-446655440001"
+        }
+      },
+      {
+        withTenant: async (_tid, fn) => fn(createMockClient(state)),
+        resendAdapter: { sendEmail: vi.fn() },
+        zapiAdapter: { sendWhatsApp }
+      }
+    );
+
+    expect(sendWhatsApp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("DARF — Receitas Federais")
+      })
+    );
+    expect(state.communicationEvents).toEqual([
+      expect.objectContaining({ channel: "whatsapp", status: "sent" })
+    ]);
+  });
+
+  it("guia.disponivel DAS inclui tipo_guia no WhatsApp", async () => {
+    const state: MockState = {
+      charge: null,
+      emailTemplate: null,
+      whatsappTemplate: {
+        subject: null,
+        body_template: "Tipo: {{tipo_guia}}"
+      },
+      payment: null,
+      communicationEvents: [],
+      guiaDisponivel: {
+        cliente_nome: "Empresa Alfa",
+        cliente_telefone: "11977776666",
+        opt_in_whatsapp: true,
+        razao_social: "Escritório Y",
+        tipo_guia: "DAS",
+        competencia: "2030-05",
+        valor_total: "250.00",
+        data_vencimento: "2030-05-20",
+        linha_digitavel: "456",
+        pdf_url: null
+      }
+    };
+
+    const sendWhatsApp = vi.fn().mockResolvedValue({ messageId: "zapi-das" });
+
+    await processNotificationSend(
+      {
+        tenantId,
+        eventType: "guia.disponivel",
+        forceChannel: "whatsapp",
+        metadata: {
+          guia_id: "550e8400-e29b-41d4-a716-446655440000",
+          portal_cliente_id: "660e8400-e29b-41d4-a716-446655440001"
+        }
+      },
+      {
+        withTenant: async (_tid, fn) => fn(createMockClient(state)),
+        resendAdapter: { sendEmail: vi.fn() },
+        zapiAdapter: { sendWhatsApp }
+      }
+    );
+
+    expect(sendWhatsApp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Tipo: DAS — Simples Nacional"
+      })
+    );
   });
 });

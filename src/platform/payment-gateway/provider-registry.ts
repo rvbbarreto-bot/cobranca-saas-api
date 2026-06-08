@@ -40,8 +40,8 @@ export const GATEWAY_REGISTRY: Record<string, GatewayProviderMeta> = {
     credentialFields: [
       { key: "client_id", label: "Client ID", secret: false, required: true },
       { key: "client_secret", label: "Client Secret", secret: true, required: true },
-      { key: "certificate_pem", label: "Certificado PEM", secret: true, required: true },
-      { key: "private_key_pem", label: "Chave privada PEM", secret: true, required: true }
+      { key: "certificate_pem", label: "Certificado digital", secret: true, required: true },
+      { key: "private_key_pem", label: "Chave privada", secret: true, required: true }
     ],
     supportsBoleto: true,
     supportsPix: false
@@ -53,8 +53,8 @@ export const GATEWAY_REGISTRY: Record<string, GatewayProviderMeta> = {
     authType: "mtls_oauth",
     credentialFields: [
       { key: "client_id", label: "Client ID", secret: false, required: true },
-      { key: "certificate_pem", label: "Certificado PEM", secret: true, required: true },
-      { key: "private_key_pem", label: "Chave privada PEM", secret: true, required: true }
+      { key: "certificate_pem", label: "Certificado digital", secret: true, required: true },
+      { key: "private_key_pem", label: "Chave privada", secret: true, required: true }
     ],
     supportsBoleto: true,
     supportsPix: true

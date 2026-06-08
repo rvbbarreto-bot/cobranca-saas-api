@@ -68,7 +68,45 @@ export type PortalLoginResponse = {
   access_token: string;
   token_type: string;
   expires_in: number;
+  login_kind?: "portal" | "platform_master" | "tenant_selection_required";
+  tenant_id?: string;
+  tenant_slug?: string | null;
+  user?: { id: string; email: string; full_name: string | null };
+  tenants?: Array<{
+    automacao_tenant_id: string;
+    slug: string | null;
+    name: string | null;
+    role: string;
+  }>;
 };
+
+export type UnifiedLoginTenantOption = {
+  automacao_tenant_id: string;
+  slug: string | null;
+  name: string | null;
+  role: string;
+};
+
+export type UnifiedLoginResult =
+  | {
+      kind: "portal";
+      access_token: string;
+      token_type: string;
+      expires_in: number;
+      tenant_id: string;
+      tenant_slug: string | null;
+    }
+  | {
+      kind: "platform_master";
+      access_token: string;
+      token_type: string;
+      expires_in: number;
+      user: { id: string; email: string; full_name: string | null };
+    }
+  | {
+      kind: "tenant_selection_required";
+      tenants: UnifiedLoginTenantOption[];
+    };
 
 export type ChargeRow = {
   id: string;
@@ -115,6 +153,14 @@ export type PortalListQuery = {
   cursor?: string | null;
   /** Busca textual (clientes: nome ou documento) */
   search?: string;
+};
+
+/** Query GET /v1/portal/fiscal/guias */
+export type GuiasFiscaisListQuery = PortalListQuery & {
+  tipo_guia?: "DAS" | "DARF";
+  competencia?: string;
+  status?: string;
+  portal_cliente_id?: string;
 };
 
 export type CobrancasListResponse = {
@@ -175,10 +221,22 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
       headers.set(k, v);
     }
   }
-  if (init.body && !headers.has("Content-Type")) {
+  if (init.body && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
   const res = await portalFetch(url, { ...init, headers });
+  if (res.status === 403) {
+    try {
+      const clone = res.clone();
+      const json = (await clone.json()) as { error?: string };
+      if (json.error === "tenant_inactive") {
+        clearSession();
+        window.dispatchEvent(new CustomEvent("portal:tenant-inactive"));
+      }
+    } catch {
+      /* ignore parse errors */
+    }
+  }
   if (res.status === 401) {
     clearSession();
     window.dispatchEvent(new Event("portal:unauthorized"));
@@ -202,11 +260,23 @@ export function hasSession(): boolean {
   return Boolean(localStorage.getItem(STORAGE_ACCESS_TOKEN) && localStorage.getItem(STORAGE_TENANT_ID));
 }
 
-export async function portalLogin(body: { email: string; tenant_id: string; password: string }): Promise<PortalLoginResponse> {
+export async function portalLogin(body: {
+  email: string;
+  password: string;
+  tenant_id?: string;
+}): Promise<UnifiedLoginResult> {
+  const payload: Record<string, string> = {
+    email: body.email,
+    password: body.password
+  };
+  if (body.tenant_id?.trim()) {
+    payload.tenant_id = body.tenant_id.trim();
+  }
+
   const res = await portalFetch(apiUrl("/v1/portal/auth/login"), {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify(payload)
   });
   const text = await res.text();
   let json: unknown;
@@ -234,15 +304,40 @@ export async function portalLogin(body: { email: string; tenant_id: string; pass
     }
     throw new ApiError(msg, res.status, json);
   }
-  const parsed = json as Partial<PortalLoginResponse>;
-  if (!parsed.access_token || typeof parsed.access_token !== "string") {
-    throw new ApiError("Resposta sem access_token", res.status, json);
+
+  const o = json as PortalLoginResponse;
+  const kind = o.login_kind ?? (o.access_token ? "portal" : undefined);
+
+  if (kind === "tenant_selection_required" && o.tenants) {
+    return { kind: "tenant_selection_required", tenants: o.tenants };
   }
-  return {
-    access_token: parsed.access_token,
-    token_type: typeof parsed.token_type === "string" ? parsed.token_type : "Bearer",
-    expires_in: typeof parsed.expires_in === "number" ? parsed.expires_in : 900
-  };
+
+  if (kind === "platform_master" && o.access_token && o.user) {
+    return {
+      kind: "platform_master",
+      access_token: o.access_token,
+      token_type: o.token_type ?? "Bearer",
+      expires_in: o.expires_in ?? 28800,
+      user: o.user
+    };
+  }
+
+  if (o.access_token && typeof o.access_token === "string") {
+    const tenantId = o.tenant_id ?? "";
+    if (!tenantId) {
+      throw new ApiError("Resposta portal sem tenant_id", res.status, json);
+    }
+    return {
+      kind: "portal",
+      access_token: o.access_token,
+      token_type: o.token_type ?? "Bearer",
+      expires_in: o.expires_in ?? 900,
+      tenant_id: tenantId,
+      tenant_slug: o.tenant_slug ?? null
+    };
+  }
+
+  throw new ApiError("Resposta de login inesperada", res.status, json);
 }
 
 export type PortalMeResponse = {
@@ -254,6 +349,8 @@ export type PortalMeResponse = {
     jwt_roles: string[];
   };
   tenant: { id: string; slug: string | null };
+  modules?: import("./portal-nav-access").PortalModuleFlags;
+  module_labels?: Record<string, string>;
 };
 
 export async function fetchPortalMe(): Promise<PortalMeResponse> {
@@ -310,6 +407,30 @@ function portalListSearch(q?: PortalListQuery): string {
   }
   if (q.search?.trim()) {
     sp.set("search", q.search.trim());
+  }
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+function guiasFiscaisListSearch(q?: GuiasFiscaisListQuery): string {
+  const sp = new URLSearchParams();
+  if (q?.limit != null) {
+    sp.set("limit", String(q.limit));
+  }
+  if (q?.cursor) {
+    sp.set("cursor", q.cursor);
+  }
+  if (q?.tipo_guia) {
+    sp.set("tipo_guia", q.tipo_guia);
+  }
+  if (q?.competencia?.trim()) {
+    sp.set("competencia", q.competencia.trim());
+  }
+  if (q?.status?.trim()) {
+    sp.set("status", q.status.trim());
+  }
+  if (q?.portal_cliente_id?.trim()) {
+    sp.set("portal_cliente_id", q.portal_cliente_id.trim());
   }
   const s = sp.toString();
   return s ? `?${s}` : "";
@@ -863,7 +984,47 @@ export type PatchGatewayProviderBody = {
   gateway_provider: string;
   gateway_api_key?: string;
   gateway_credentials?: Record<string, string>;
+  certificate_upload_id?: string;
 };
+
+export type CertificateValidateResponse = {
+  certificate_id: string;
+  subject_cn: string;
+  not_after: string;
+  days_remaining: number;
+  warnings: string[];
+  info: string[];
+};
+
+export async function validateCertificateUpload(
+  certificate: File,
+  privateKey: File
+): Promise<CertificateValidateResponse> {
+  const form = new FormData();
+  form.append("certificate", certificate);
+  form.append("private_key", privateKey);
+  const res = await apiFetch("/v1/portal/certificates/validate", {
+    method: "POST",
+    body: form
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const payload = json as { message?: string; error_code?: string };
+    const message =
+      payload.message ??
+      (payload.error_code === "NET-001"
+        ? "Não foi possível validar o certificado. Verifique sua conexão e tente novamente."
+        : apiMessageFromJson(json, res.status));
+    throw new ApiError(message, res.status, json);
+  }
+  return json as CertificateValidateResponse;
+}
 
 export type GatewayChangeLogEntry = {
   id: string;
@@ -1464,4 +1625,588 @@ export async function fetchCobrancas(q?: PortalListQuery): Promise<CobrancasList
     billing_link_status: typeof o.billing_link_status === "string" ? o.billing_link_status : undefined,
     message: typeof o.message === "string" ? o.message : undefined
   };
+}
+
+export type GuiaFiscalRow = {
+  id: string;
+  portal_cliente_id: string;
+  tipo_guia: "DAS" | "DARF";
+  competencia: string;
+  data_vencimento: string | null;
+  valor_principal: number;
+  valor_multa: number;
+  valor_juros: number;
+  valor_total: number;
+  linha_digitavel: string | null;
+  pix_copia_cola: string | null;
+  status: string;
+  compliance_status: string;
+  compliance_motivo: string | null;
+  pdf_url: string | null;
+  versao_atual: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type GuiasFiscaisListResponse = {
+  guias: GuiaFiscalRow[];
+  count: number;
+  page_limit?: number;
+  next_cursor?: string | null;
+};
+
+export async function fetchGuiasFiscais(q?: GuiasFiscaisListQuery): Promise<GuiasFiscaisListResponse> {
+  const res = await apiFetch(`/v1/portal/fiscal/guias${guiasFiscaisListSearch(q)}`, { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as Partial<GuiasFiscaisListResponse>;
+  if (!Array.isArray(o.guias)) {
+    throw new ApiError("Formato inesperado: guias nao e array", res.status, json);
+  }
+  return {
+    guias: o.guias as GuiaFiscalRow[],
+    count: typeof o.count === "number" ? o.count : o.guias.length,
+    page_limit: typeof o.page_limit === "number" ? o.page_limit : undefined,
+    next_cursor: o.next_cursor === undefined ? undefined : (o.next_cursor as string | null)
+  };
+}
+
+export async function fetchGuiaFiscal(guiaId: string): Promise<{ guia: GuiaFiscalRow }> {
+  const res = await apiFetch(`/v1/portal/fiscal/guias/${encodeURIComponent(guiaId)}`, { method: "GET" });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { guia?: GuiaFiscalRow };
+  if (!o.guia?.id) {
+    throw new ApiError("Formato inesperado: guia ausente", res.status, json);
+  }
+  return { guia: o.guia };
+}
+
+export type CertificadoDigitalRow = {
+  id: string;
+  portal_cliente_id: string;
+  label: string;
+  valid_from: string;
+  valid_until: string;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PostCertificadoDigitalBody = {
+  portal_cliente_id: string;
+  label: string;
+  valid_from: string;
+  valid_until: string;
+  certificado_pem: string;
+  chave_privada_pem: string;
+};
+
+export async function fetchCertificadoDigital(
+  portalClienteId: string
+): Promise<{ certificado: CertificadoDigitalRow | null }> {
+  const qs = new URLSearchParams({ portal_cliente_id: portalClienteId });
+  const res = await apiFetch(`/v1/portal/fiscal/certificados?${qs.toString()}`, {
+    method: "GET"
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { certificado?: CertificadoDigitalRow | null };
+  if (!("certificado" in o)) {
+    throw new ApiError("Formato inesperado: certificado ausente", res.status, json);
+  }
+  return { certificado: o.certificado ?? null };
+}
+
+export async function postCertificadoDigital(
+  body: PostCertificadoDigitalBody
+): Promise<{ certificado: CertificadoDigitalRow }> {
+  const res = await apiFetch("/v1/portal/fiscal/certificados", {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { certificado?: CertificadoDigitalRow };
+  if (!o.certificado?.id) {
+    throw new ApiError("Formato inesperado: certificado ausente", res.status, json);
+  }
+  return { certificado: o.certificado };
+}
+
+export type ProcuracaoRow = {
+  id: string;
+  portal_cliente_id: string;
+  tipo: "ecac" | "receita_federal" | "outro";
+  procurador_documento: string;
+  validade_inicio: string;
+  validade_fim: string;
+  ativa: boolean;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PostProcuracaoBody = {
+  portal_cliente_id: string;
+  tipo?: "ecac" | "receita_federal" | "outro";
+  procurador_documento: string;
+  validade_inicio: string;
+  validade_fim: string;
+  ativa?: boolean;
+};
+
+export async function fetchProcuracao(
+  portalClienteId: string
+): Promise<{ procuracao: ProcuracaoRow | null }> {
+  const qs = new URLSearchParams({ portal_cliente_id: portalClienteId });
+  const res = await apiFetch(`/v1/portal/fiscal/procuracoes?${qs.toString()}`, {
+    method: "GET"
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { procuracao?: ProcuracaoRow | null };
+  if (!("procuracao" in o)) {
+    throw new ApiError("Formato inesperado: procuracao ausente", res.status, json);
+  }
+  return { procuracao: o.procuracao ?? null };
+}
+
+export async function postProcuracao(body: PostProcuracaoBody): Promise<{ procuracao: ProcuracaoRow }> {
+  const res = await apiFetch("/v1/portal/fiscal/procuracoes", {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { procuracao?: ProcuracaoRow };
+  if (!o.procuracao?.id) {
+    throw new ApiError("Formato inesperado: procuracao ausente", res.status, json);
+  }
+  return { procuracao: o.procuracao };
+}
+
+export async function fetchGuiaFiscalPdfUrl(
+  guiaId: string
+): Promise<{ pdf_url: string; expires_in_seconds: number }> {
+  const res = await apiFetch(`/v1/portal/fiscal/guias/${encodeURIComponent(guiaId)}/pdf-url`, {
+    method: "GET"
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { pdf_url?: string; expires_in_seconds?: number };
+  if (!o.pdf_url) {
+    throw new ApiError("Formato inesperado: pdf_url ausente", res.status, json);
+  }
+  return {
+    pdf_url: o.pdf_url,
+    expires_in_seconds: typeof o.expires_in_seconds === "number" ? o.expires_in_seconds : 3600
+  };
+}
+
+export type PostGuiaPagamentoBody = {
+  valor_pago: number;
+  data_pagamento: string;
+  meio?: "pix" | "boleto" | "manual" | "conciliacao";
+  comprovante_url?: string;
+};
+
+export async function postGuiaPagamento(
+  guiaId: string,
+  body: PostGuiaPagamentoBody
+): Promise<{ pagamento: { id: string; valor_pago: number; data_pagamento: string }; guia_status: string }> {
+  const res = await apiFetch(`/v1/portal/fiscal/guias/${encodeURIComponent(guiaId)}/pagamentos`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    throw new ApiError("Resposta invalida da API", res.status, text);
+  }
+  if (!res.ok) {
+    const msg =
+      typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+        ? (json as { message: string }).message
+        : `HTTP ${res.status}`;
+    throw new ApiError(msg, res.status, json);
+  }
+  const o = json as { pagamento?: { id: string; valor_pago: number; data_pagamento: string }; guia_status?: string };
+  if (!o.pagamento?.id) {
+    throw new ApiError("Formato inesperado: pagamento ausente", res.status, json);
+  }
+  return { pagamento: o.pagamento, guia_status: o.guia_status ?? "PAGO" };
+}
+
+export type FiscalIngestValidationError = {
+  linha: number;
+  campo: string;
+  codigo: string;
+  mensagem: string;
+};
+
+export type FiscalIngestCanonicalPreview = {
+  cnpj: string;
+  competencia: string;
+  receita_bruta_mes: number;
+  valor_total_das: number;
+  portal_cliente_id: string | null;
+};
+
+export type FiscalIngestPublic = {
+  id: string;
+  status: "VALIDANDO" | "VALIDADO" | "ERRO";
+  source_type: string;
+  original_filename: string | null;
+  row_count: number;
+  valid_count: number;
+  error_count: number;
+  validation_errors: FiscalIngestValidationError[];
+  canonical_rows: FiscalIngestCanonicalPreview[];
+  created_at: string;
+  updated_at: string;
+};
+
+export async function postFiscalIngestCsv(file: File): Promise<{ ingest: FiscalIngestPublic }> {
+  const form = new FormData();
+  form.append("file", file, file.name);
+  const res = await apiFetch("/v1/portal/fiscal/ingest/csv", { method: "POST", body: form });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { ingest?: FiscalIngestPublic };
+    if (!o.ingest?.id) {
+      throw new ApiError("Formato inesperado: ingest ausente", res.status, json);
+    }
+    return { ingest: o.ingest };
+  });
+}
+
+export async function fetchFiscalIngestStatus(ingestId: string): Promise<{ ingest: FiscalIngestPublic }> {
+  const res = await apiFetch(`/v1/portal/fiscal/ingest/${encodeURIComponent(ingestId)}`, {
+    method: "GET"
+  });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { ingest?: FiscalIngestPublic };
+    if (!o.ingest?.id) {
+      throw new ApiError("Formato inesperado: ingest ausente", res.status, json);
+    }
+    return { ingest: o.ingest };
+  });
+}
+
+export async function postProcessamentosFromIngest(
+  fiscalIngestId: string
+): Promise<{ processamentos: ProcessamentoFiscalRow[] }> {
+  const res = await apiFetch("/v1/portal/fiscal/processamentos", {
+    method: "POST",
+    body: JSON.stringify({ fiscal_ingest_id: fiscalIngestId })
+  });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { processamentos?: ProcessamentoFiscalRow[] };
+    if (!Array.isArray(o.processamentos)) {
+      throw new ApiError("Formato inesperado: processamentos ausente", res.status, json);
+    }
+    return { processamentos: o.processamentos };
+  });
+}
+
+export type ProcessamentoFiscalRow = {
+  id: string;
+  portal_cliente_id: string;
+  fiscal_ingest_id: string | null;
+  competencia: string;
+  tipo: string;
+  status: string;
+  valor_apurado: string | null;
+  protocolo_serpro: string | null;
+  recibo_disponivel: boolean;
+  guia_fiscal_id: string | null;
+  erro_codigo: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProcessamentoEventoRow = {
+  id: string;
+  evento: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+};
+
+export async function fetchProcessamentosFiscais(): Promise<{ processamentos: ProcessamentoFiscalRow[] }> {
+  const res = await apiFetch("/v1/portal/fiscal/processamentos", { method: "GET" });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { processamentos?: ProcessamentoFiscalRow[] };
+    if (!Array.isArray(o.processamentos)) {
+      throw new ApiError("Formato inesperado: processamentos ausente", res.status, json);
+    }
+    return { processamentos: o.processamentos };
+  });
+}
+
+export async function fetchProcessamentoFiscalDetail(
+  processamentoId: string
+): Promise<{ processamento: ProcessamentoFiscalRow; eventos: ProcessamentoEventoRow[] }> {
+  const res = await apiFetch(`/v1/portal/fiscal/processamentos/${encodeURIComponent(processamentoId)}`, {
+    method: "GET"
+  });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { processamento?: ProcessamentoFiscalRow; eventos?: ProcessamentoEventoRow[] };
+    if (!o.processamento?.id) {
+      throw new ApiError("Formato inesperado: processamento ausente", res.status, json);
+    }
+    return { processamento: o.processamento, eventos: o.eventos ?? [] };
+  });
+}
+
+export async function fetchProcessamentoReciboUrl(
+  processamentoId: string
+): Promise<{ pdf_url: string; expires_in_seconds: number }> {
+  const res = await apiFetch(
+    `/v1/portal/fiscal/processamentos/${encodeURIComponent(processamentoId)}/recibo/url`,
+    { method: "GET" }
+  );
+  return parseJsonResponse(res, (json) => {
+    const o = json as { pdf_url?: string; expires_in_seconds?: number };
+    if (!o.pdf_url) {
+      throw new ApiError("Formato inesperado: pdf_url ausente", res.status, json);
+    }
+    return {
+      pdf_url: o.pdf_url,
+      expires_in_seconds: typeof o.expires_in_seconds === "number" ? o.expires_in_seconds : 3600
+    };
+  });
+}
+
+export type ExpiringCertificateRow = {
+  id: string;
+  portal_cliente_id: string | null;
+  label: string;
+  valid_until: string;
+  status: string;
+  days_left: number;
+};
+
+export async function fetchExpiringCertificates(): Promise<{ certificados: ExpiringCertificateRow[] }> {
+  const res = await apiFetch("/v1/portal/fiscal/certificados/expiring", { method: "GET" });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { certificados?: ExpiringCertificateRow[] };
+    return { certificados: o.certificados ?? [] };
+  });
+}
+
+export async function postValidarProcuracaoSerpro(body: {
+  portal_cliente_id: string;
+  contribuinte_cnpj?: string;
+}): Promise<{ situacao: string; mensagem: string; procuracao: ProcuracaoRow }> {
+  const res = await apiFetch("/v1/portal/fiscal/procuracoes/validar-serpro", {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { situacao?: string; mensagem?: string; procuracao?: ProcuracaoRow };
+    if (!o.situacao || !o.procuracao?.id) {
+      throw new ApiError("Formato inesperado: validacao SERPRO ausente", res.status, json);
+    }
+    return {
+      situacao: o.situacao,
+      mensagem: o.mensagem ?? "",
+      procuracao: o.procuracao
+    };
+  });
+}
+
+export type SerproConfigRow = {
+  organization_id: string;
+  ambiente: "demo" | "prod";
+  contratante_cnpj: string;
+  serpro_enabled: boolean;
+  consumer_key_configured: boolean;
+  consumer_secret_configured: boolean;
+  updated_at: string | null;
+};
+
+export type PatchSerproConfigBody = {
+  ambiente?: "demo" | "prod";
+  contratante_cnpj: string;
+  consumer_key?: string;
+  consumer_secret?: string;
+  serpro_enabled?: boolean;
+};
+
+export async function fetchSerproConfig(): Promise<{ serpro_config: SerproConfigRow }> {
+  const res = await apiFetch("/v1/portal/fiscal/serpro-config", { method: "GET" });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { serpro_config?: SerproConfigRow };
+    if (!o.serpro_config?.organization_id) {
+      throw new ApiError("Formato inesperado: serpro_config ausente", res.status, json);
+    }
+    return { serpro_config: o.serpro_config };
+  });
+}
+
+export async function patchSerproConfig(
+  body: PatchSerproConfigBody
+): Promise<{ serpro_config: SerproConfigRow }> {
+  const res = await apiFetch("/v1/portal/fiscal/serpro-config", {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+  return parseJsonResponse(res, (json) => {
+    const o = json as { serpro_config?: SerproConfigRow };
+    if (!o.serpro_config?.organization_id) {
+      throw new ApiError("Formato inesperado: serpro_config ausente", res.status, json);
+    }
+    return { serpro_config: o.serpro_config };
+  });
+}
+
+export type FiscalAuditLogEntry = {
+  id: string;
+  user_id: string | null;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  old_value: Record<string, unknown> | null;
+  new_value: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+};
+
+export type FiscalAuditListResponse = {
+  entries: FiscalAuditLogEntry[];
+  count: number;
+  page_limit?: number;
+  next_cursor?: string | null;
+};
+
+function fiscalAuditListSearch(q: Record<string, string>): string {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(q)) {
+    if (value.trim()) {
+      sp.set(key, value.trim());
+    }
+  }
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+export async function fetchFiscalAuditLog(q: Record<string, string>): Promise<FiscalAuditListResponse> {
+  const res = await apiFetch(`/v1/portal/fiscal/audit${fiscalAuditListSearch(q)}`, { method: "GET" });
+  return parseJsonResponse(res, (json) => {
+    const o = json as Partial<FiscalAuditListResponse>;
+    if (!Array.isArray(o.entries)) {
+      throw new ApiError("Formato inesperado: entries ausente", res.status, json);
+    }
+    return {
+      entries: o.entries as FiscalAuditLogEntry[],
+      count: typeof o.count === "number" ? o.count : o.entries.length,
+      page_limit: typeof o.page_limit === "number" ? o.page_limit : undefined,
+      next_cursor: o.next_cursor === undefined ? undefined : (o.next_cursor as string | null)
+    };
+  });
+}
+
+function parseJsonResponse<T>(res: Response, map: (json: unknown) => T): Promise<T> {
+  return res.text().then((text) => {
+    let json: unknown;
+    try {
+      json = text ? JSON.parse(text) : {};
+    } catch {
+      throw new ApiError("Resposta invalida da API", res.status, text);
+    }
+    if (!res.ok) {
+      const msg =
+        typeof json === "object" && json !== null && "message" in json && typeof (json as { message: unknown }).message === "string"
+          ? (json as { message: string }).message
+          : `HTTP ${res.status}`;
+      throw new ApiError(msg, res.status, json);
+    }
+    return map(json);
+  });
 }

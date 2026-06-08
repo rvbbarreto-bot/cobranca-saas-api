@@ -47,8 +47,14 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/portal/fiscal/procuracoes` | Idem; query **`portal_cliente_id`** (UUID); **200** `{ procuracao }` ou `{ procuracao: null }` |
 | GET | `/v1/portal/fiscal/serpro-config` | Idem; **admin_escritorio** apenas; **200** `{ serpro_config }`; migration **`032_organization_and_serpro_config.sql`** + backfill org |
 | PATCH | `/v1/portal/fiscal/serpro-config` | Idem; **admin_escritorio** apenas; body `ambiente?`, `contratante_cnpj`, `consumer_key?`, `consumer_secret?`, `serpro_enabled?`; credenciais AES-256-GCM (`ENCRYPTION_KEY`); **200** `{ serpro_config }` (CNPJ mascarado; flags `consumer_*_configured`) |
+| GET | `/v1/portal/fiscal/audit` | Idem; **admin_escritorio** apenas; query `limit`, `cursor`, `from`, `to` (YYYY-MM-DD), `action`, `user_id`; **200** `{ entries, count, page_limit, next_cursor }`; tabela `fiscal.audit_log` |
 | POST | `/v1/portal/fiscal/ingest/csv` | Idem; **admin_escritorio**; multipart campo **`file`** (CSV PGDASD v1, max 2MB); **202** `{ ingest }` status inicial `VALIDANDO`; migration **`034_fiscal_ingest.sql`** |
 | GET | `/v1/portal/fiscal/ingest/:ingestId` | Idem; admin/operador; **200** `{ ingest }` status `VALIDANDO` \| `VALIDADO` \| `ERRO` + `validation_errors` + `canonical_rows` (se validado) |
+| GET | `/v1/portal/fiscal/certificados/expiring` | Idem; admin/operador; **200** `{ certificados[], count }` certs com ≤30 dias |
+| GET | `/v1/portal/fiscal/processamentos/:processamentoId/recibo/url` | Idem; admin/operador; **200** `{ pdf_url, expires_in_seconds }` presigned recibo |
+| POST | `/v1/portal/fiscal/processamentos` | Idem; admin/operador; body `{ fiscal_ingest_id }`; ingest deve estar `VALIDADO`; **201** `{ processamentos[] }`; migration **`035_processamento_fiscal.sql`** |
+| GET | `/v1/portal/fiscal/processamentos` | Idem; admin/operador; **200** `{ processamentos[] }` |
+| GET | `/v1/portal/fiscal/processamentos/:processamentoId` | Idem; admin/operador; **200** `{ processamento, eventos[] }` timeline |
 | POST | `/v1/exeq/auth/login` | Público (rate limit); body `email`, `password`; master EXEQ (`is_platform_master`); **200** `{ access_token, user }` |
 | GET | `/v1/exeq/auth/me` | Bearer master EXEQ |
 | GET | `/v1/exeq/organizations` | Bearer master; **200** `{ data[], count }` — orgs com `automacao_tenant_id` quando vinculadas |

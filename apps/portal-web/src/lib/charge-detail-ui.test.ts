@@ -38,17 +38,17 @@ describe("resolveChargeDetailBanners", () => {
     expect(b.showEmissionInconclusive).toBe(false);
   });
 
-  it("apos timeout em rascunho: inconclusivo sem erro antigo nem andamento", () => {
+  it("apos aviso de demora em rascunho: alerta lento mesmo com polling ativo", () => {
     const b = resolveChargeDetailBanners({
       events: baseEvents,
       chargeStatus: "rascunho",
-      isPolling: false,
-      timeoutReached: true,
+      isPolling: true,
+      slowEmissionWarning: true,
       hasPayment: false
     });
     expect(b.emissionError).toBeNull();
     expect(b.showEmissionProgress).toBe(false);
-    expect(b.showEmissionInconclusive).toBe(true);
+    expect(b.showEmissionSlowWarning).toBe(true);
   });
 
   it("em erro_emissao: exibe falha amigavel, sem andamento", () => {

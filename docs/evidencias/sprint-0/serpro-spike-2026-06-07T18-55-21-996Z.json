@@ -1,0 +1,19 @@
+{
+  "sprint": "S0",
+  "issue": "EXEQ-FISC-001",
+  "mode": "dry-run",
+  "timestamp": "2026-06-07T18:55:21.989Z",
+  "steps": [
+    {
+      "step": "dry-run",
+      "message": "Spike preparado. Configure .env.serpro.local e rode sem --dry-run.",
+      "pedidoDados": {
+        "idSistema": "PGDASD",
+        "idServico": "CONSULTIMADECREC14",
+        "versaoSistema": "1.0",
+        "nota": "Consultar última declaração/recibo transmitida"
+      },
+      "envExample": ".env.serpro.local — SERPRO_CONSUMER_KEY, SERPRO_CONSUMER_SECRET, SERPRO_CONTRATANTE_CNPJ"
+    }
+  ]
+}

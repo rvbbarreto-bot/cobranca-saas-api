@@ -44,7 +44,8 @@ function createRateLimiter(extra: Partial<Options>): RateLimitRequestHandler {
 const limiterSlots = {
   auth: noopRateLimit() as RateLimitRequestHandler,
   webhook: noopRateLimit() as RateLimitRequestHandler,
-  csvExport: noopRateLimit() as RateLimitRequestHandler
+  csvExport: noopRateLimit() as RateLimitRequestHandler,
+  certificateValidate: noopRateLimit() as RateLimitRequestHandler
 };
 
 function installRateLimiters(): void {
@@ -52,6 +53,7 @@ function installRateLimiters(): void {
     limiterSlots.auth = noopRateLimit() as RateLimitRequestHandler;
     limiterSlots.webhook = noopRateLimit() as RateLimitRequestHandler;
     limiterSlots.csvExport = noopRateLimit() as RateLimitRequestHandler;
+    limiterSlots.certificateValidate = noopRateLimit() as RateLimitRequestHandler;
     return;
   }
 
@@ -78,6 +80,17 @@ function installRateLimiters(): void {
       return `csv-export:${ipKeyGenerator(req.ip ?? "unknown")}`;
     }
   });
+
+  limiterSlots.certificateValidate = createRateLimiter({
+    max: 10,
+    keyGenerator: (req: Request) => {
+      const userId = req.authContext?.userId;
+      if (userId) {
+        return `cert-validate:${userId}`;
+      }
+      return `cert-validate:${ipKeyGenerator(req.ip ?? "unknown")}`;
+    }
+  });
 }
 
 installRateLimiters();
@@ -93,6 +106,10 @@ export const webhookRateLimit: RequestHandler = (req, res, next) =>
 /** GET /v1/portal/escritorio/cobrancas/export — 5 req/min por tenant. */
 export const escritorioCsvExportRateLimit: RequestHandler = (req, res, next) =>
   limiterSlots.csvExport(req, res, next);
+
+/** POST /v1/portal/certificates/validate — 10 req/min por usuário autenticado. */
+export const certificateValidateRateLimit: RequestHandler = (req, res, next) =>
+  limiterSlots.certificateValidate(req, res, next);
 
 /** Conecta Redis e recria limiters com store compartilhado (chamar antes de aceitar trafego). */
 export async function initRateLimitRedis(): Promise<void> {

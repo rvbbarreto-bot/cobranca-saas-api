@@ -2,8 +2,33 @@ import tls from "node:tls";
 
 export type MtlsPemValidationResult = { ok: true } | { ok: false; message: string };
 
+const PEM_BLOCK_RE = /-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g;
+
+/** Remove lixo comum de copy/paste (prompt do terminal, linhas antes/depois do bloco PEM). */
+export function sanitizePemPaste(raw: string): string {
+  const normalized = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const blocks = normalized.match(PEM_BLOCK_RE);
+  if (blocks?.length) {
+    return blocks.map((block) => block.trim()).join("\n");
+  }
+  return normalized.trim();
+}
+
 function normalizePem(pem: string): string {
-  return pem.replace(/\r\n/g, "\n").trim();
+  return sanitizePemPaste(pem);
+}
+
+function friendlyTlsError(message: string): string {
+  if (/bad end line|04800066|PEM routines/i.test(message)) {
+    return (
+      "Certificado ou chave PEM com formato invalido. Cole apenas o bloco completo " +
+      "(de -----BEGIN ...----- ate -----END ...-----), sem linhas do terminal ou pastas."
+    );
+  }
+  if (/key values mismatch|certificate.*key/i.test(message)) {
+    return "Certificado e chave privada nao correspondem ao mesmo par. Verifique os arquivos do banco.";
+  }
+  return `Par certificado/chave invalido: ${message.split("\n")[0]}`;
 }
 
 function assertPemMarkers(certPem: string, keyPem: string): MtlsPemValidationResult | null {
@@ -35,7 +60,7 @@ export function validateMtlsPemPair(certPem: string, keyPem: string): MtlsPemVal
     const message = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
-      message: `Par certificado/chave invalido: ${message.split("\n")[0]}`
+      message: friendlyTlsError(message)
     };
   }
 }

@@ -7,6 +7,7 @@ type AuthContextValue = {
   email: string | null;
   isAuthenticated: boolean;
   login: (values: LoginFormValues) => Promise<void>;
+  establishSession: (token: string, tenantId: string, userEmail: string) => void;
   logout: () => void;
   error: string | null;
   isSubmitting: boolean;
@@ -21,6 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const establishSession = useCallback((token: string, tenantId: string, userEmail: string) => {
+    saveSession(token, tenantId, userEmail);
+    setEmail(userEmail);
+    setAuthenticated(true);
+    setError(null);
+  }, []);
+
   const login = useCallback(async (values: LoginFormValues) => {
     setError(null);
     setIsSubmitting(true);
@@ -30,9 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
         tenant_id: values.tenant_id,
         password: values.password
       });
-      saveSession(res.access_token, values.tenant_id.trim(), values.email.trim());
-      setEmail(values.email.trim());
-      setAuthenticated(true);
+      if (res.kind !== "portal") {
+        throw new Error("Use a tela de login unificada para este tipo de acesso.");
+      }
+      establishSession(res.access_token, res.tenant_id, values.email.trim());
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Falha no login";
       setError(msg);
@@ -40,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     } finally {
       setIsSubmitting(false);
     }
-  }, []);
+  }, [establishSession]);
 
   const logout = useCallback(() => {
     clearSession();
@@ -55,8 +64,20 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
     const on401 = (): void => {
       logout();
     };
+    const onInactive = (): void => {
+      logout();
+      window.dispatchEvent(
+        new CustomEvent("portal:toast", {
+          detail: "Escritório inativado. Faça login novamente quando for reativado."
+        })
+      );
+    };
     window.addEventListener("portal:unauthorized", on401);
-    return () => window.removeEventListener("portal:unauthorized", on401);
+    window.addEventListener("portal:tenant-inactive", onInactive);
+    return () => {
+      window.removeEventListener("portal:unauthorized", on401);
+      window.removeEventListener("portal:tenant-inactive", onInactive);
+    };
   }, [logout]);
 
   const value = useMemo(
@@ -64,12 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       email,
       isAuthenticated: authenticated,
       login,
+      establishSession,
       logout,
       error,
       isSubmitting,
       clearError
     }),
-    [email, authenticated, login, logout, error, isSubmitting, clearError]
+    [email, authenticated, login, establishSession, logout, error, isSubmitting, clearError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

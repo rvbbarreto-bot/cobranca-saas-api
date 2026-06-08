@@ -2,9 +2,13 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PortalLoadMore } from "../components/PortalLoadMore";
+import { ClienteFiscalIndicatorsCell, ClienteNovaApuracaoLink } from "../components/ClienteFiscalIndicatorsCell";
+import { ShellPageHeader } from "../components/ShellPageHeader";
+import { useClienteFiscalIndicators } from "../hooks/useClienteFiscalIndicators";
 import { CLIENTES_LIST_QUERY_KEY } from "../lib/cliente-query-keys";
 import { fetchClientes, fetchCobrancas, fetchEscritorioConfig } from "../lib/api";
 import type { ChargeRow, ClienteRow } from "../lib/api";
+import { isFiscalGuiasNavEnabled } from "../lib/fiscal-feature";
 import {
   chargeStatusLabelPortal,
   portalClienteIdFromMetadata
@@ -122,6 +126,7 @@ export function ClientesPage(): JSX.Element {
 
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState<"todos" | "ativo" | "cobranca" | "atencao" | "programado">("todos");
+  const fiscalEnabled = isFiscalGuiasNavEnabled();
 
   const allClientes = useMemo(() => q.data?.pages.flatMap((p) => p.data) ?? [], [q.data?.pages]);
 
@@ -146,20 +151,24 @@ export function ClientesPage(): JSX.Element {
     });
   }, [allClientes, cobQ.data?.data, busca, statusFiltro, gatewayRequiresPayerAddress]);
 
+  const fiscalClienteIds = useMemo(() => rows.map((r) => r.id), [rows]);
+  const fiscalIndicators = useClienteFiscalIndicators(fiscalClienteIds);
+
   return (
     <div className="shell-page">
-      <div className="shell-page__head">
-        <div>
-          <h2 className="shell-page__title">Clientes</h2>
-          <p className="shell-page__desc" style={{ marginBottom: 0 }}>
-            Cadastro do escritório com visão operacional. Colunas de mensalidade e vencimento aparecem quando a API
-            passar a expor os campos; até lá usamos dados derivados das cobranças vinculadas.
-          </p>
-        </div>
-        <Link to="/clientes/novo" className="btn-primary">
-          Novo cliente
-        </Link>
-      </div>
+      <ShellPageHeader
+        title="Clientes"
+        description={
+          fiscalEnabled
+            ? "Cadastro do escritório com visão operacional e indicadores fiscais (certificado, procuração e último PGDASD)."
+            : "Cadastro do escritório com visão operacional. Colunas de mensalidade e vencimento aparecem quando a API passar a expor os campos; até lá usamos dados derivados das cobranças vinculadas."
+        }
+        actions={
+          <Link to="/clientes/novo" className="btn-primary">
+            Novo cliente
+          </Link>
+        }
+      />
 
       {q.isLoading ? <p className="muted">Carregando…</p> : null}
       {q.isError ? (
@@ -227,13 +236,14 @@ export function ClientesPage(): JSX.Element {
                     <th>Vencimento</th>
                     <th>Último boleto</th>
                     <th>Status</th>
+                    {fiscalEnabled ? <th>Fiscal</th> : null}
                     <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="muted">
+                      <td colSpan={fiscalEnabled ? 8 : 7} className="muted">
                         Nenhum cliente corresponde aos filtros.
                       </td>
                     </tr>
@@ -248,6 +258,15 @@ export function ClientesPage(): JSX.Element {
                         <td>
                           <span className={`status-pill status-pill--${c.statusPill}`}>{c.statusLabel}</span>
                         </td>
+                        {fiscalEnabled ? (
+                          <td>
+                            <ClienteFiscalIndicatorsCell
+                              clienteId={c.id}
+                              indicators={fiscalIndicators.byClienteId.get(c.id)}
+                              loading={fiscalIndicators.isLoading}
+                            />
+                          </td>
+                        ) : null}
                         <td>
                           <div className="table-actions">
                             <Link to={`/clientes/${c.id}`} className="link-inline">
@@ -261,6 +280,12 @@ export function ClientesPage(): JSX.Element {
                             <Link to={`/cobrancas/nova?clienteId=${encodeURIComponent(c.id)}`} className="link-inline">
                               Cobrar
                             </Link>
+                            {fiscalEnabled ? (
+                              <>
+                                <span className="sep">|</span>
+                                <ClienteNovaApuracaoLink clienteId={c.id} />
+                              </>
+                            ) : null}
                             <span className="sep">|</span>
                             {c.reprocessChargeId ? (
                               <Link

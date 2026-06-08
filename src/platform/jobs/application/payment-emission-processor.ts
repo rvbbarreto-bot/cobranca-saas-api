@@ -257,15 +257,14 @@ async function runEmission(
 
   const oldStatus = charge.canonicalStatus;
 
-  // O escritorio_config pertence ao automacaoTenant (tenant do escritório),
-  // não ao publicTenant (tenant de cobrança). Usar o ID errado causaria
-  // "escritorio_config_not_found" e o boleto jamais seria emitido.
   const automacaoTenantId =
     typeof charge.metadata.portal_automacao_tenant_id === "string"
       ? charge.metadata.portal_automacao_tenant_id.trim()
       : undefined;
 
-  const configTenantId = automacaoTenantId || data.tenantId;
+  // escritorio_config.tenant_id = UUID publico (mesmo id da charge / portal PATCH).
+  // portal.cliente continua no schema automacao (automacaoTenantId).
+  const configTenantId = data.tenantId;
   const gatewayProvider = await loadGatewayProvider(client, configTenantId);
   const adapter = await resolveGatewayAdapter(client, configTenantId, deps);
 

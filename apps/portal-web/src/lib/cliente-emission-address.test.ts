@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isCompleteClienteEmissionAddress } from "./cliente-emission-address";
+import { emissionAddressBlockMessage, isCompleteClienteEmissionAddress } from "./cliente-emission-address";
 
 describe("isCompleteClienteEmissionAddress", () => {
+  it("emissionAddressBlockMessage inclui gateway", () => {
+    expect(emissionAddressBlockMessage("Banco Inter")).toMatch(/Banco Inter/);
+  });
+
   it("aceita endereco completo", () => {
     expect(
       isCompleteClienteEmissionAddress({
