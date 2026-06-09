@@ -1,0 +1,10 @@
+{
+  "sprint": 5,
+  "started_at": "2026-06-09T01:14:42.916Z",
+  "finished_at": "2026-06-09T01:15:04.285Z",
+  "tests": [
+    "tests/fiscal-guias/certificate-expiry-alert.test.ts",
+    "tests/serpro-integra-contador/serpro-procuracao-situacao.test.ts",
+    "tests/fiscal-processamento/sprint5-pipeline.integration.test.ts"
+  ]
+}

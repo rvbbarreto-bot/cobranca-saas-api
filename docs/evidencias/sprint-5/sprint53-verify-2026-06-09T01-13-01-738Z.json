@@ -1,0 +1,11 @@
+{
+  "sprint": 5,
+  "issue": "EXEQ-FISC-053",
+  "started_at": "2026-06-09T01:13:01.738Z",
+  "finished_at": "2026-06-09T01:13:15.686Z",
+  "tests": [
+    "tests/fiscal-processamento/fisc-053-apuracao-audit.test.ts",
+    "tests/fiscal-processamento/fisc-053-apuracao-audit.integration.test.ts"
+  ],
+  "migration": "037_fiscal_audit_apuracao_serpro.sql"
+}

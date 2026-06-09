@@ -939,6 +939,13 @@ export function createPortalRouter(): Router {
 
   if (isFiscalGuiasEnabled()) {
     protectedRoutes.use("/fiscal", createFiscalPortalRouter());
+  } else {
+    protectedRoutes.use("/fiscal", (_req, res) => {
+      res.status(404).json({
+        error: "fiscal_module_disabled",
+        message: "Modulo fiscal desligado (FISCAL_GUIAS_ENABLED=false)."
+      });
+    });
   }
 
   router.use(protectedRoutes);
