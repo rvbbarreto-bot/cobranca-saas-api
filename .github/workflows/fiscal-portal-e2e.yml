@@ -73,6 +73,7 @@ jobs:
           npm run migrate
           npm run seed:dev
           npm run backfill:organization
+          npm run seed:fiscal-portal-e2e
 
       - name: Build API
         run: npm run build
@@ -98,3 +99,13 @@ jobs:
 
       - name: Playwright fiscal portal (API live + SERPRO mock)
         run: npm run e2e:fiscal-portal:live
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fiscal-portal-e2e-playwright
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore

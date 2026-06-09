@@ -14,6 +14,7 @@
     "check:readiness": "npm run check:prod-env -- --strict && npm run check:db",
     "seed:dev": "tsx scripts/seed-dev-portal.ts",
     "seed:dev-rbac": "tsx scripts/seed-dev-rbac-users.ts",
+    "seed:fiscal-portal-e2e": "tsx scripts/seed-fiscal-portal-e2e.ts",
     "backfill:organization": "tsx scripts/backfill-organization-from-tenants.ts",
     "backfill:certificate-vault": "tsx scripts/backfill-certificate-vault-from-legacy.ts",
     "verify:sprint1": "tsx scripts/sprint1-factory-verify.ts",

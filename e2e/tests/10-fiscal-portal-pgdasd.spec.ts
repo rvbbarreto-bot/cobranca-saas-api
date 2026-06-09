@@ -25,6 +25,11 @@ test.describe("Fiscal portal PGDASD (EXEQ-FISC-092)", () => {
     if (!session?.automacaoTenantId) {
       throw new Error("E2E fiscal live: login API falhou — verifique seed:dev e credenciais.");
     }
+    if (!session.fiscalEnabled) {
+      throw new Error(
+        "E2E fiscal live: módulo fiscal_guias desabilitado no tenant — rode npm run seed:fiscal-portal-e2e."
+      );
+    }
     await ensureFiscalPortalLiveSeed(request, session);
   });
 
