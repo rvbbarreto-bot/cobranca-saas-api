@@ -27,6 +27,7 @@ O portal usa JWT cujo claim `tid` e **texto** (id do escritorio em `automacao`).
 | GET | `/v1/admin/queues/dlq/:queueName` | Idem; query `limit` (max 200); lista jobs na DLQ |
 | POST | `/v1/admin/queues/dlq/:queueName/reprocess` | Idem; body `{ "jobId": "<id na DLQ>" }` |
 | GET | `/v1/admin/metrics/sli` | Idem; 7 SLIs calculados em SQL |
+| GET | `/v1/admin/metrics/fiscal-sli` | Idem; SLIs fiscais (fila depth, p95 transmit SERPRO, taxa erro); requer `FISCAL_GUIAS_ENABLED` |
 | POST | `/v1/portal/auth/token/mock` | **Mock** — veja secao 3; desligavel |
 | POST | `/v1/portal/auth/login` | **Auth real** — body `email`, `tenant_id`, `password`; veja secao 3; sem mock gate |
 | GET | `/v1/portal/auth/me` | Bearer + portal middlewares; perfil `user` + `tenant` (fase 2) |
