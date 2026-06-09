@@ -11,7 +11,10 @@ export type FiscalAuditAction =
   | "capture_requested"
   | "capture_failed"
   | "certificado_expirando"
-  | "procuracao_validada_serpro";
+  | "procuracao_validada_serpro"
+  | "apuracao_iniciada"
+  | "transmitida"
+  | "erro_serpro";
 
 export type FiscalAuditEntry = {
   tenantId: string;

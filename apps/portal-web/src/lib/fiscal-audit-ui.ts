@@ -10,7 +10,10 @@ export const FISCAL_AUDIT_ACTION_OPTIONS: { value: string; label: string }[] = [
   { value: "capture_requested", label: "Captura solicitada" },
   { value: "capture_failed", label: "Falha na captura" },
   { value: "certificado_expirando", label: "Certificado expirando" },
-  { value: "procuracao_validada_serpro", label: "Procuração validada SERPRO" }
+  { value: "procuracao_validada_serpro", label: "Procuração validada SERPRO" },
+  { value: "apuracao_iniciada", label: "Apuração iniciada (PGDASD)" },
+  { value: "transmitida", label: "Transmissão SERPRO concluída" },
+  { value: "erro_serpro", label: "Erro SERPRO (apuração)" }
 ];
 
 const ACTION_LABEL: Record<string, string> = Object.fromEntries(

@@ -7,11 +7,13 @@ import {
   insertProcessamentoFiscal,
   type ProcessamentoFiscalRow
 } from "../infrastructure/processamento-fiscal-repository";
+import { writeProcessamentoApuracaoAudit } from "./write-processamento-apuracao-audit";
 
 export async function createProcessamentosFromIngestUseCase(input: {
   automacaoTenantId: string;
   fiscalIngestId: string;
   correlationId?: string;
+  userId?: string;
 }): Promise<
   | { ok: true; processamentos: ProcessamentoFiscalRow[] }
   | { ok: false; kind: "ingest_not_found" }
@@ -57,6 +59,18 @@ export async function createProcessamentosFromIngestUseCase(input: {
       created.push(proc);
 
       if (inserted) {
+        await writeProcessamentoApuracaoAudit(client, {
+          tenantId: input.automacaoTenantId,
+          processamentoId: proc.id,
+          action: "apuracao_iniciada",
+          correlationId: input.correlationId,
+          userId: input.userId,
+          payload: {
+            fiscal_ingest_id: input.fiscalIngestId,
+            competencia: row.competencia,
+            cnpj: row.cnpj
+          }
+        });
         scheduleSerproTransmitJob({
           processamentoId: proc.id,
           automacaoTenantId: input.automacaoTenantId

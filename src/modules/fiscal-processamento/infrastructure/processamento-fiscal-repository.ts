@@ -23,6 +23,7 @@ export type ProcessamentoFiscalRow = {
   reciboStorageKey: string | null;
   guiaFiscalId: string | null;
   erroCodigo: string | null;
+  correlationId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -32,7 +33,7 @@ export type ProcessamentoFiscalInsertResult = ProcessamentoFiscalRow & { inserte
 const PROC_SELECT_COLS = `
   id::text, organization_id::text, automacao_tenant_id, portal_cliente_id::text,
   fiscal_ingest_id::text, competencia, tipo, status, valor_apurado::text,
-  protocolo_serpro, recibo_storage_key, guia_fiscal_id::text, erro_codigo, created_at, updated_at`;
+  protocolo_serpro, recibo_storage_key, guia_fiscal_id::text, erro_codigo, correlation_id, created_at, updated_at`;
 
 function mapProc(row: {
   id: string;
@@ -48,6 +49,7 @@ function mapProc(row: {
   recibo_storage_key: string | null;
   guia_fiscal_id: string | null;
   erro_codigo: string | null;
+  correlation_id: string | null;
   created_at: Date;
   updated_at: Date;
 }): ProcessamentoFiscalRow {
@@ -65,6 +67,7 @@ function mapProc(row: {
     reciboStorageKey: row.recibo_storage_key,
     guiaFiscalId: row.guia_fiscal_id,
     erroCodigo: row.erro_codigo,
+    correlationId: row.correlation_id,
     createdAt: row.created_at.toISOString(),
     updatedAt: row.updated_at.toISOString()
   };

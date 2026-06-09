@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import { getPool } from "../../../platform/persistence/pool";
 import { isSerproProcuracaoRequired } from "../../../platform/config/fiscal-serpro-procuracao";
 import type { CanonicalApuracao } from "../../fiscal-ingestion/domain/canonical-apuracao.schema";
@@ -12,6 +13,35 @@ import {
   updateProcessamentoStatus
 } from "../infrastructure/processamento-fiscal-repository";
 import { scheduleSerproReciboJob } from "../../../platform/jobs/enqueue-serpro-recibo";
+import { writeProcessamentoApuracaoAudit } from "./write-processamento-apuracao-audit";
+
+async function auditTransmitida(
+  client: PoolClient,
+  proc: { id: string; automacaoTenantId: string; correlationId: string | null },
+  payload: Record<string, unknown>
+): Promise<void> {
+  await writeProcessamentoApuracaoAudit(client, {
+    tenantId: proc.automacaoTenantId,
+    processamentoId: proc.id,
+    action: "transmitida",
+    correlationId: proc.correlationId,
+    payload
+  });
+}
+
+async function auditErroSerpro(
+  client: PoolClient,
+  proc: { id: string; automacaoTenantId: string; correlationId: string | null },
+  payload: Record<string, unknown>
+): Promise<void> {
+  await writeProcessamentoApuracaoAudit(client, {
+    tenantId: proc.automacaoTenantId,
+    processamentoId: proc.id,
+    action: "erro_serpro",
+    correlationId: proc.correlationId,
+    payload
+  });
+}
 
 export type SerproTransmitJobPayload = {
   processamentoId: string;
@@ -44,6 +74,10 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
         await insertProcessamentoEvento(client, proc.id, "transmissao_bloqueada", {
           motivo: "procuracao_ausente"
         });
+        await auditErroSerpro(client, proc, {
+          erro_codigo: "PROCURACAO_AUSENTE",
+          motivo: "procuracao_ausente"
+        });
         return;
       }
       if (!isProcuracaoSerproValid(procuracao.metadata)) {
@@ -61,6 +95,10 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
         });
         await insertProcessamentoEvento(client, proc.id, "transmissao_bloqueada", {
           motivo: "procuracao_invalida",
+          serpro_situacao: situacao
+        });
+        await auditErroSerpro(client, proc, {
+          erro_codigo: "PROCURACAO_INVALIDA",
           serpro_situacao: situacao
         });
         return;
@@ -91,6 +129,9 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
         erroDetalhe: { raw: res.rawBody }
       });
       await insertProcessamentoEvento(client, proc.id, "transmissao_erro", { res });
+      await auditErroSerpro(client, proc, {
+        erro_codigo: res.erroCodigo ?? "SERPRO_ERRO"
+      });
       return;
     }
 
@@ -100,6 +141,9 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
     });
     await insertProcessamentoEvento(client, proc.id, "transmissao_concluida", {
       protocolo: res.protocolo
+    });
+    await auditTransmitida(client, proc, {
+      protocolo_serpro: res.protocolo ?? null
     });
 
     scheduleSerproReciboJob(payload);
@@ -111,6 +155,10 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
       erroDetalhe: { message }
     });
     await insertProcessamentoEvento(client, proc.id, "transmissao_erro", { message });
+    await auditErroSerpro(client, proc, {
+      erro_codigo: "TRANSMISSAO_FALHOU",
+      message
+    });
   } finally {
     client.release();
   }
