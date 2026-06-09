@@ -1,0 +1,14 @@
+{
+  "sprint": 10,
+  "issue": "EXEQ-FISC-095",
+  "started_at": "2026-06-09T01:13:34.466Z",
+  "finished_at": "2026-06-09T01:13:55.926Z",
+  "tests": [
+    "tests/platform/fiscal-serpro-enabled.test.ts",
+    "tests/platform/fiscal-ingest-rate-limit.test.ts",
+    "tests/platform/encryption-key-policy.test.ts",
+    "tests/platform/fiscal-serpro-prod-env.test.ts",
+    "tests/fiscal-guias/fiscal-go-live-hardening.integration.test.ts"
+  ],
+  "checklist": "docs/FISCAL_GO_LIVE_CHECKLIST.md"
+}

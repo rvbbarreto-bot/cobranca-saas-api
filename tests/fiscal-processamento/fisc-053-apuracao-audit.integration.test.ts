@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import request from "supertest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { createApp } from "../../src/app";
 import {
   runSeedPortalHappyPath,
@@ -12,8 +13,6 @@ import {
 import { ensureOrganizationForEscritorio } from "../../src/modules/exeq-platform/infrastructure/organization-repository";
 import { processFiscalIngestValidateJob } from "../../src/modules/fiscal-ingestion/application/process-fiscal-ingest-validate";
 import { processSerproTransmitJob } from "../../src/modules/fiscal-processamento/application/process-serpro-transmit-job";
-import { processSerproReciboJob } from "../../src/modules/fiscal-processamento/application/process-serpro-recibo-job";
-import { processSerproEmitDasJob } from "../../src/modules/fiscal-processamento/application/process-serpro-emit-das-job";
 import { closePool, getPool } from "../../src/platform/persistence/pool";
 
 const hasDb = Boolean(process.env.DATABASE_URL?.trim());
@@ -35,29 +34,12 @@ function buildCsvForCompetencia(competencia: string): string {
   return `${header}\n${cols.join(",")}\n`;
 }
 
-async function flushScheduledJobs(): Promise<void> {
-  await new Promise<void>((resolve) => setImmediate(resolve));
-  await new Promise<void>((resolve) => setImmediate(resolve));
-  await new Promise((resolve) => setTimeout(resolve, 50));
-}
-
-async function portalLogin(app: ReturnType<typeof createApp>, automacaoTenantId: string): Promise<string> {
-  const r = await request(app)
-    .post("/v1/portal/auth/login")
-    .send({
-      email: SEED_PORTAL_EMAIL,
-      tenant_id: automacaoTenantId,
-      password: SEED_PORTAL_DEFAULT_PASSWORD
-    })
-    .expect(200);
-  return r.body.access_token as string;
-}
-
-describe.skipIf(!hasDb)("Sprint 5 — pipeline CONCLUIDO + procuração SERPRO", () => {
+describe.skipIf(!hasDb)("FISC-053 — audit trail apuração SERPRO (integração)", () => {
   let app: ReturnType<typeof createApp>;
   let tenantId = "";
-  let portalClienteId = "";
   let adminToken = "";
+  const competencia = pickUniqueCompetencia();
+  const correlationId = randomUUID();
   const previousFlag = process.env.FISCAL_GUIAS_ENABLED;
   const previousMock = process.env.FISCAL_SERPRO_MOCK;
   const previousProc = process.env.FISCAL_SERPRO_REQUIRE_PROCURACAO;
@@ -66,7 +48,7 @@ describe.skipIf(!hasDb)("Sprint 5 — pipeline CONCLUIDO + procuração SERPRO",
   beforeAll(async () => {
     process.env.FISCAL_GUIAS_ENABLED = "true";
     process.env.FISCAL_SERPRO_MOCK = "true";
-    process.env.FISCAL_SERPRO_REQUIRE_PROCURACAO = "true";
+    process.env.FISCAL_SERPRO_REQUIRE_PROCURACAO = "false";
     process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY?.trim() || "a".repeat(64);
 
     app = createApp();
@@ -80,19 +62,25 @@ describe.skipIf(!hasDb)("Sprint 5 — pipeline CONCLUIDO + procuração SERPRO",
         slug: SEED_AUTOMACAO_SLUG,
         name: "Escritorio Demo"
       });
-      const ins = await client.query<{ id: string }>(
+      await client.query(
         `INSERT INTO portal.cliente (tenant_id, documento, tipo_documento, nome, email)
          VALUES ($1, $2, 'cnpj', $3, $4)
-         ON CONFLICT (tenant_id, documento) DO UPDATE SET nome = EXCLUDED.nome
-         RETURNING id::text`,
-        [tenantId, TEST_CNPJ, "Empresa PGDASD Demo", "pgdasd-demo@local.dev"]
+         ON CONFLICT (tenant_id, documento) DO UPDATE SET nome = EXCLUDED.nome`,
+        [tenantId, TEST_CNPJ, "Empresa PGDASD Audit", "pgdasd-audit@local.dev"]
       );
-      portalClienteId = ins.rows[0]?.id ?? "";
     } finally {
       client.release();
     }
 
-    adminToken = await portalLogin(app, tenantId);
+    const login = await request(app)
+      .post("/v1/portal/auth/login")
+      .send({
+        email: SEED_PORTAL_EMAIL,
+        tenant_id: tenantId,
+        password: SEED_PORTAL_DEFAULT_PASSWORD
+      })
+      .expect(200);
+    adminToken = login.body.access_token as string;
   });
 
   afterAll(async () => {
@@ -107,30 +95,9 @@ describe.skipIf(!hasDb)("Sprint 5 — pipeline CONCLUIDO + procuração SERPRO",
     await closePool().catch(() => undefined);
   });
 
-  it("procuração validada SERPRO + pipeline até CONCLUIDO com guia_fiscal_id", async () => {
-    await request(app)
-      .post("/v1/portal/fiscal/procuracoes")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .set("x-tenant-id", tenantId)
-      .send({
-        portal_cliente_id: portalClienteId,
-        procurador_documento: "12345678901",
-        validade_inicio: "2026-01-01",
-        validade_fim: "2027-12-31"
-      })
-      .expect(201);
-
-    const validar = await request(app)
-      .post("/v1/portal/fiscal/procuracoes/validar-serpro")
-      .set("Authorization", `Bearer ${adminToken}`)
-      .set("x-tenant-id", tenantId)
-      .send({ portal_cliente_id: portalClienteId, contribuinte_cnpj: TEST_CNPJ })
-      .expect(200);
-
-    expect(validar.body.situacao).toBe("valida");
-
-    const competencia = pickUniqueCompetencia();
+  it("registra apuracao_iniciada e transmitida com correlation_id no audit log", async () => {
     const csv = buildCsvForCompetencia(competencia);
+
     const postIngest = await request(app)
       .post("/v1/portal/fiscal/ingest/csv")
       .set("Authorization", `Bearer ${adminToken}`)
@@ -145,31 +112,46 @@ describe.skipIf(!hasDb)("Sprint 5 — pipeline CONCLUIDO + procuração SERPRO",
       .post("/v1/portal/fiscal/processamentos")
       .set("Authorization", `Bearer ${adminToken}`)
       .set("x-tenant-id", tenantId)
+      .set("x-correlation-id", correlationId)
       .send({ fiscal_ingest_id: ingestId })
       .expect(201);
 
     const processamentoId = createProc.body.processamentos[0].id as string;
-    await flushScheduledJobs();
+    expect(createProc.headers["x-correlation-id"]).toBe(correlationId);
+
     await processSerproTransmitJob({ processamentoId, automacaoTenantId: tenantId });
-    await processSerproReciboJob({ processamentoId, automacaoTenantId: tenantId });
-    await processSerproEmitDasJob({ processamentoId, automacaoTenantId: tenantId });
 
-    const detail = await request(app)
-      .get(`/v1/portal/fiscal/processamentos/${processamentoId}`)
+    const auditIniciada = await request(app)
+      .get("/v1/portal/fiscal/audit?action=apuracao_iniciada&limit=50")
       .set("Authorization", `Bearer ${adminToken}`)
       .set("x-tenant-id", tenantId)
       .expect(200);
 
-    expect(detail.body.processamento.status).toBe("CONCLUIDO");
-    expect(detail.body.processamento.guia_fiscal_id).toBeTruthy();
-    expect(detail.body.processamento.recibo_disponivel).toBe(true);
+    expect(auditIniciada.body.entries.length).toBeGreaterThanOrEqual(1);
+    const iniciada = auditIniciada.body.entries.find(
+      (e: { resource_id: string }) => e.resource_id === processamentoId
+    );
+    expect(iniciada).toMatchObject({
+      action: "apuracao_iniciada",
+      resource_type: "processamento_fiscal"
+    });
+    expect(iniciada.new_value?.correlation_id).toBe(correlationId);
+    expect(iniciada.new_value?.fiscal_ingest_id).toBe(ingestId);
 
-    const reciboUrl = await request(app)
-      .get(`/v1/portal/fiscal/processamentos/${processamentoId}/recibo/url`)
+    const auditTransmitida = await request(app)
+      .get(`/v1/portal/fiscal/audit?action=transmitida&limit=50`)
       .set("Authorization", `Bearer ${adminToken}`)
       .set("x-tenant-id", tenantId)
       .expect(200);
 
-    expect(reciboUrl.body.pdf_url).toBeTruthy();
+    const transmitida = auditTransmitida.body.entries.find(
+      (e: { resource_id: string }) => e.resource_id === processamentoId
+    );
+    expect(transmitida).toMatchObject({
+      action: "transmitida",
+      resource_type: "processamento_fiscal"
+    });
+    expect(transmitida.new_value?.correlation_id).toBe(correlationId);
+    expect(transmitida.new_value?.protocolo_serpro).toMatch(/^MOCK-DECL-/);
   });
 });
