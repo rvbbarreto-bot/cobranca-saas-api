@@ -1,0 +1,97 @@
+# EXEQ-FISC-092 — Playwright E2E portal fiscal (job opcional)
+name: Fiscal Portal E2E
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "apps/portal-web/**"
+      - "e2e/**"
+      - "src/modules/fiscal-**/**"
+      - "docs/templates/pgdasd-import-v1.csv"
+
+jobs:
+  fiscal-portal-e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cobranca_ci
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cobranca_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/cobranca_ci
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: "0123456789abcdefghijklmnopqrstuvwxyzABCD"
+      WEBHOOK_INBOX_SECRET: "whsec_ci_example_min_32_chars____________"
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      FISCAL_GUIAS_ENABLED: "true"
+      FISCAL_SERPRO_MOCK: "true"
+      FISCAL_SERPRO_REQUIRE_PROCURACAO: "false"
+      ENABLE_BULLMQ_WORKERS: "false"
+      ENABLE_MOCK_AUTH: "false"
+      NODE_ENV: development
+      E2E_API_URL: http://localhost:3333
+      E2E_PORTAL_URL: http://localhost:5173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install API deps
+        run: npm ci
+
+      - name: Install portal deps
+        run: npm ci
+        working-directory: apps/portal-web
+
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium
+
+      - name: Migrate + seed
+        run: |
+          npm run migrate
+          npm run seed:dev
+          npm run backfill:organization
+
+      - name: Build API
+        run: npm run build
+
+      - name: Start API
+        run: |
+          npm start &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:3333/health/ready && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Start portal (fiscal habilitado)
+        working-directory: apps/portal-web
+        run: |
+          VITE_FISCAL_GUIAS_ENABLED=true npm run dev -- --host 127.0.0.1 --port 5173 &
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:5173 && exit 0
+            sleep 2
+          done
+          exit 1
+
+      - name: Playwright fiscal portal (mock API)
+        run: npm run e2e:fiscal-portal

@@ -64,7 +64,22 @@ Fluxo: CSV PGDASD mock → `TRANSDECLARACAO11` → recibo PDF → `GERARDAS12` �
 
 ---
 
-## 5. Plano B (se credenciais atrasarem)
+## 5. Playwright E2E portal (EXEQ-FISC-092)
+
+```powershell
+npm run portal:dev   # VITE_FISCAL_GUIAS_ENABLED=true
+# API: FISCAL_GUIAS_ENABLED=true
+npm run e2e:fiscal-portal
+```
+
+Fluxo UI: upload CSV → validação → stepper transmissão → download recibo/DAS.
+
+- [ ] `npm run e2e:fiscal-portal` passa (mock API)
+- [ ] Workflow opcional `fiscal-portal-e2e.yml` verde
+
+---
+
+## 6. Plano B (se credenciais atrasarem)
 
 - [ ] ADR aprovado com mocks (`FISCAL_SERPRO_MOCK=1`)
 - [ ] Fixtures JSON em `tests/fixtures/serpro/`
@@ -73,7 +88,7 @@ Fluxo: CSV PGDASD mock → `TRANSDECLARACAO11` → recibo PDF → `GERARDAS12` �
 
 ---
 
-## 6. Referências
+## 7. Referências
 
 - [Integra Contador — documentação](https://apicenter.estaleiro.serpro.gov.br/documentacao/api-integra-contador/)
 - [Catálogo PGDASD](https://apicenter.estaleiro.serpro.gov.br/documentacao/api-integra-contador/pt/catalogo_de_servicos/)

@@ -26,6 +26,20 @@ npm run e2e:playwright:install   # primeira vez
 npm run e2e:playwright
 ```
 
+### Fiscal PGDASD (EXEQ-FISC-092)
+
+Requer API + portal com fiscal habilitado (`FISCAL_GUIAS_ENABLED`, `VITE_FISCAL_GUIAS_ENABLED=true`).
+
+```bash
+# Mock API (default — rápido, sem pipeline SERPRO real)
+npm run e2e:fiscal-portal
+
+# Homolog live (API + SERPRO mock + jobs síncronos)
+$env:E2E_FISCAL_MOCK="0"; $env:E2E_FISCAL_LIVE="1"; npm run e2e:fiscal-portal:live
+```
+
+CI opcional: workflow `.github/workflows/fiscal-portal-e2e.yml` (`workflow_dispatch` + PRs fiscal).
+
 Relatórios: `cenarios_testes.md`, `asaas-e2e-result.json` (atualizados pelo reporter em `e2e/reporters/`).
 O `seed:dev` garante ≥ 55 cobranças no tenant demo para o cenário «Carregar mais».
 
