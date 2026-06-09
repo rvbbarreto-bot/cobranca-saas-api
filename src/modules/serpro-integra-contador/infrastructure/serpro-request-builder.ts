@@ -99,3 +99,24 @@ export function buildSerproEmitDasRequest(input: {
     dados: { pa, valorDas: input.valorDas }
   });
 }
+
+export function buildSerproEmitDarfRequest(input: {
+  contratanteCnpj: string;
+  contribuinteCnpj: string;
+  competencia: string;
+  codigoReceita: string;
+  periodoApuracao: string;
+}): SerproIntegraRequest {
+  const pa = input.competencia.replace("-", "");
+  return buildSerproRequest({
+    contratanteCnpj: input.contratanteCnpj,
+    contribuinteCnpj: input.contribuinteCnpj,
+    idSistema: "DCTFWEB",
+    idServico: "CONSOLIDARGERARDARF51",
+    dados: {
+      pa,
+      codigoReceita: input.codigoReceita.replace(/\D/g, ""),
+      periodoApuracao: input.periodoApuracao
+    }
+  });
+}

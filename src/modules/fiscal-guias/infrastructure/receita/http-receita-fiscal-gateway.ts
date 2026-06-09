@@ -1,8 +1,8 @@
 import { ReceitaGatewayError } from "../../domain/receita-gateway-error";
+import type { ReceitaFiscalGateway } from "../../domain/receita-gateway.interface";
 import type {
   ReceitaDasCaptureInput,
-  ReceitaDarfCaptureInput,
-  ReceitaFiscalGateway
+  ReceitaDarfCaptureInput
 } from "../../domain/receita-gateway.interface";
 import { postReceitaCaptureJson, isReceitaTlsInsecure } from "./http-receita-capture-client";
 import { parseReceitaCaptureResponse } from "./receita-capture-response";
@@ -90,18 +90,7 @@ export function getReceitaCaptureUrl(): string | null {
 /** @deprecated use getReceitaCaptureUrl */
 export const getReceitaDasCaptureUrl = getReceitaCaptureUrl;
 
-export function createReceitaFiscalGateway(): ReceitaFiscalGateway | null {
-  const url = getReceitaCaptureUrl();
-  if (!url) {
-    return null;
-  }
-  return new HttpReceitaFiscalGateway({ baseUrl: url });
-}
-
-/** @deprecated use createReceitaFiscalGateway */
-export function createReceitaDasGateway(): ReceitaFiscalGateway | null {
-  return createReceitaFiscalGateway();
-}
+export { createReceitaFiscalGateway, createReceitaDasGateway } from "./create-receita-fiscal-gateway";
 
 /** @deprecated use HttpReceitaFiscalGateway */
 export const HttpReceitaDasGateway = HttpReceitaFiscalGateway;
