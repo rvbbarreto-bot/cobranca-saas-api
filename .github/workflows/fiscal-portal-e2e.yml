@@ -41,11 +41,14 @@ jobs:
       FISCAL_GUIAS_ENABLED: "true"
       FISCAL_SERPRO_MOCK: "true"
       FISCAL_SERPRO_REQUIRE_PROCURACAO: "false"
+      # Jobs inline (sem fila) — pipeline SERPRO mock completa na mesma requisição.
       ENABLE_BULLMQ_WORKERS: "false"
       ENABLE_MOCK_AUTH: "false"
       NODE_ENV: development
-      E2E_API_URL: http://localhost:3333
-      E2E_PORTAL_URL: http://localhost:5173
+      E2E_API_URL: http://127.0.0.1:3333
+      E2E_PORTAL_URL: http://127.0.0.1:5173
+      E2E_FISCAL_LIVE: "1"
+      E2E_FISCAL_MOCK: "0"
 
     steps:
       - uses: actions/checkout@v4
@@ -93,5 +96,5 @@ jobs:
           done
           exit 1
 
-      - name: Playwright fiscal portal (mock API)
-        run: npm run e2e:fiscal-portal
+      - name: Playwright fiscal portal (API live + SERPRO mock)
+        run: npm run e2e:fiscal-portal:live

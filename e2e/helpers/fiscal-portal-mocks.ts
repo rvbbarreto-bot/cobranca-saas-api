@@ -6,8 +6,6 @@ type MockState = {
   processamentoId: string;
   guiaId: string;
   competencia: string;
-  ingestPolls: number;
-  procPolls: number;
 };
 
 function json(route: Route, status: number, body: unknown): Promise<void> {
@@ -23,9 +21,55 @@ function pathAfterFiscal(pathname: string): string {
   return idx >= 0 ? pathname.slice(idx + "/v1/portal/fiscal/".length) : pathname;
 }
 
+function isoNow(): string {
+  return new Date().toISOString();
+}
+
+function validatedIngest(state: MockState) {
+  return {
+    id: state.ingestId,
+    status: "VALIDADO",
+    source_type: "csv",
+    original_filename: "pgdasd-mock.csv",
+    row_count: 1,
+    valid_count: 1,
+    error_count: 0,
+    validation_errors: [],
+    canonical_rows: [
+      {
+        cnpj: FISCAL_E2E_CNPJ,
+        competencia: state.competencia,
+        receita_bruta_mes: 85000,
+        valor_total_das: 2050,
+        portal_cliente_id: "44444444-4444-4444-8444-444444444444"
+      }
+    ],
+    created_at: isoNow(),
+    updated_at: isoNow()
+  };
+}
+
+function concludedProcessamento(state: MockState) {
+  return {
+    id: state.processamentoId,
+    portal_cliente_id: "44444444-4444-4444-8444-444444444444",
+    fiscal_ingest_id: state.ingestId,
+    competencia: state.competencia,
+    tipo: "PGDASD_APURACAO",
+    status: "CONCLUIDO",
+    valor_apurado: "2050.00",
+    protocolo_serpro: `MOCK-DECL-${FISCAL_E2E_CNPJ}`,
+    recibo_disponivel: true,
+    guia_fiscal_id: state.guiaId,
+    erro_codigo: null,
+    created_at: isoNow(),
+    updated_at: isoNow()
+  };
+}
+
 /**
  * Stub do pipeline fiscal portal — ingest → processamento → stepper → PDF.
- * Usado quando E2E_FISCAL_MOCK=1 (default do npm run e2e:fiscal-portal).
+ * Usado quando E2E_FISCAL_MOCK=1 (default do npm run e2e:fiscal-portal local).
  */
 export async function installFiscalPortalMocks(
   page: Page,
@@ -35,12 +79,10 @@ export async function installFiscalPortalMocks(
     ingestId: "11111111-1111-4111-8111-111111111111",
     processamentoId: "22222222-2222-4222-8222-222222222222",
     guiaId: "33333333-3333-4333-8333-333333333333",
-    competencia: opts?.competencia ?? "2025-06",
-    ingestPolls: 0,
-    procPolls: 0
+    competencia: opts?.competencia ?? "2025-06"
   };
 
-  await page.route("**/v1/portal/fiscal/**", async (route) => {
+  await page.route(/\/v1\/portal\/fiscal\//, async (route) => {
     const req = route.request();
     const url = new URL(req.url());
     const sub = pathAfterFiscal(url.pathname);
@@ -58,41 +100,15 @@ export async function installFiscalPortalMocks(
           error_count: 0,
           validation_errors: [],
           canonical_rows: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: isoNow(),
+          updated_at: isoNow()
         }
       });
       return;
     }
 
     if (method === "GET" && sub === `ingest/${state.ingestId}`) {
-      state.ingestPolls += 1;
-      const validated = state.ingestPolls >= 2;
-      await json(route, 200, {
-        ingest: {
-          id: state.ingestId,
-          status: validated ? "VALIDADO" : "VALIDANDO",
-          source_type: "csv",
-          original_filename: "pgdasd-mock.csv",
-          row_count: 1,
-          valid_count: validated ? 1 : 0,
-          error_count: 0,
-          validation_errors: [],
-          canonical_rows: validated
-            ? [
-                {
-                  cnpj: FISCAL_E2E_CNPJ,
-                  competencia: state.competencia,
-                  receita_bruta_mes: 85000,
-                  valor_total_das: 2050,
-                  portal_cliente_id: "44444444-4444-4444-8444-444444444444"
-                }
-              ]
-            : [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      });
+      await json(route, 200, { ingest: validatedIngest(state) });
       return;
     }
 
@@ -100,19 +116,11 @@ export async function installFiscalPortalMocks(
       await json(route, 201, {
         processamentos: [
           {
-            id: state.processamentoId,
-            portal_cliente_id: "44444444-4444-4444-8444-444444444444",
-            fiscal_ingest_id: state.ingestId,
-            competencia: state.competencia,
-            tipo: "PGDASD_APURACAO",
+            ...concludedProcessamento(state),
             status: "VALIDADO",
-            valor_apurado: "2050.00",
             protocolo_serpro: null,
             recibo_disponivel: false,
-            guia_fiscal_id: null,
-            erro_codigo: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            guia_fiscal_id: null
           }
         ]
       });
@@ -125,49 +133,27 @@ export async function installFiscalPortalMocks(
     }
 
     if (method === "GET" && sub === `processamentos/${state.processamentoId}`) {
-      state.procPolls += 1;
-      const phase = Math.min(state.procPolls, 4);
-      let status = "VALIDADO";
-      let protocolo: string | null = null;
-      let recibo = false;
-      let guia: string | null = null;
-
-      if (phase >= 2) {
-        status = "TRANSMITIDA";
-        protocolo = `MOCK-DECL-${FISCAL_E2E_CNPJ}`;
-      }
-      if (phase >= 3) {
-        status = "RECIBO_OK";
-        recibo = true;
-      }
-      if (phase >= 4) {
-        status = "CONCLUIDO";
-        recibo = true;
-        guia = state.guiaId;
-      }
-
       await json(route, 200, {
-        processamento: {
-          id: state.processamentoId,
-          portal_cliente_id: "44444444-4444-4444-8444-444444444444",
-          fiscal_ingest_id: state.ingestId,
-          competencia: state.competencia,
-          tipo: "PGDASD_APURACAO",
-          status,
-          valor_apurado: "2050.00",
-          protocolo_serpro: protocolo,
-          recibo_disponivel: recibo,
-          guia_fiscal_id: guia,
-          erro_codigo: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
+        processamento: concludedProcessamento(state),
         eventos: [
-          { evento: "transmissao_iniciada", created_at: new Date().toISOString() },
-          ...(phase >= 2
-            ? [{ evento: "transmissao_concluida", created_at: new Date().toISOString() }]
-            : []),
-          ...(phase >= 4 ? [{ evento: "das_concluido", created_at: new Date().toISOString() }] : [])
+          {
+            id: "ev-transmissao-iniciada",
+            evento: "transmissao_iniciada",
+            payload: {},
+            created_at: isoNow()
+          },
+          {
+            id: "ev-transmissao-concluida",
+            evento: "transmissao_concluida",
+            payload: {},
+            created_at: isoNow()
+          },
+          {
+            id: "ev-das-concluido",
+            evento: "das_concluido",
+            payload: {},
+            created_at: isoNow()
+          }
         ]
       });
       return;
@@ -200,8 +186,8 @@ export async function installFiscalPortalMocks(
           compliance_motivo: null,
           pdf_url: null,
           versao_atual: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: isoNow(),
+          updated_at: isoNow()
         }
       });
       return;
@@ -215,7 +201,10 @@ export async function installFiscalPortalMocks(
       return;
     }
 
-    await route.continue();
+    await json(route, 501, {
+      error: "fiscal_mock_unhandled",
+      message: `Rota fiscal nao mockada: ${method} ${sub}`
+    });
   });
 
   return state;

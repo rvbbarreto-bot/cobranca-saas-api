@@ -11,19 +11,21 @@ import { installFiscalPortalMocks } from "../helpers/fiscal-portal-mocks";
 import { ensureFiscalPortalLiveSeed, loginFiscalPortalApi } from "../helpers/fiscal-portal-api";
 
 test.describe("Fiscal portal PGDASD (EXEQ-FISC-092)", () => {
-  test.describe.configure({ timeout: 120_000 });
+  test.describe.configure({ timeout: 180_000 });
+
+  let e2eCompetencia = pickFiscalE2eCompetencia();
 
   test.beforeEach(async ({ page, request }) => {
+    e2eCompetencia = pickFiscalE2eCompetencia();
     if (isFiscalPortalMockMode()) {
-      await installFiscalPortalMocks(page, { competencia: pickFiscalE2eCompetencia() });
+      await installFiscalPortalMocks(page, { competencia: e2eCompetencia });
       return;
     }
-    if (isFiscalPortalLiveMode()) {
-      const session = await loginFiscalPortalApi(request);
-      if (session?.fiscalEnabled && session.automacaoTenantId) {
-        await ensureFiscalPortalLiveSeed(request, session);
-      }
+    const session = await loginFiscalPortalApi(request);
+    if (!session?.automacaoTenantId) {
+      throw new Error("E2E fiscal live: login API falhou — verifique seed:dev e credenciais.");
     }
+    await ensureFiscalPortalLiveSeed(request, session);
   });
 
   test(bddTitle("Fiscal PGDASD", "Upload CSV, stepper e download DAS"), async ({ page }) => {
@@ -40,9 +42,7 @@ test.describe("Fiscal portal PGDASD (EXEQ-FISC-092)", () => {
       test.skip(true, "VITE_FISCAL_GUIAS_ENABLED=false no portal");
     }
 
-    const csvPath = isFiscalPortalLiveMode()
-      ? writeFiscalE2eCsv()
-      : writeFiscalE2eCsv(pickFiscalE2eCompetencia());
+    const csvPath = writeFiscalE2eCsv(e2eCompetencia);
 
     await page.locator('[data-testid="csv-upload-zone"] input[type="file"]').setInputFiles(csvPath);
     await expect(page.getByText(/pgdasd-/i)).toBeVisible();
@@ -72,7 +72,7 @@ test.describe("Fiscal portal PGDASD (EXEQ-FISC-092)", () => {
     await expect(stepper).toBeVisible();
 
     await expect(page.getByTestId("fiscal-live-message")).toContainText(/Processo concluído/i, {
-      timeout: 90_000
+      timeout: 120_000
     });
     await expect(stepper.locator(".fiscal-stepper__item--done")).toHaveCount(5, { timeout: 15_000 });
 
