@@ -1,6 +1,8 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import multer from "multer";
+import { isFiscalSerproEnabled } from "../../../../platform/config/fiscal-serpro-enabled";
+import { fiscalCsvIngestRateLimit } from "../../../../platform/http/middleware/rate-limit.middleware";
 import { asyncHandler } from "../../../../platform/http/async-handler";
 import { FiscalGuiasSchemaMigrationError } from "../../infrastructure/fiscal-schema";
 import { getPortalCertificadoDigitalUseCase } from "../../application/get-portal-certificado-digital";
@@ -581,6 +583,15 @@ async function postProcessamentosHttp(req: Request, res: Response): Promise<void
     return;
   }
 
+  if (!isFiscalSerproEnabled()) {
+    res.status(503).json({
+      error: "fiscal_serpro_disabled",
+      message:
+        "Transmissoes SERPRO temporariamente desabilitadas. Ingestao e consultas permanecem disponiveis."
+    });
+    return;
+  }
+
   try {
     const result = await createProcessamentosFromIngestUseCase({
       automacaoTenantId: tenantId,
@@ -865,7 +876,7 @@ export function createFiscalPortalRouter(): Router {
   router.post("/procuracoes", asyncHandler(postProcuracaoHttp));
   router.get("/serpro-config", asyncHandler(getSerproConfigHttp));
   router.patch("/serpro-config", asyncHandler(patchSerproConfigHttp));
-  router.post("/ingest/csv", csvUpload.single("file"), asyncHandler(postIngestCsvHttp));
+  router.post("/ingest/csv", fiscalCsvIngestRateLimit, csvUpload.single("file"), asyncHandler(postIngestCsvHttp));
   router.get("/ingest/:ingestId", asyncHandler(getIngestStatusHttp));
   router.post("/processamentos", asyncHandler(postProcessamentosHttp));
   router.get("/processamentos", asyncHandler(listProcessamentosHttp));

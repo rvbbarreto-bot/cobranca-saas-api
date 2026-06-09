@@ -7,6 +7,7 @@ import rateLimit, {
 } from "express-rate-limit";
 import { RedisStore } from "rate-limit-redis";
 import { connectRedis } from "../../persistence/redis";
+import { FISCAL_CSV_INGEST_RATE_LIMIT } from "../../config/fiscal-ingest-rate-limit";
 
 const RATE_LIMIT_MESSAGE = {
   error: {
@@ -45,7 +46,8 @@ const limiterSlots = {
   auth: noopRateLimit() as RateLimitRequestHandler,
   webhook: noopRateLimit() as RateLimitRequestHandler,
   csvExport: noopRateLimit() as RateLimitRequestHandler,
-  certificateValidate: noopRateLimit() as RateLimitRequestHandler
+  certificateValidate: noopRateLimit() as RateLimitRequestHandler,
+  fiscalCsvIngest: noopRateLimit() as RateLimitRequestHandler
 };
 
 function installRateLimiters(): void {
@@ -54,6 +56,7 @@ function installRateLimiters(): void {
     limiterSlots.webhook = noopRateLimit() as RateLimitRequestHandler;
     limiterSlots.csvExport = noopRateLimit() as RateLimitRequestHandler;
     limiterSlots.certificateValidate = noopRateLimit() as RateLimitRequestHandler;
+    limiterSlots.fiscalCsvIngest = noopRateLimit() as RateLimitRequestHandler;
     return;
   }
 
@@ -91,6 +94,19 @@ function installRateLimiters(): void {
       return `cert-validate:${ipKeyGenerator(req.ip ?? "unknown")}`;
     }
   });
+
+  limiterSlots.fiscalCsvIngest = createRateLimiter({
+    windowMs: FISCAL_CSV_INGEST_RATE_LIMIT.windowMs,
+    max: FISCAL_CSV_INGEST_RATE_LIMIT.maxPerTenant,
+    keyGenerator: (req: Request) => {
+      const tenant = req.tenantContext?.tenantId ?? req.header("x-tenant-id")?.trim();
+      const userId = req.authContext?.userId ?? "anon";
+      if (tenant) {
+        return `fiscal-csv-ingest:${tenant}:${userId}`;
+      }
+      return `fiscal-csv-ingest:${ipKeyGenerator(req.ip ?? "unknown")}`;
+    }
+  });
 }
 
 installRateLimiters();
@@ -110,6 +126,10 @@ export const escritorioCsvExportRateLimit: RequestHandler = (req, res, next) =>
 /** POST /v1/portal/certificates/validate — 10 req/min por usuário autenticado. */
 export const certificateValidateRateLimit: RequestHandler = (req, res, next) =>
   limiterSlots.certificateValidate(req, res, next);
+
+/** POST /v1/portal/fiscal/ingest/csv — 10 req/min por tenant + usuário (EXEQ-FISC-095). */
+export const fiscalCsvIngestRateLimit: RequestHandler = (req, res, next) =>
+  limiterSlots.fiscalCsvIngest(req, res, next);
 
 /** Conecta Redis e recria limiters com store compartilhado (chamar antes de aceitar trafego). */
 export async function initRateLimitRedis(): Promise<void> {
