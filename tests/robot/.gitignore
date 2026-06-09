@@ -1,0 +1,6 @@
+# Venv recomendado fora do OneDrive (Windows): %LOCALAPPDATA%\exeq-robot-venv
+# Override: set ROBOT_VENV=C:\caminho\venv
+tests/robot/.venv/
+tests/robot/results/
+tests/robot/browser/
+tests/robot/playwright-log.txt

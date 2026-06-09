@@ -6,5 +6,15 @@ dist
 .git
 coverage
 *.log
-apps/portal-web/node_modules
-apps/portal-web/dist
+apps
+tests
+e2e
+docs
+Projeto_CobrancaBoleto
+.cursor
+prints
+**/*.md
+**/*.png
+**/*.jpg
+**/*.webp
+**/*.pdf

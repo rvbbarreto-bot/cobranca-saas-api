@@ -1,0 +1,7 @@
+{
+  "mock": true,
+  "operacao": "Consultar",
+  "servico": "CONSDECREC15",
+  "protocolo": "FIXTURE-REC-202605-00000000000191",
+  "pdfBase64": "JVBERi0xLjQgbW9jayByZWNpYm8gZml4dHVyZQ=="
+}

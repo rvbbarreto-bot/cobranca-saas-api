@@ -12,6 +12,7 @@ import {
 import { dlqQueueName } from "../../jobs/dlq/dlq-types";
 import type { MonitoredQueueName } from "../../jobs/dlq/dlq-service";
 import { computeSliSnapshots } from "../../observability/sli-metrics";
+import { computeFiscalSliSnapshots } from "../../observability/fiscal-sli-metrics";
 import { isJobsEnabled } from "../../jobs/redis-connection";
 
 export function createAdminQueuesRouter(): express.Router {
@@ -99,6 +100,17 @@ export function createAdminQueuesRouter(): express.Router {
       res.json({
         generatedAt: new Date().toISOString(),
         slis
+      });
+    })
+  );
+
+  router.get(
+    "/metrics/fiscal-sli",
+    asyncHandler(async (_req: Request, res: Response) => {
+      const fiscal = await computeFiscalSliSnapshots();
+      res.json({
+        generatedAt: new Date().toISOString(),
+        ...fiscal
       });
     })
   );

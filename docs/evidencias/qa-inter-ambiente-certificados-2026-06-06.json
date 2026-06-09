@@ -1,0 +1,54 @@
+{
+  "authorization": {
+    "ref": "docs/AUTORIZACAO_PO_AMBIENTE_CERTIFICADOS_JUN2026.md",
+    "po": "Ricardo Barreto",
+    "date": "2026-06-06",
+    "status": "CERT-E1_E5_EXECUTADO — CERT-E6_pendente"
+  },
+  "factory_execution": {
+    "executed_at": "2026-06-06T17:12:00.000Z",
+    "steps": [
+      { "id": "CERT-E1", "action": "dev-up.ps1 + .env + npm ci", "result": "PASS" },
+      { "id": "CERT-E2", "action": "E1 /health", "result": "PASS", "detail": "status=ok" },
+      { "id": "CERT-E2", "action": "E2 /health/ready", "result": "PASS", "detail": "Postgres OK" },
+      { "id": "CERT-E3", "action": "portal :5173/login", "result": "PASS", "detail": "HTTP 200" },
+      { "id": "CERT-E4", "action": "login admin@teste.local / escritorio-demo", "result": "PASS" },
+      { "id": "CERT-E4", "action": "gateway providers", "result": "PASS", "providers": ["asaas", "inter", "cora", "c6"] },
+      { "id": "CERT-E4", "action": "PATCH /v1/portal/escritorio/gateway", "result": "PASS", "status": 200 },
+      { "id": "CERT-E4", "action": "qa:inter-pem", "result": "PASS", "out_dir": "data/qa-inter-credentials" },
+      { "id": "CERT-E4", "action": "qa:inter-check-cert-ou", "result": "PASS", "client_id_ou": "51157cc7-c8af-469b-9aa5-a94fcd6cf0cd" },
+      { "id": "CERT-E6", "action": "qa:inter-oauth-probe", "result": "FAIL", "detail": "getaddrinfo ENOTFOUND cdpj-sandbox.partners.uatinter.co (rede/DNS — retestar com conectividade Inter)" }
+    ]
+  },
+  "dod_status": {
+    "E1_E4": "PASS",
+    "ui_gateway_inter": "PASS",
+    "pacote_pem_local": "PASS",
+    "handoff_po": "PASS",
+    "oauth_probe": "PENDING",
+    "INT-05b": "NOT_RUN",
+    "INT-06": "NOT_RUN"
+  },
+  "cert_metadata": {
+    "certificate_cn": "EXEQ TECNOLOGIA LTDA",
+    "client_id_from_cert_ou": "51157cc7-c8af-469b-9aa5-a94fcd6cf0cd",
+    "fingerprint": "d753dc94404cbf0f",
+    "validity": "2026-06-02 → 2027-06-02"
+  },
+  "urls": {
+    "api": "http://localhost:3333",
+    "portal": "http://localhost:5173/login",
+    "configuracoes": "http://localhost:5173/configuracoes"
+  },
+  "login_dev": {
+    "email": "admin@teste.local",
+    "tenant": "escritorio-demo",
+    "password_hint": "TesteDev!2026"
+  },
+  "po_actions_required": [
+    "Entregar client_secret da app 51157cc7-c8af-469b-9aa5-a94fcd6cf0cd (canal seguro)",
+    "Regravar gateway no portal ou npm run qa:inter-push-gateway com QA_INTER_CLIENT_ID/SECRET",
+    "Retestar qa:inter-oauth-probe com conectividade ao sandbox Inter",
+    "Rodar qa:inter-api após oauth-probe PASS"
+  ]
+}

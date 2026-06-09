@@ -12,7 +12,7 @@ export async function loginPortal(
   await page.locator("#login-password").fill(opts?.password ?? SEED_PASSWORD);
   await Promise.all([
     waitForApi(page, "/v1/portal/auth/login", "POST"),
-    page.getByRole("button", { name: /entrar no portal/i }).click()
+    page.getByRole("button", { name: /^(Entrar|Continuar)$/i }).click()
   ]);
   await page.waitForURL(/\/(dashboard|cobrancas|escritorio|clientes)/, { timeout: 20_000 });
 }

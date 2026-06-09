@@ -158,6 +158,43 @@ describe.skipIf(!hasDb)("POST /v1/portal/clientes — integracao, validacao e ca
     expect(get.body?.cliente?.endereco?.uf).toBe("SP");
   });
 
+  it("PATCH atualiza endereco do cliente", async () => {
+    const documento = uniqueTestCnpj(Date.now() + 9999, 88);
+    const create = await request(app)
+      .post("/v1/portal/clientes")
+      .set(portalAuthHeaders(tokenPortal))
+      .send({
+        documento,
+        nome: `Cliente patch end ${documento.slice(-6)}`,
+        email: `patchend+${documento.slice(-6)}@test.local`,
+        whatsapp_opt_in: false
+      })
+      .expect(201);
+    const id = create.body?.cliente?.id as string;
+
+    await request(app)
+      .patch(`/v1/portal/clientes/${id}`)
+      .set(portalAuthHeaders(tokenPortal))
+      .send({
+        endereco: {
+          cep: "30130-010",
+          logradouro: "Rua da Bahia",
+          numero: "500",
+          bairro: "Centro",
+          cidade: "Belo Horizonte",
+          uf: "MG"
+        }
+      })
+      .expect(200);
+
+    const get = await request(app)
+      .get(`/v1/portal/clientes/${id}`)
+      .set(portalAuthHeaders(tokenPortal))
+      .expect(200);
+    expect(get.body?.cliente?.endereco?.cidade).toBe("Belo Horizonte");
+    expect(get.body?.cliente?.endereco?.bairro).toBe("Centro");
+  });
+
   it("401 sem Bearer", async () => {
     const documento = uniqueTestCnpj(Date.now() + 5555, 22);
     await request(app)

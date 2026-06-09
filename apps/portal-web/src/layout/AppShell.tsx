@@ -1,21 +1,27 @@
 import { useQuery } from "@tanstack/react-query";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { PageErrorBoundary } from "../components/PageErrorBoundary";
 import { useAuth } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
 import { fetchPortalMe } from "../lib/api";
+import { buildNavRenderList, isNavItemActive, navItemsForRole } from "../lib/portal-nav-access";
+import type { PortalNavItem } from "../lib/portal-nav-access";
 
-const navCls = ({ isActive }: { isActive: boolean }): string =>
-  `sidebar__link${isActive ? " sidebar__link--active" : ""}`;
+function navLinkItems(entries: ReturnType<typeof buildNavRenderList>): PortalNavItem[] {
+  return entries.filter((e) => e.kind === "link").map((e) => e.item);
+}
 
 export function AppShell(): JSX.Element {
   const { logout, email: sessionEmail } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const me = useQuery({ queryKey: ["portalMe"], queryFn: fetchPortalMe, staleTime: 60_000 });
 
   const displayName = me.data?.user.full_name?.trim() || me.data?.user.email || sessionEmail || "—";
   const roleLabel = me.data?.user.membership_role ?? "—";
+  const navEntries = buildNavRenderList(navItemsForRole(me.data?.user.membership_role, me.data?.modules));
+  const navLinks = navLinkItems(navEntries);
 
   function handleLogout(): void {
     logout();
@@ -30,40 +36,23 @@ export function AppShell(): JSX.Element {
           <div className="sidebar__tag">Cobrança & Boletos</div>
         </div>
         <nav className="sidebar__nav">
-          <NavLink to="/dashboard" className={navCls}>
-            Dashboard
-          </NavLink>
-          <NavLink to="/clientes" className={navCls}>
-            Clientes
-          </NavLink>
-          <NavLink to="/cobrancas" className={navCls}>
-            Boletos
-          </NavLink>
-          <NavLink to="/recorrente" className={navCls}>
-            Cobrança recorrente
-          </NavLink>
-          <NavLink to="/notificacoes" className={navCls}>
-            Notificações
-          </NavLink>
-          <NavLink to="/auditoria" className={navCls}>
-            Auditoria
-          </NavLink>
-          <NavLink to="/configuracoes" className={navCls}>
-            Configurações
-          </NavLink>
-          <div className="sidebar__section-label">Ferramentas</div>
-          <NavLink to="/notas-fiscais" className={navCls}>
-            Notas fiscais
-          </NavLink>
-          <NavLink to="/relatorios" className={navCls}>
-            Relatórios / CSV
-          </NavLink>
-          <NavLink to="/escritorio" className={navCls}>
-            Escritório
-          </NavLink>
-          <NavLink to="/ajuda/provisionamento-core" className={navCls}>
-            Ajuda (core)
-          </NavLink>
+          {navEntries.map((entry) =>
+            entry.kind === "section" ? (
+              <div key={`section-${entry.label}`} className="sidebar__section-label">
+                {entry.label}
+              </div>
+            ) : (
+              <NavLink
+                key={entry.item.to}
+                to={entry.item.to}
+                className={`sidebar__link${
+                  isNavItemActive(location.pathname, entry.item, navLinks) ? " sidebar__link--active" : ""
+                }`}
+              >
+                {entry.item.label}
+              </NavLink>
+            )
+          )}
         </nav>
         <button
           type="button"
@@ -76,14 +65,14 @@ export function AppShell(): JSX.Element {
       </aside>
       <div className="shell-main">
         <header className="shell-header">
-          <div>
+          <div className="shell-header__brand">
             <h1 className="shell-header__title">Portal SaaS de Cobrança</h1>
-            <p className="shell-header__meta">operação multiempresa · acesso restrito · rastreabilidade</p>
+            <span className="shell-header__meta-inline">multiempresa · acesso restrito · rastreabilidade</span>
           </div>
           <div className="shell-header__user">
             <div className="shell-header__pill">
-              <div className="shell-header__name">{displayName}</div>
-              <div className="shell-header__role">{roleLabel}</div>
+              <span className="shell-header__name">{displayName}</span>
+              <span className="shell-header__role">{roleLabel}</span>
             </div>
             <button type="button" className="shell-header__logout" onClick={handleLogout}>
               Sair

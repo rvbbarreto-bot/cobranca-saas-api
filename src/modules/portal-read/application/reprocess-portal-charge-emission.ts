@@ -9,6 +9,11 @@ import {
   getChargeWithLatestPayment
 } from "../../billing-core/infrastructure/charge-repository";
 import { schedulePaymentEmissionJob } from "../../../platform/jobs/enqueue-payment-emission";
+import {
+  assertPortalChargeEmissionReady,
+  PortalEmissionNotReadyError,
+  type PortalEmissionValidationIssue
+} from "./assert-portal-charge-emission-ready";
 
 /**
  * Idade mínima de um `rascunho` para liberar reprocesso manual.
@@ -23,12 +28,14 @@ export type ReprocessPortalChargeEmissionResult =
   | { ok: true; charge: Charge; jobScheduled: boolean }
   | {
       ok: false;
-      kind: "not_found" | "illegal_status";
+      kind: "not_found" | "illegal_status" | "validation_error";
       status?: Charge["canonicalStatus"];
+      issues?: PortalEmissionValidationIssue[];
     };
 
 export async function reprocessPortalChargeEmissionUseCase(
   client: PoolClient,
+  automacaoTenantId: string,
   chargeId: string,
   audit?: AuditRequestContext
 ): Promise<ReprocessPortalChargeEmissionResult> {
@@ -38,11 +45,11 @@ export async function reprocessPortalChargeEmissionUseCase(
   }
 
   if (current.canonicalStatus === "erro_emissao") {
-    return reprocessFromError(client, chargeId, current, audit);
+    return reprocessFromError(client, automacaoTenantId, chargeId, current, audit);
   }
 
   if (current.canonicalStatus === "rascunho") {
-    return reprocessStaleRascunho(client, chargeId, current, audit);
+    return reprocessStaleRascunho(client, automacaoTenantId, chargeId, current, audit);
   }
 
   return { ok: false, kind: "illegal_status", status: current.canonicalStatus };
@@ -51,6 +58,7 @@ export async function reprocessPortalChargeEmissionUseCase(
 /** Caminho clássico: cobrança falhou na emissão e volta para rascunho. */
 async function reprocessFromError(
   client: PoolClient,
+  automacaoTenantId: string,
   chargeId: string,
   current: Charge,
   audit?: AuditRequestContext
@@ -58,6 +66,15 @@ async function reprocessFromError(
   const decision = evaluateChargeStatusTransition("erro_emissao", "rascunho");
   if (decision !== "allow") {
     return { ok: false, kind: "illegal_status", status: current.canonicalStatus };
+  }
+
+  try {
+    await assertPortalChargeEmissionReady(client, automacaoTenantId, current);
+  } catch (e) {
+    if (e instanceof PortalEmissionNotReadyError) {
+      return { ok: false, kind: "validation_error", issues: e.issues };
+    }
+    throw e;
   }
 
   const upd = await client.query(
@@ -116,6 +133,7 @@ async function reprocessFromError(
  */
 async function reprocessStaleRascunho(
   client: PoolClient,
+  automacaoTenantId: string,
   chargeId: string,
   current: Charge,
   audit?: AuditRequestContext
@@ -133,6 +151,15 @@ async function reprocessStaleRascunho(
   if (Number.isFinite(ageMs) && ageMs < STALE_RASCUNHO_MIN_AGE_MS) {
     // Emissão recém-agendada ainda pode estar em andamento.
     return { ok: false, kind: "illegal_status", status: current.canonicalStatus };
+  }
+
+  try {
+    await assertPortalChargeEmissionReady(client, automacaoTenantId, current);
+  } catch (e) {
+    if (e instanceof PortalEmissionNotReadyError) {
+      return { ok: false, kind: "validation_error", issues: e.issues };
+    }
+    throw e;
   }
 
   await insertChargeEvent(client, {

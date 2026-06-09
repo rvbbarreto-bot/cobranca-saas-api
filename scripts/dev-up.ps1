@@ -1,4 +1,4 @@
-# Sobe ambiente local cobranca-saas-api (DevOps / QA)
+# Sobe ambiente local cobranca-exeq (DevOps / QA)
 # Uso: powershell -ExecutionPolicy Bypass -File scripts/dev-up.ps1
 # Requer: Docker Desktop em execucao, .env com DB_PASSWORD=dev_only
 
@@ -60,11 +60,35 @@ Write-Host "[dev-up] Seed (host)..." -ForegroundColor Cyan
 npm run seed:dev
 if ($LASTEXITCODE -ne 0) { throw "seed:dev falhou" }
 
+Write-Host "[dev-up] Seed RBAC (admin + operador)..." -ForegroundColor Cyan
+npm run seed:dev-rbac
+if ($LASTEXITCODE -ne 0) { throw "seed:dev-rbac falhou" }
+
+Write-Host "[dev-up] Seed EXEQ platform (master + multi-escritorio)..." -ForegroundColor Cyan
+npm run seed:exeq-platform
+if ($LASTEXITCODE -ne 0) { throw "seed:exeq-platform falhou" }
+
+Write-Host "[dev-up] Rebuild API (codigo atualizado)..." -ForegroundColor Cyan
+docker compose build api
+if ($LASTEXITCODE -ne 0) { throw "docker compose build api falhou" }
+docker compose up -d api
+if ($LASTEXITCODE -ne 0) { throw "docker compose up api falhou" }
+Start-Sleep -Seconds 8
+try {
+  $h2 = Invoke-WebRequest -Uri "http://localhost:3333/health/ready" -UseBasicParsing -TimeoutSec 15
+  Write-Host "[dev-up] API pos-rebuild: HTTP $($h2.StatusCode)" -ForegroundColor Green
+} catch {
+  Write-Host "[dev-up] API pos-rebuild ainda nao respondeu. Ver: docker compose logs api" -ForegroundColor Yellow
+}
+
 $portalEnvLocal = Join-Path $Root "apps\portal-web\.env.local"
+# Dev local: menu fiscal sempre visivel (escritorio-demo / admin@teste.local).
+$fiscalPortalFlag = "VITE_FISCAL_GUIAS_ENABLED=true`n"
+
 $portalEnvDocker = @"
 # Gerado/alinhado por dev-up.ps1 — API Docker na porta 3333 (proxy Vite em dev).
 # Homolog Inter no host (:3334): copie apps/portal-web/.env.local.inter-homolog.example
-
+$fiscalPortalFlag
 "@
 Set-Content -Path $portalEnvLocal -Value $portalEnvDocker -Encoding utf8
 Write-Host "[dev-up] Portal .env.local alinhado ao Docker (:3333 via proxy Vite)" -ForegroundColor Cyan
@@ -73,6 +97,10 @@ Write-Host ""
 Write-Host "=== Ambiente base OK ===" -ForegroundColor Green
 Write-Host "  API:    http://localhost:3333/health/ready"
 Write-Host "  Portal: npm run portal:dev  ->  http://localhost:5173/login  (reinicie o Vite se ja estava aberto)"
-Write-Host "  Login:  portal-seed@local.dev | tenant: escritorio-demo (ou 1) | senha: PortalSeedDev!ChangeMe1"
+Write-Host "  Login unificado: http://localhost:5173/login"
+Write-Host "  Master EXEQ: master@exeq.local | senha ExeqMaster!2026 | escritorio EM BRANCO"
+Write-Host "  Atibaia: admin.atibaia@teste.local | tenant escritorio-atibaia (ou vazio)"
+Write-Host "  Nazare:  admin.nazare@teste.local  | tenant escritorio-nazare (ou vazio)"
+Write-Host "  Demo RBAC: admin@teste.local | tenant escritorio-demo | senha TesteDev!2026"
 Write-Host ""
 Write-Host "Parar: docker compose stop api postgres redis" -ForegroundColor DarkGray

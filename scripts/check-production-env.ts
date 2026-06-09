@@ -1,5 +1,9 @@
 import "dotenv/config";
 import { validateJwtSecretForProduction } from "../src/platform/config/jwt-secret-policy";
+import {
+  collectFiscalSerproProductionEnvIssues,
+  collectFiscalSerproProductionEnvWarnings
+} from "../src/platform/config/fiscal-serpro-prod-env";
 import { databaseUrlIndicatesTls, shouldEnforceDatabaseTlsInChecks } from "../src/platform/health/database-url-tls";
 /**
  * Valida variaveis criticas antes do deploy em producao.
@@ -53,6 +57,17 @@ function main(): void {
     issues.push("ENABLE_MOCK_AUTH=true expoe rotas mock em producao — use false");
   }
 
+  const fiscalSerproSnapshot = {
+    nodeEnv: process.env.NODE_ENV,
+    fiscalGuiasEnabled: process.env.FISCAL_GUIAS_ENABLED,
+    fiscalSerproEnabled: process.env.FISCAL_SERPRO_ENABLED,
+    fiscalSerproMock: process.env.FISCAL_SERPRO_MOCK,
+    encryptionKey: process.env.ENCRYPTION_KEY
+  };
+  issues.push(...collectFiscalSerproProductionEnvIssues(fiscalSerproSnapshot));
+
+  const fiscalWarnings = collectFiscalSerproProductionEnvWarnings(fiscalSerproSnapshot);
+
   if (!strict) {
     // eslint-disable-next-line no-console
     console.log(
@@ -67,6 +82,7 @@ function main(): void {
     if (!cors) {
       warn("CORS_ORIGIN vazio: em producao o portal no browser nao recebe CORS aberto; defina origens se o front for separado.");
     }
+    fiscalWarnings.forEach((w) => warn(w));
     return;
   }
 
@@ -81,6 +97,7 @@ function main(): void {
   if (!cors) {
     warn("CORS_ORIGIN vazio — OK se API for apenas server-to-server; se houver front em outro dominio, configure.");
   }
+  fiscalWarnings.forEach((w) => warn(w));
 
   // eslint-disable-next-line no-console
   console.log("[check:prod-env] OK: checagens minimas de producao passaram.");

@@ -1,0 +1,54 @@
+{
+  "authorization": {
+    "ref": "docs/AUTORIZACAO_PO_INTER_FABRICA_JUN2026.md",
+    "po": "Ricardo Barreto",
+    "date": "2026-06-02",
+    "status": "EXECUTADO — bloqueio externo (Inter sandbox mTLS)"
+  },
+  "factory_execution": {
+    "executed_at": "2026-06-02T22:00:00.000Z",
+    "steps": [
+      {
+        "id": "INT-F3",
+        "action": "npm run qa:inter-oauth-probe",
+        "result": "FAIL",
+        "detail": "OAuth sandbox: SSL alert unknown_ca (48)"
+      },
+      {
+        "id": "INT-F4",
+        "action": "npm run qa:inter-api (reteste anterior)",
+        "result": "INT-05b FAIL / INT-06 FAIL",
+        "charge_id": "110a7928-7faf-4d32-acce-441b552c43c2"
+      }
+    ]
+  },
+  "diagnostic": {
+    "cert_db_fingerprint": "d753dc94404cbf0f",
+    "cert_qa_fingerprint": "d753dc94404cbf0f",
+    "cert_db_matches_qa_package": true,
+    "certificate_cn": "EXEQ TECNOLOGIA LTDA",
+    "certificate_validity": "2026-06-02 → 2027-06-02",
+    "escritorio_config_updated_at": "2026-06-02T21:23:39.538Z",
+    "client_id_prefix": "efd8ef1f",
+    "client_secret_configured": true,
+    "conclusion": "SaaS grava PEM correto (igual pacote QA). Inter rejeita mTLS — client_id/secret provavelmente de outra aplicação ou certificado não vinculado à integração no Portal Developers."
+  },
+  "dod_status": {
+    "INT-05b": "FAIL",
+    "INT-06": "FAIL"
+  },
+  "po_actions_required": [
+    "No Portal Developers Inter: abrir a aplicação cujo Client ID começa com efd8ef1f… (ou gerar novo par cert+secret na mesma app).",
+    "Baixar NOVO certificado + chave da MESMA aplicação sandbox (Cobrança/boleto-cobranca).",
+    "Regravar em Configurações → Editar → Guardar.",
+    "Validar OAuth fora do SaaS (Postman mTLS) antes do reteste.",
+    "Rodar: npm run qa:inter-oauth-probe (deve PASS) → npm run qa:inter-api"
+  ],
+  "factory_deliverables": [
+    "scripts/qa-inter-oauth-probe.ts",
+    "scripts/qa-inter-api-battery.ts",
+    "npm run qa:inter-oauth-probe",
+    "npm run qa:inter-api",
+    "Fix tenant UUID emissão + ConfiguracoesPage Editar/Salvar"
+  ]
+}

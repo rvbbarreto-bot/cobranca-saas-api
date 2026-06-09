@@ -1,0 +1,57 @@
+{
+  "ran_at": "2026-06-03T01:56:05.552Z",
+  "results": [
+    {
+      "id": "HEALTH",
+      "ok": true,
+      "detail": "ready status=ok"
+    },
+    {
+      "id": "PEM-LOCAL",
+      "ok": true,
+      "detail": "Par cert+chave OK (pacote QA)"
+    },
+    {
+      "id": "AUTH",
+      "ok": true,
+      "detail": "login_kind=portal tenant=1"
+    },
+    {
+      "id": "INT-01",
+      "ok": true,
+      "detail": "inter enabled=true"
+    },
+    {
+      "id": "INT-02",
+      "ok": true,
+      "detail": "campos=client_id,client_secret,certificate_pem,private_key_pem"
+    },
+    {
+      "id": "INT-03",
+      "ok": true,
+      "detail": "provider=inter configured=true"
+    },
+    {
+      "id": "INT-04",
+      "ok": true,
+      "detail": "resposta mascarada"
+    },
+    {
+      "id": "INT-05a",
+      "ok": true,
+      "detail": "charge=ba3301e0-539a-4cc6-877b-a37f12f4310d status=rascunho"
+    },
+    {
+      "id": "INT-05b",
+      "ok": false,
+      "detail": "mTLS: certificado rejeitado pelo Inter (unknown_ca) — revisar PEM/client_id da mesma app"
+    },
+    {
+      "id": "INT-06",
+      "ok": false,
+      "detail": "payment=false provider=null"
+    }
+  ],
+  "charge_id": "ba3301e0-539a-4cc6-877b-a37f12f4310d",
+  "lastErr": "mTLS: certificado rejeitado pelo Inter (unknown_ca) — revisar PEM/client_id da mesma app"
+}

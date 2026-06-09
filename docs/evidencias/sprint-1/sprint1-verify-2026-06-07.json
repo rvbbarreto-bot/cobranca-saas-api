@@ -1,0 +1,17 @@
+{
+  "sprint": 1,
+  "issues": ["EXEQ-FISC-010", "EXEQ-FISC-011", "EXEQ-FISC-012"],
+  "verified_at": "2026-06-07T16:52:00-03:00",
+  "executor": "fabrica",
+  "po_authorization": "docs/AUTORIZACAO_PO_SPRINT1_PROXIMA_DEMANDA.md",
+  "branch": "feature/EXEQ-FISC-010-organization-model",
+  "steps": {
+    "docker_postgres": "healthy :5434",
+    "check_db": "OK",
+    "migrate": "032_organization_and_serpro_config.sql applied",
+    "backfill_organization": "7 tenants linked",
+    "vitest_sprint1": "6 passed / 0 skipped / 0 failed"
+  },
+  "command": "npm run verify:sprint1",
+  "dod": "complete"
+}

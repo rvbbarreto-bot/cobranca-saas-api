@@ -5,6 +5,7 @@ import { writeAuditLog } from "../../../platform/audit/audit.service";
 import { encryptAes256Gcm } from "../../../platform/crypto/symmetric-encryption";
 import type { GatewayCredentials } from "../../../modules/payment-gateway/domain/gateway-types";
 import { decrypt } from "../../../platform/crypto/decrypt";
+import { resolveCertificateUpload } from "../../../platform/certificate-validation/certificate-upload-store";
 import {
   mergeGatewayCredentialsPatch,
   validateGatewayCredentials
@@ -21,8 +22,29 @@ import { mapEscritorioConfigPublic } from "./escritorio-config-use-cases";
 export const patchGatewayProviderSchema = z.object({
   gateway_provider: z.enum(["asaas", "pagarme", "inter", "cora", "bb", "c6"]),
   gateway_credentials: z.record(z.string(), z.string()).optional(),
-  gateway_api_key: z.string().min(10).optional()
+  gateway_api_key: z.string().min(10).optional(),
+  certificate_upload_id: z.string().uuid().optional()
 });
+
+async function resolveCredentialsFromUpload(
+  tenantId: string,
+  certificateUploadId: string | undefined,
+  credentials: GatewayCredentials | undefined
+): Promise<GatewayCredentials | undefined> {
+  if (!certificateUploadId) {
+    return credentials;
+  }
+  const upload = await resolveCertificateUpload(tenantId, certificateUploadId);
+  if (!upload) {
+    const err = new Error("CERTIFICATE_UPLOAD_EXPIRED");
+    throw err;
+  }
+  return {
+    ...(credentials ?? {}),
+    certificate_pem: upload.certificate_pem,
+    private_key_pem: upload.private_key_pem
+  };
+}
 
 export async function patchGatewayProviderUseCase(
   client: PoolClient,
@@ -49,26 +71,32 @@ export async function patchGatewayProviderUseCase(
   const fields: Record<string, unknown> = { gateway_provider: provider };
   let iv = before?.encryption_iv;
 
-  if (data.gateway_credentials) {
-    let credentialsToSave: GatewayCredentials = data.gateway_credentials;
+  const credentialsFromUpload = await resolveCredentialsFromUpload(
+    tenantId,
+    data.certificate_upload_id,
+    data.gateway_credentials
+  );
+
+  if (credentialsFromUpload) {
+    let credentialsToSave: GatewayCredentials = credentialsFromUpload;
     if (before?.gateway_credentials_encrypted?.trim() && before.encryption_iv?.trim()) {
       try {
         const existing = JSON.parse(
           decrypt(before.gateway_credentials_encrypted, before.encryption_iv)
         ) as GatewayCredentials;
-        credentialsToSave = mergeGatewayCredentialsPatch(provider, existing, data.gateway_credentials);
+        credentialsToSave = mergeGatewayCredentialsPatch(provider, existing, credentialsFromUpload);
       } catch {
-        validateGatewayCredentials(provider, data.gateway_credentials);
+        validateGatewayCredentials(provider, credentialsFromUpload);
       }
     } else {
-      validateGatewayCredentials(provider, data.gateway_credentials);
+      validateGatewayCredentials(provider, credentialsFromUpload);
     }
     const enc = encryptAes256Gcm(JSON.stringify(credentialsToSave));
     fields.gateway_credentials_encrypted = enc.ciphertext;
     iv = enc.iv;
     fields.encryption_iv = iv;
-    if (meta.authType === "api_key" && data.gateway_credentials.api_key) {
-      const keyEnc = encryptAes256Gcm(data.gateway_credentials.api_key);
+    if (meta.authType === "api_key" && credentialsFromUpload.api_key) {
+      const keyEnc = encryptAes256Gcm(credentialsFromUpload.api_key);
       fields.gateway_api_key_encrypted = keyEnc.ciphertext;
     }
   } else if (data.gateway_api_key && meta.authType === "api_key") {

@@ -4,7 +4,8 @@ import {
   GatewayCredentialsValidationError
 } from "../../modules/payment-gateway/domain/payment-gateway-error";
 import { getProviderMeta } from "./provider-registry";
-import { validateMtlsPemPair } from "./mtls-credential-validation";
+import { validateInterCredentialAppAlignment } from "./inter-credential-alignment";
+import { sanitizePemPaste, validateMtlsPemPair } from "./mtls-credential-validation";
 
 const MTLS_PEM_PROVIDERS = new Set(["inter", "cora", "c6"]);
 
@@ -26,12 +27,29 @@ export function validateGatewayCredentials(
   }
 
   if (MTLS_PEM_PROVIDERS.has(provider)) {
-    const cert = credentials.certificate_pem?.trim();
-    const key = credentials.private_key_pem?.trim();
+    if (credentials.certificate_pem?.trim()) {
+      credentials.certificate_pem = sanitizePemPaste(credentials.certificate_pem);
+    }
+    if (credentials.private_key_pem?.trim()) {
+      credentials.private_key_pem = sanitizePemPaste(credentials.private_key_pem);
+    }
+    const cert = credentials.certificate_pem;
+    const key = credentials.private_key_pem;
     if (cert && key) {
       const pemCheck = validateMtlsPemPair(cert, key);
       if (!pemCheck.ok) {
         throw new GatewayCredentialsValidationError(provider, pemCheck.message);
+      }
+    }
+  }
+
+  if (provider === "inter") {
+    const clientId = credentials.client_id?.trim() ?? "";
+    const cert = credentials.certificate_pem?.trim() ?? "";
+    if (clientId && cert) {
+      const alignment = validateInterCredentialAppAlignment(clientId, cert);
+      if (!alignment.ok) {
+        throw new GatewayCredentialsValidationError(provider, alignment.message);
       }
     }
   }

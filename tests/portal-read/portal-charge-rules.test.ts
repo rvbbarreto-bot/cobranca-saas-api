@@ -43,4 +43,13 @@ describe("isDueDateAllowed", () => {
     expect(isDueDateAllowed(min, rules, today)).toBe(true);
     expect(isDueDateAllowed("2026-05-21", rules, today)).toBe(false);
   });
+
+  it("aceita hoje mesmo quando o instante atual seria D+1 em UTC (fronteira 21h BRT)", () => {
+    // Simula 21:40 BRT = 00:40 UTC do dia seguinte.
+    // O today passado deve ser o dia CALENDÁRIO brasileiro (2026-05-28),
+    // não o dia UTC (2026-05-29), para não rejeitar a data de hoje.
+    const todayBrazil = new Date(2026, 4, 28); // 2026-05-28 midnight local
+    const rules = getPortalChargeRules("asaas");
+    expect(isDueDateAllowed("2026-05-28", rules, todayBrazil)).toBe(true);
+  });
 });

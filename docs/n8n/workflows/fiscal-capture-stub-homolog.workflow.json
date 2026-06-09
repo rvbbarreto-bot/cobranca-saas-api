@@ -1,0 +1,105 @@
+{
+  "name": "Fiscal DAS — captura stub homolog (n8n → inbox)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "f1a00001-0001-4000-8000-000000000001",
+      "name": "Manual trigger fiscal",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "external_event_id",
+              "value": "=fiscal-stub-{{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "tenant_header",
+              "value": "={{ $env.TENANT_ID_HEADER || 'demo' }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "portal_cliente_id",
+              "value": "={{ $env.FISCAL_PORTAL_CLIENTE_ID || 'SUBSTITUIR-UUID-CLIENTE' }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "competencia",
+              "value": "={{ $env.FISCAL_COMPETENCIA || '2026-06' }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "idempotency_key",
+              "value": "=escritorio:{{ $json.portal_cliente_id }}:{{ $json.competencia }}:DAS",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1a00002-0002-4000-8000-000000000002",
+      "name": "Payload fiscal capture",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($env.API_BASE_URL || 'http://host.docker.internal:3333') + '/v1/inbox/webhooks' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-Tenant-Id", "value": "={{ $json.tenant_header }}" },
+            { "name": "X-Webhook-Secret", "value": "={{ $env.WEBHOOK_INBOX_SECRET }}" },
+            { "name": "X-External-Event-Id", "value": "={{ $json.external_event_id }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"event_type\": \"fiscal.capture.requested\",\n  \"portal_cliente_id\": \"{{ $json.portal_cliente_id }}\",\n  \"tipo_guia\": \"DAS\",\n  \"competencia\": \"{{ $json.competencia }}\",\n  \"idempotency_key\": \"{{ $json.idempotency_key }}\"\n}",
+        "options": { "response": { "response": { "fullResponse": true } } }
+      },
+      "id": "f1a00003-0003-4000-8000-000000000003",
+      "name": "POST inbox fiscal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "content": "## Fiscal DAS stub homolog\n\nRequer na API:\n- `FISCAL_GUIAS_ENABLED=true`\n- `FISCAL_CAPTURE_STUB=true` (sem gateway Receita real)\n- Redis + worker `fiscal-capture`\n\nVariáveis n8n:\n- `FISCAL_PORTAL_CLIENTE_ID` — UUID em portal.cliente\n- `FISCAL_COMPETENCIA` — YYYY-MM\n\nPar DARF: `fiscal-capture-darf-stub-homolog.workflow.json`",
+        "height": 320,
+        "width": 420
+      },
+      "id": "f1a00004-0004-4000-8000-000000000004",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-40, 80]
+    }
+  ],
+  "connections": {
+    "Manual trigger fiscal": {
+      "main": [[{ "node": "Payload fiscal capture", "type": "main", "index": 0 }]]
+    },
+    "Payload fiscal capture": {
+      "main": [[{ "node": "POST inbox fiscal", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

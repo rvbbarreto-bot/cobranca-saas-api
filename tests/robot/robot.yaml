@@ -1,0 +1,4 @@
+# Configuração RF 6.1+ — ver README.md
+outputdir: results
+console: verbose
+loglevel: INFO

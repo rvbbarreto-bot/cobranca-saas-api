@@ -9,6 +9,7 @@ export type N8nPlatformEventType =
   | "charge.overdue"
   | "charge.cancelled"
   | "notification.regua_enqueued"
+  | "fiscal.guia_disponivel_enqueued"
   | "subscription.past_due";
 
 export type N8nPlatformEvent = {

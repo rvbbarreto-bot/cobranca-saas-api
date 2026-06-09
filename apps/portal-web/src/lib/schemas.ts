@@ -5,7 +5,13 @@ import { isValidPartyName } from "./format-br";
 
 export const loginFormSchema = z.object({
   email: z.string().trim().email("E-mail invalido"),
-  tenant_id: z.string().trim().min(1, "Tenant obrigatorio"),
+  tenant_id: z.string().trim().optional(),
+  password: z.string().min(1, "Senha obrigatoria")
+});
+
+/** Valida e-mail + senha; tenant opcional (master ou auto-resolucao). */
+export const loginFormBaseSchema = z.object({
+  email: z.string().trim().email("E-mail invalido"),
   password: z.string().min(1, "Senha obrigatoria")
 });
 
@@ -157,17 +163,22 @@ export function normalizeClientePayload(
   };
 }
 
-export function normalizeClienteEditPayload(values: ClienteEditFormValues): {
+export function normalizeClienteEditPayload(
+  values: ClienteEditFormValues,
+  endereco?: ClienteEnderecoPayload | null
+): {
   nome: string;
   email: string;
   telefone: string | null;
   whatsapp_opt_in: boolean;
+  endereco?: ClienteEnderecoPayload | null;
 } {
   const phoneDigits = onlyDigits(values.telefone ?? "");
   return {
     nome: values.nome.trim(),
     email: values.email.trim().toLowerCase(),
     telefone: phoneDigits.length > 0 ? phoneDigits : null,
-    whatsapp_opt_in: values.whatsapp_opt_in
+    whatsapp_opt_in: values.whatsapp_opt_in,
+    ...(endereco !== undefined ? { endereco } : {})
   };
 }

@@ -1,0 +1,108 @@
+{
+  "executedAt": "2026-05-30T03:10:18.560Z",
+  "git": {
+    "branch": "unknown",
+    "commit": "unknown"
+  },
+  "environment": {
+    "nodeEnv": "development",
+    "databaseUrl": "postgres://app:***@localhost:5434/cobranca_saas",
+    "receitaDasCaptureUrl": "http://127.0.0.1:19443",
+    "fiscalCaptureStub": false,
+    "fiscalPdfStorage": "local",
+    "hasEncryptionKey": true,
+    "hasWebhookSecret": true
+  },
+  "tenantPublicId": "00000000-0000-4000-8000-000000000001",
+  "automacaoTenantId": "1",
+  "correlationId": "fiscal-e2e-1780110618560",
+  "steps": {
+    "portalClienteId": "4f8a2016-03fa-4d68-aea0-b39a70904f0f",
+    "certificadoId": "14407bb9-1473-4e86-9d1c-52d5f7a9cf85",
+    "procuracaoId": "a1422e52-24da-4a0b-be56-9ad5ac24b7c4",
+    "webhookInboxInsert": {
+      "inserted": true,
+      "row": {
+        "id": "91f4c530-2259-473c-b95c-c664e6df6907",
+        "tenantId": "00000000-0000-4000-8000-000000000001",
+        "source": "n8n",
+        "externalEventId": "homolog-e2e-fiscal-e2e-1780110618560",
+        "createdAt": "2026-05-30T03:10:19.200Z",
+        "processedAt": null
+      },
+      "alreadyProcessed": false
+    },
+    "webhookProcess": {
+      "scanned": 1,
+      "updated": 1,
+      "dead": 0,
+      "dead_parse": 0,
+      "dead_not_found": 0,
+      "dead_illegal_transition": 0,
+      "skipped_already_processed": 0
+    },
+    "inboxHandle": {
+      "kind": "queued",
+      "job": {
+        "publicTenantUuid": "00000000-0000-4000-8000-000000000001",
+        "automacaoTenantId": "1",
+        "portalClienteId": "4f8a2016-03fa-4d68-aea0-b39a70904f0f",
+        "tipoGuia": "DAS",
+        "competencia": "2032-09",
+        "idempotencyKey": "homolog-e2e-fiscal-e2e-1780110618560",
+        "correlationId": "fiscal-e2e-1780110618560"
+      }
+    },
+    "guia": {
+      "id": "7b86d950-1dad-4651-8d23-b292bca5735c",
+      "status": "DISPONIVEL",
+      "compliance_status": "aprovado",
+      "pdf_url": "file://local/fiscal/1/7b86d950-1dad-4651-8d23-b292bca5735c/v1.pdf",
+      "pdf_storage_key": "fiscal/1/7b86d950-1dad-4651-8d23-b292bca5735c/v1.pdf",
+      "valor_total": "181.00"
+    }
+  },
+  "assertions": [
+    {
+      "name": "ambiente_receita_configurado",
+      "ok": true,
+      "detail": "http://127.0.0.1:19443"
+    },
+    {
+      "name": "certificado_cadastrado",
+      "ok": true,
+      "detail": "14407bb9-1473-4e86-9d1c-52d5f7a9cf85"
+    },
+    {
+      "name": "procuracao_cadastrada",
+      "ok": true,
+      "detail": "a1422e52-24da-4a0b-be56-9ad5ac24b7c4"
+    },
+    {
+      "name": "inbox_fiscal_processado",
+      "ok": true,
+      "detail": "updated=1"
+    },
+    {
+      "name": "guia_disponivel_compliance",
+      "ok": true,
+      "detail": "status=DISPONIVEL; compliance=aprovado"
+    },
+    {
+      "name": "pdf_persistido",
+      "ok": true,
+      "detail": "pdf_url=file://local/fiscal/1/7b86d950-1dad-4651-8d23-b292bca5735c/v1.pdf"
+    },
+    {
+      "name": "audit_guia_disponibilizada",
+      "ok": true,
+      "detail": "count=1"
+    },
+    {
+      "name": "whatsapp_guia_disponivel",
+      "ok": true,
+      "detail": "communication_events sent=1"
+    }
+  ],
+  "automatedTestsNote": "Reproducao homolog fiscal DAS:\n  Terminal 1: npm run receita:mock:gateway  (ou URL real em RECEITA_DAS_CAPTURE_URL)\n  Terminal 2: npm run migrate && npm run seed:dev\n  Terminal 3: npm run dev  (workers BullMQ + Redis)\n  Terminal 4: RUN_FISCAL_HOMOLOG_E2E=1 npm run fiscal:homolog:e2e\nDocs: docs/FISCAL_HOMOLOG_E2E.md\nDARF: fora de escopo (Fase 2)."
+}

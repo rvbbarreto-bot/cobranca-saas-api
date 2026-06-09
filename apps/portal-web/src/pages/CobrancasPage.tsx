@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { PortalLoadMore } from "../components/PortalLoadMore";
 import { ReprocessEmissionButton } from "../components/ReprocessEmissionButton";
+import { ShellPageHeader } from "../components/ShellPageHeader";
 import { fetchCobrancas } from "../lib/api";
 import type { ChargeRow } from "../lib/api";
 import {
@@ -150,22 +151,20 @@ export function CobrancasPage(): JSX.Element {
 
   return (
     <div className="shell-page">
-      <div className="shell-page__head">
-        <div>
-          <h2 className="shell-page__title">Boletos</h2>
-          <p className="shell-page__desc" style={{ marginBottom: 0 }}>
-            Consulta, reenvio, cancelamento e rastreabilidade do ciclo financeiro.
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          <Link to="/cobrancas/nova" className="btn-primary">
-            Nova cobrança
-          </Link>
-          <Link to="/relatorios" className="btn-secondary">
-            Relatórios / CSV
-          </Link>
-        </div>
-      </div>
+      <ShellPageHeader
+        title="Boletos"
+        description="Consulta, reenvio, cancelamento e rastreabilidade do ciclo financeiro."
+        actions={
+          <>
+            <Link to="/cobrancas/nova" className="btn-primary">
+              Nova cobrança
+            </Link>
+            <Link to="/relatorios" className="btn-secondary">
+              Relatórios / CSV
+            </Link>
+          </>
+        }
+      />
 
       {q.isLoading ? <p className="muted">Carregando…</p> : null}
       {q.isError ? (

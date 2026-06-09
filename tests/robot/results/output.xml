@@ -1,0 +1,1033 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot generator="Robot 7.4.2 (Python 3.12.10 on win32)" generated="2026-05-30T20:37:36.490188" rpa="false" schemaversion="5">
+<suite id="s1" name="01 Login Auth" source="C:\Users\riica\OneDrive\Empresas Ricardo\Exeq\Projeto_CobrancaBoleto_v2\cobranca-saas-api\tests\robot\tests\01_login_auth.robot">
+<kw name="Abrir Navegador Portal" owner="portal_keywords" type="SETUP">
+<kw name="Convert To Boolean" owner="BuiltIn">
+<msg time="2026-05-30T20:37:36.816119" level="INFO">${headless} = True</msg>
+<var>${headless}</var>
+<arg>${BROWSER_HEADLESS}</arg>
+<doc>Converts the given item to Boolean ``True`` or ``False``.</doc>
+<status status="PASS" start="2026-05-30T20:37:36.816119" elapsed="0.000000"/>
+</kw>
+<kw name="New Browser" owner="Browser">
+<msg time="2026-05-30T20:37:36.817118" level="INFO">{"browser": "chromium", "headless": true, "chromiumSandbox": false, "devtools": false, "handleSIGHUP": true, "handleSIGINT": true, "handleSIGTERM": true, "slowMo": 0.0, "timeout": 30000.0, "tracesDir": "C:\\Users\\riica\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto_v2\\cobranca-saas-api\\tests\\robot\\results\\browser\\traces\\temp\\ebf1ddc9-8cde-497c-90fb-55e8640d94ea"}</msg>
+<msg time="2026-05-30T20:37:36.840317" level="INFO">Starting Browser process C:\Users\riica\AppData\Local\exeq-robot-venv\Lib\site-packages\Browser\wrapper\index.js using at 127.0.0.1:59835</msg>
+<msg time="2026-05-30T20:37:37.481559" level="INFO">Successfully created browser with options: {"browser":"chromium","headless":true,"chromiumSandbox":false,"devtools":false,"handleSIGHUP":true,"handleSIGINT":true,"handleSIGTERM":true,"slowMo":0,"timeout":30000,"tracesDir":"C:\\Users\\riica\\OneDrive\\Empresas Ricardo\\Exeq\\Projeto_CobrancaBoleto_v2\\cobranca-saas-api\\tests\\robot\\results\\browser\\traces\\temp\\ebf1ddc9-8cde-497c-90fb-55e8640d94ea"}</msg>
+<arg>chromium</arg>
+<arg>headless=${headless}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new playwright Browser with specified options.</doc>
+<status status="PASS" start="2026-05-30T20:37:36.816119" elapsed="0.666441"/>
+</kw>
+<kw name="Set Browser Timeout" owner="Browser">
+<arg>${BROWSER_TIMEOUT}</arg>
+<tag>Config</tag>
+<tag>Setter</tag>
+<doc>Sets the timeout used by most input and getter keywords.</doc>
+<status status="PASS" start="2026-05-30T20:37:37.482560" elapsed="0.006001"/>
+</kw>
+<kw name="New Context" owner="Browser">
+<msg time="2026-05-30T20:37:37.490562" level="INFO">{
+  "acceptDownloads": true,
+  "bypassCSP": false,
+  "forcedColors": "none",
+  "ignoreHTTPSErrors": false,
+  "javaScriptEnabled": true,
+  "locale": "pt-BR",
+  "offline": false,
+  "reducedMotion": "no-preference",
+  "serviceWorkers": "allow",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  }
+}</msg>
+<msg time="2026-05-30T20:37:37.522004" level="INFO">Successfully created context. </msg>
+<msg time="2026-05-30T20:37:37.522004" level="INFO">{'acceptDownloads': True, 'bypassCSP': False, 'forcedColors': 'none', 'ignoreHTTPSErrors': False, 'javaScriptEnabled': True, 'locale': 'pt-BR', 'offline': False, 'reducedMotion': 'no-preference', 'serviceWorkers': 'allow', 'viewport': {'width': 1440, 'height': 900}}</msg>
+<arg>viewport={'width': 1440, 'height': 900}</arg>
+<arg>locale=pt-BR</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Create a new BrowserContext with specified options.</doc>
+<status status="PASS" start="2026-05-30T20:37:37.488561" elapsed="0.033443"/>
+</kw>
+<kw name="New Page" owner="Browser">
+<msg time="2026-05-30T20:37:37.835855" level="INFO">Successfully initialized new page object and opened url: http://localhost:5173/</msg>
+<arg>${PORTAL_BASE_URL}/</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Open a new Page.</doc>
+<status status="PASS" start="2026-05-30T20:37:37.522004" elapsed="0.313851"/>
+</kw>
+<doc>Inicializa Browser Library (Playwright) para testes E2E.</doc>
+<status status="PASS" start="2026-05-30T20:37:36.815119" elapsed="1.021733"/>
+</kw>
+<test id="s1-t1" name="Login Admin Com Credenciais Seed" line="9">
+<kw name="Preparar Sessao Limpa" owner="portal_keywords" type="SETUP">
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:41.013043" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="browser/screenshot/fail-screenshot-1.png" target="_blank"&gt;&lt;img src="browser/screenshot/fail-screenshot-1.png" width="800px"/&gt;&lt;/a&gt;</msg>
+<msg time="2026-05-30T20:37:41.013043" level="INFO">See also file:///C:/Users/riica/OneDrive/Empresas%20Ricardo/Exeq/Projeto_CobrancaBoleto_v2/cobranca-saas-api/tests/robot/results/playwright-log.txt for additional details.</msg>
+<msg time="2026-05-30T20:37:41.013043" level="FAIL">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="FAIL" start="2026-05-30T20:37:37.868411" elapsed="3.146666">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</status>
+</kw>
+<msg time="2026-05-30T20:37:41.016129" level="INFO">${logged} = False</msg>
+<var>${logged}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:37.867414" elapsed="3.148715"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>${logged}</arg>
+<arg>Logout Escritorio</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.016129" elapsed="0.000000"/>
+</kw>
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:41.022079" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.016129" elapsed="0.005950"/>
+</kw>
+<msg time="2026-05-30T20:37:41.022079" level="INFO">${on_login} = True</msg>
+<var>${on_login}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.016129" elapsed="0.005950"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>not ${on_login}</arg>
+<arg>Ir Para</arg>
+<arg>/login</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.022079" elapsed="0.001039"/>
+</kw>
+<doc>Garante estado deslogado antes de cada teste.</doc>
+<status status="PASS" start="2026-05-30T20:37:37.867414" elapsed="3.155704"/>
+</kw>
+<kw name="Login Escritorio" owner="portal_keywords">
+<kw name="Ir Para" owner="portal_keywords">
+<kw name="Go To" owner="Browser">
+<msg time="2026-05-30T20:37:41.087520" level="INFO">Successfully opened URL http://localhost:5173/login</msg>
+<arg>${PORTAL_BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.024081" elapsed="0.063439"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:41.088514" level="INFO">Waiting page load to state to receive networkidle in 20000.0</msg>
+<msg time="2026-05-30T20:37:41.587301" level="INFO">Load state networkidle got in 20000</msg>
+<arg>networkidle</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.088514" elapsed="0.498787"/>
+</kw>
+<arg>/login</arg>
+<status status="PASS" start="2026-05-30T20:37:41.023118" elapsed="0.565136"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:41.619933" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.588254" elapsed="0.031679"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:41.620959" level="INFO">Fills the text 'admin@teste.local' in the given field.</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>${email}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.619933" elapsed="0.019656"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:41.640589" level="INFO">Fills the text 'TesteDev!2026' in the given field.</msg>
+<arg>${LOC_LOGIN_PASSWORD}</arg>
+<arg>${password}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.639589" elapsed="0.010431"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:41.651577" level="INFO">Fills the text 'escritorio-demo' in the given field.</msg>
+<arg>${LOC_LOGIN_TENANT}</arg>
+<arg>${tenant}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.650020" elapsed="0.008619"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:41.659596" level="INFO">Clicks the element 'css=button.btn-login-cta'.</msg>
+<arg>${LOC_LOGIN_SUBMIT}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.658639" elapsed="0.064342"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:41.725287" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-05-30T20:37:41.731860" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.722981" elapsed="0.009440"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:42.052432" level="INFO">Waited for Element with selector css=h1.shell-header__title at state visible</msg>
+<arg>${LOC_SHELL_TITLE}</arg>
+<arg>visible</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:41.732421" elapsed="0.320011"/>
+</kw>
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:42.071485" level="INFO">Text: 'Portal SaaS de Cobrança'</msg>
+<arg>${LOC_SHELL_TITLE}</arg>
+<arg>contains</arg>
+<arg>Portal SaaS</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.052432" elapsed="0.019053"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:41.023118" elapsed="1.049413"/>
+</kw>
+<kw name="Pagina Deve Ter Titulo" owner="portal_keywords">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:42.077415" level="INFO">Waited for Element with selector css=h2.shell-page__title at state visible</msg>
+<arg>css=h2.shell-page__title</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.072531" elapsed="0.004884"/>
+</kw>
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:42.089424" level="INFO">Text: 'Dashboard do escritório'</msg>
+<arg>css=h2.shell-page__title</arg>
+<arg>contains</arg>
+<arg>${titulo}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.077415" elapsed="0.012009"/>
+</kw>
+<arg>Dashboard do escritório</arg>
+<status status="PASS" start="2026-05-30T20:37:42.072531" elapsed="0.017895"/>
+</kw>
+<kw name="Pagina Deve Conter Texto" owner="portal_keywords">
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:42.108424" level="INFO">Text: 'EXEQ\nCobrança &amp; Boletos\nDashboard\nClientes\nBoletos\nGuias fiscais (DAS/DARF)\nConfig. fiscal\nCobrança recorrente\nNotificações\nAuditoria\nConfigurações\nFERRAMENTAS\nNotas fiscais\nRelatórios / CSV\nEscritório\nAjuda (core)\nTema escuro\nPortal SaaS de Cobrança\n\noperação multiempresa · acesso restrito · rastreabilidade\n\nAdmin Teste\nadmin_escritorio\nSair\nDashboard do escritório\n\nPeríodo: 2026-05-01 — 2026-05-30\n\nCobranças no período\n\n171\n\nPagas\n\n36\n\nValor recebido\n\nR$\xa03.357,00\n\nTaxa de conversão\n\n58.1%\n\nPor status\nrascunho\t109\nemitida\t0\nenviada\t0\npendente_pagamento\t24\npaga\t36\nvencida\t0\ncancelada\t0\nerro_emissao\t2\nAtalhos\nClientes\nBoletos\nRelatórios CSV'</msg>
+<arg>body</arg>
+<arg>contains</arg>
+<arg>${texto}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.090426" elapsed="0.019001"/>
+</kw>
+<arg>admin_escritorio</arg>
+<status status="PASS" start="2026-05-30T20:37:42.090426" elapsed="0.019001"/>
+</kw>
+<tag>admin</tag>
+<tag>auth</tag>
+<tag>critical</tag>
+<status status="PASS" start="2026-05-30T20:37:37.836852" elapsed="4.272575"/>
+</test>
+<test id="s1-t2" name="Login Campos Obrigatorios Vazios" line="15">
+<kw name="Preparar Sessao Limpa" owner="portal_keywords" type="SETUP">
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:42.127942" level="INFO">Waited for Element with selector css=button.shell-header__logout at state visible</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.121941" elapsed="0.006001"/>
+</kw>
+<msg time="2026-05-30T20:37:42.127942" level="INFO">${logged} = True</msg>
+<var>${logged}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.121941" elapsed="0.006001"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<kw name="Logout Escritorio" owner="portal_keywords">
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:42.128960" level="INFO">Clicks the element 'css=button.shell-header__logout'.</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.128960" elapsed="0.020658"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:42.154164" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.150180" elapsed="0.003984"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:42.127942" elapsed="0.026765"/>
+</kw>
+<arg>${logged}</arg>
+<arg>Logout Escritorio</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.127942" elapsed="0.026765"/>
+</kw>
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:42.158971" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.154707" elapsed="0.005266"/>
+</kw>
+<msg time="2026-05-30T20:37:42.159973" level="INFO">${on_login} = True</msg>
+<var>${on_login}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.154707" elapsed="0.005266"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>not ${on_login}</arg>
+<arg>Ir Para</arg>
+<arg>/login</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.159973" elapsed="0.001000"/>
+</kw>
+<doc>Garante estado deslogado antes de cada teste.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.121941" elapsed="0.039032"/>
+</kw>
+<kw name="Submeter Formulario Login Vazio" owner="portal_keywords">
+<kw name="Ir Para" owner="portal_keywords">
+<kw name="Go To" owner="Browser">
+<msg time="2026-05-30T20:37:42.228491" level="INFO">Successfully opened URL http://localhost:5173/login</msg>
+<arg>${PORTAL_BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.162006" elapsed="0.066485"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:42.229506" level="INFO">Waiting page load to state to receive networkidle in 20000.0</msg>
+<msg time="2026-05-30T20:37:42.721838" level="INFO">Load state networkidle got in 20000</msg>
+<arg>networkidle</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.228491" elapsed="0.493347"/>
+</kw>
+<arg>/login</arg>
+<status status="PASS" start="2026-05-30T20:37:42.160973" elapsed="0.560865"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:42.722839" level="INFO">Clicks the element 'css=button.btn-login-cta'.</msg>
+<arg>${LOC_LOGIN_SUBMIT}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.721838" elapsed="0.051609"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:42.160973" elapsed="0.612474"/>
+</kw>
+<kw name="Validar Erros Login Obrigatorios" owner="portal_keywords">
+<kw name="Get Element Count" owner="Browser">
+<msg time="2026-05-30T20:37:42.783411" level="INFO">${count} = 3</msg>
+<var>${count}</var>
+<arg>css=.err</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns the count of elements found with ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.774437" elapsed="0.008974"/>
+</kw>
+<kw name="Should Be True" owner="BuiltIn">
+<arg>${count} &gt;= 3</arg>
+<doc>Fails if the given condition is not true.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.783411" elapsed="0.000000"/>
+</kw>
+<kw name="Pagina Deve Conter Texto" owner="portal_keywords">
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:42.799595" level="INFO">Text: 'EXEQ\n\nCobrança &amp; Boletos\n\nPortal de cobrança recorrente com autenticação segura, trilha de auditoria e integração bancária.\n\nSubstituição da planilha por um ambiente transacional com cadastro, boletos, notificações e governança operacional.\n\nEntrar\n\nAcesso restrito por e-mail e senha\n\nE-mail corporativo\nE-mail invalido\nSenha\nSenha obrigatoria\nTenant / Escritório\nUse o id numérico ou o slug do tenant (ex.: 1, escritorio-demo). O nome do escritório (ex. "Escritório") não é aceito.\nTenant obrigatorio\nEntrar no portal\nAutenticação · RLS · sessão auditável\nEsqueci minha senha'</msg>
+<arg>body</arg>
+<arg>contains</arg>
+<arg>${texto}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.784422" elapsed="0.015173"/>
+</kw>
+<arg>${MSG_EMAIL_OBRIGATORIO}</arg>
+<status status="PASS" start="2026-05-30T20:37:42.783411" elapsed="0.016184"/>
+</kw>
+<kw name="Pagina Deve Conter Texto" owner="portal_keywords">
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:42.808595" level="INFO">Text: 'EXEQ\n\nCobrança &amp; Boletos\n\nPortal de cobrança recorrente com autenticação segura, trilha de auditoria e integração bancária.\n\nSubstituição da planilha por um ambiente transacional com cadastro, boletos, notificações e governança operacional.\n\nEntrar\n\nAcesso restrito por e-mail e senha\n\nE-mail corporativo\nE-mail invalido\nSenha\nSenha obrigatoria\nTenant / Escritório\nUse o id numérico ou o slug do tenant (ex.: 1, escritorio-demo). O nome do escritório (ex. "Escritório") não é aceito.\nTenant obrigatorio\nEntrar no portal\nAutenticação · RLS · sessão auditável\nEsqueci minha senha'</msg>
+<arg>body</arg>
+<arg>contains</arg>
+<arg>${texto}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.800627" elapsed="0.007968"/>
+</kw>
+<arg>${MSG_SENHA_OBRIGATORIA}</arg>
+<status status="PASS" start="2026-05-30T20:37:42.800627" elapsed="0.007968"/>
+</kw>
+<kw name="Pagina Deve Conter Texto" owner="portal_keywords">
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:42.818599" level="INFO">Text: 'EXEQ\n\nCobrança &amp; Boletos\n\nPortal de cobrança recorrente com autenticação segura, trilha de auditoria e integração bancária.\n\nSubstituição da planilha por um ambiente transacional com cadastro, boletos, notificações e governança operacional.\n\nEntrar\n\nAcesso restrito por e-mail e senha\n\nE-mail corporativo\nE-mail invalido\nSenha\nSenha obrigatoria\nTenant / Escritório\nUse o id numérico ou o slug do tenant (ex.: 1, escritorio-demo). O nome do escritório (ex. "Escritório") não é aceito.\nTenant obrigatorio\nEntrar no portal\nAutenticação · RLS · sessão auditável\nEsqueci minha senha'</msg>
+<arg>body</arg>
+<arg>contains</arg>
+<arg>${texto}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.809600" elapsed="0.008999"/>
+</kw>
+<arg>${MSG_TENANT_OBRIGATORIO}</arg>
+<status status="PASS" start="2026-05-30T20:37:42.809600" elapsed="0.008999"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:42.773447" elapsed="0.045152"/>
+</kw>
+<tag>auth</tag>
+<tag>validation</tag>
+<status status="PASS" start="2026-05-30T20:37:42.116947" elapsed="0.701652"/>
+</test>
+<test id="s1-t3" name="Login Senha Invalida Exibe Erro" line="20">
+<kw name="Preparar Sessao Limpa" owner="portal_keywords" type="SETUP">
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:45.978644" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="browser/screenshot/fail-screenshot-2.png" target="_blank"&gt;&lt;img src="browser/screenshot/fail-screenshot-2.png" width="800px"/&gt;&lt;/a&gt;</msg>
+<msg time="2026-05-30T20:37:45.978644" level="INFO">See also file:///C:/Users/riica/OneDrive/Empresas%20Ricardo/Exeq/Projeto_CobrancaBoleto_v2/cobranca-saas-api/tests/robot/results/playwright-log.txt for additional details.</msg>
+<msg time="2026-05-30T20:37:45.978644" level="FAIL">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="FAIL" start="2026-05-30T20:37:42.830606" elapsed="3.148038">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</status>
+</kw>
+<msg time="2026-05-30T20:37:45.978644" level="INFO">${logged} = False</msg>
+<var>${logged}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.829601" elapsed="3.149043"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>${logged}</arg>
+<arg>Logout Escritorio</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:45.979733" elapsed="0.000000"/>
+</kw>
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:45.984717" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:45.979733" elapsed="0.004984"/>
+</kw>
+<msg time="2026-05-30T20:37:45.984717" level="INFO">${on_login} = True</msg>
+<var>${on_login}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:45.979733" elapsed="0.004984"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>not ${on_login}</arg>
+<arg>Ir Para</arg>
+<arg>/login</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:45.984717" elapsed="0.000000"/>
+</kw>
+<doc>Garante estado deslogado antes de cada teste.</doc>
+<status status="PASS" start="2026-05-30T20:37:42.829601" elapsed="3.155116"/>
+</kw>
+<kw name="Ir Para" owner="portal_keywords">
+<kw name="Go To" owner="Browser">
+<msg time="2026-05-30T20:37:46.046047" level="INFO">Successfully opened URL http://localhost:5173/login</msg>
+<arg>${PORTAL_BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-05-30T20:37:45.985776" elapsed="0.060271"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:46.046047" level="INFO">Waiting page load to state to receive networkidle in 20000.0</msg>
+<msg time="2026-05-30T20:37:46.546160" level="INFO">Load state networkidle got in 20000</msg>
+<arg>networkidle</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.046047" elapsed="0.501108"/>
+</kw>
+<arg>/login</arg>
+<status status="PASS" start="2026-05-30T20:37:45.985776" elapsed="0.561379"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:46.547155" level="INFO">Fills the text 'admin@teste.local' in the given field.</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>${PORTAL_ADMIN_EMAIL}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.547155" elapsed="0.022123"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:46.569278" level="INFO">Fills the text 'senha-errada-robot' in the given field.</msg>
+<arg>${LOC_LOGIN_PASSWORD}</arg>
+<arg>senha-errada-robot</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.569278" elapsed="0.010117"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:46.580464" level="INFO">Fills the text 'escritorio-demo' in the given field.</msg>
+<arg>${LOC_LOGIN_TENANT}</arg>
+<arg>${PORTAL_TENANT}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.580464" elapsed="0.005874"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:46.587365" level="INFO">Clicks the element 'css=button.btn-login-cta'.</msg>
+<arg>${LOC_LOGIN_SUBMIT}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.586338" elapsed="0.052757"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:46.954477" level="INFO">Waited for Element with selector css=.banner-err at state visible</msg>
+<arg>css=.banner-err</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.640105" elapsed="0.314372"/>
+</kw>
+<tag>auth</tag>
+<tag>negative</tag>
+<status status="PASS" start="2026-05-30T20:37:42.823602" elapsed="4.130875"/>
+</test>
+<test id="s1-t4" name="Logout Retorna Para Login" line="29">
+<kw name="Preparar Sessao Limpa" owner="portal_keywords" type="SETUP">
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:50.093503" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="browser/screenshot/fail-screenshot-3.png" target="_blank"&gt;&lt;img src="browser/screenshot/fail-screenshot-3.png" width="800px"/&gt;&lt;/a&gt;</msg>
+<msg time="2026-05-30T20:37:50.093503" level="INFO">See also file:///C:/Users/riica/OneDrive/Empresas%20Ricardo/Exeq/Projeto_CobrancaBoleto_v2/cobranca-saas-api/tests/robot/results/playwright-log.txt for additional details.</msg>
+<msg time="2026-05-30T20:37:50.093503" level="FAIL">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="FAIL" start="2026-05-30T20:37:46.968764" elapsed="3.126082">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</status>
+</kw>
+<msg time="2026-05-30T20:37:50.094846" level="INFO">${logged} = False</msg>
+<var>${logged}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.968764" elapsed="3.126082"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>${logged}</arg>
+<arg>Logout Escritorio</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.094846" elapsed="0.000000"/>
+</kw>
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:50.099839" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.095839" elapsed="0.004000"/>
+</kw>
+<msg time="2026-05-30T20:37:50.099839" level="INFO">${on_login} = True</msg>
+<var>${on_login}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.094846" elapsed="0.004993"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>not ${on_login}</arg>
+<arg>Ir Para</arg>
+<arg>/login</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.100843" elapsed="0.000000"/>
+</kw>
+<doc>Garante estado deslogado antes de cada teste.</doc>
+<status status="PASS" start="2026-05-30T20:37:46.967769" elapsed="3.133074"/>
+</kw>
+<kw name="Login Escritorio" owner="portal_keywords">
+<kw name="Ir Para" owner="portal_keywords">
+<kw name="Go To" owner="Browser">
+<msg time="2026-05-30T20:37:50.163690" level="INFO">Successfully opened URL http://localhost:5173/login</msg>
+<arg>${PORTAL_BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.101839" elapsed="0.062851"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:50.164690" level="INFO">Waiting page load to state to receive networkidle in 20000.0</msg>
+<msg time="2026-05-30T20:37:50.673572" level="INFO">Load state networkidle got in 20000</msg>
+<arg>networkidle</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.164690" elapsed="0.508882"/>
+</kw>
+<arg>/login</arg>
+<status status="PASS" start="2026-05-30T20:37:50.100843" elapsed="0.572729"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:50.701696" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.673572" elapsed="0.028124"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:50.702702" level="INFO">Fills the text 'admin@teste.local' in the given field.</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>${email}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.701696" elapsed="0.014129"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:50.715825" level="INFO">Fills the text 'TesteDev!2026' in the given field.</msg>
+<arg>${LOC_LOGIN_PASSWORD}</arg>
+<arg>${password}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.715825" elapsed="0.012028"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:50.728862" level="INFO">Fills the text 'escritorio-demo' in the given field.</msg>
+<arg>${LOC_LOGIN_TENANT}</arg>
+<arg>${tenant}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.727853" elapsed="0.009009"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:50.737863" level="INFO">Clicks the element 'css=button.btn-login-cta'.</msg>
+<arg>${LOC_LOGIN_SUBMIT}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.736862" elapsed="0.050976"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:50.788418" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-05-30T20:37:50.792318" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.787838" elapsed="0.004480"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:51.109689" level="INFO">Waited for Element with selector css=h1.shell-header__title at state visible</msg>
+<arg>${LOC_SHELL_TITLE}</arg>
+<arg>visible</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:50.793314" elapsed="0.317395"/>
+</kw>
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:51.124709" level="INFO">Text: 'Portal SaaS de Cobrança'</msg>
+<arg>${LOC_SHELL_TITLE}</arg>
+<arg>contains</arg>
+<arg>Portal SaaS</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:51.110709" elapsed="0.014000"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:50.100843" elapsed="1.023866"/>
+</kw>
+<kw name="Logout Escritorio" owner="portal_keywords">
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:51.126711" level="INFO">Clicks the element 'css=button.shell-header__logout'.</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:51.125709" elapsed="0.051749"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:51.186763" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:51.178731" elapsed="0.008032"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:51.124709" elapsed="0.063059"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:51.195764" level="INFO">Waited for Element with selector css=button.btn-login-cta at state visible</msg>
+<arg>${LOC_LOGIN_SUBMIT}</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:51.187768" elapsed="0.007996"/>
+</kw>
+<tag>admin</tag>
+<tag>auth</tag>
+<status status="PASS" start="2026-05-30T20:37:46.961760" elapsed="4.234004"/>
+</test>
+<test id="s1-t5" name="Login Operador Redireciona Dashboard" line="35">
+<kw name="Preparar Sessao Limpa" owner="portal_keywords" type="SETUP">
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:54.358226" level="INFO" html="true">&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td colspan="3"&gt;&lt;a href="browser/screenshot/fail-screenshot-4.png" target="_blank"&gt;&lt;img src="browser/screenshot/fail-screenshot-4.png" width="800px"/&gt;&lt;/a&gt;</msg>
+<msg time="2026-05-30T20:37:54.358226" level="INFO">See also file:///C:/Users/riica/OneDrive/Empresas%20Ricardo/Exeq/Projeto_CobrancaBoleto_v2/cobranca-saas-api/tests/robot/results/playwright-log.txt for additional details.</msg>
+<msg time="2026-05-30T20:37:54.358226" level="FAIL">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</msg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="FAIL" start="2026-05-30T20:37:51.212205" elapsed="3.147018">TimeoutError: locator.waitFor: Timeout 3000ms exceeded.
+Call log:
+  - waiting for locator('button.shell-header__logout') to be visible
+</status>
+</kw>
+<msg time="2026-05-30T20:37:54.360235" level="INFO">${logged} = False</msg>
+<var>${logged}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGOUT_BTN}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:51.212205" elapsed="3.148030"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>${logged}</arg>
+<arg>Logout Escritorio</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.360235" elapsed="0.000000"/>
+</kw>
+<kw name="Run Keyword And Return Status" owner="BuiltIn">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:54.366222" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.361226" elapsed="0.006302"/>
+</kw>
+<msg time="2026-05-30T20:37:54.367528" level="INFO">${on_login} = True</msg>
+<var>${on_login}</var>
+<arg>Wait For Elements State</arg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<arg>timeout=3s</arg>
+<doc>Runs the specified keyword and returns the status as a Boolean value.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.360235" elapsed="0.007293"/>
+</kw>
+<kw name="Run Keyword If" owner="BuiltIn">
+<arg>not ${on_login}</arg>
+<arg>Ir Para</arg>
+<arg>/login</arg>
+<doc>Runs the given keyword with the given arguments, if ``condition`` is true.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.367528" elapsed="0.000509"/>
+</kw>
+<doc>Garante estado deslogado antes de cada teste.</doc>
+<status status="PASS" start="2026-05-30T20:37:51.211204" elapsed="3.156833"/>
+</kw>
+<kw name="Login Escritorio" owner="portal_keywords">
+<kw name="Ir Para" owner="portal_keywords">
+<kw name="Go To" owner="Browser">
+<msg time="2026-05-30T20:37:54.439677" level="INFO">Successfully opened URL http://localhost:5173/login</msg>
+<arg>${PORTAL_BASE_URL}${path}</arg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Navigates to the given ``url``.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.369050" elapsed="0.070627"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:54.440397" level="INFO">Waiting page load to state to receive networkidle in 20000.0</msg>
+<msg time="2026-05-30T20:37:54.935395" level="INFO">Load state networkidle got in 20000</msg>
+<arg>networkidle</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.440397" elapsed="0.494998"/>
+</kw>
+<arg>/login</arg>
+<status status="PASS" start="2026-05-30T20:37:54.368037" elapsed="0.567928"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:54.950496" level="INFO">Waited for Element with selector id=login-email at state visible</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>visible</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.935965" elapsed="0.014531"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:54.950496" level="INFO">Fills the text 'operador@teste.local' in the given field.</msg>
+<arg>${LOC_LOGIN_EMAIL}</arg>
+<arg>${email}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.950496" elapsed="0.010000"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:54.961510" level="INFO">Fills the text 'TesteDev!2026' in the given field.</msg>
+<arg>${LOC_LOGIN_PASSWORD}</arg>
+<arg>${password}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.960496" elapsed="0.010010"/>
+</kw>
+<kw name="Fill Text" owner="Browser">
+<msg time="2026-05-30T20:37:54.970506" level="INFO">Fills the text 'escritorio-demo' in the given field.</msg>
+<arg>${LOC_LOGIN_TENANT}</arg>
+<arg>${tenant}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Clears and fills the given ``txt`` into the text field found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.970506" elapsed="0.010059"/>
+</kw>
+<kw name="Click" owner="Browser">
+<msg time="2026-05-30T20:37:54.980565" level="INFO">Clicks the element 'css=button.btn-login-cta'.</msg>
+<arg>${LOC_LOGIN_SUBMIT}</arg>
+<tag>PageContent</tag>
+<tag>Setter</tag>
+<doc>Simulates mouse click on the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:54.980565" elapsed="0.035271"/>
+</kw>
+<kw name="Wait For Load State" owner="Browser">
+<msg time="2026-05-30T20:37:55.016842" level="INFO">Waiting page load to state to receive networkidle in 15000.0</msg>
+<msg time="2026-05-30T20:37:55.018929" level="INFO">Load state networkidle got in 15000</msg>
+<arg>networkidle</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits that the page reaches the required load state.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.015836" elapsed="0.003093"/>
+</kw>
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:55.341358" level="INFO">Waited for Element with selector css=h1.shell-header__title at state visible</msg>
+<arg>${LOC_SHELL_TITLE}</arg>
+<arg>visible</arg>
+<arg>timeout=20s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.018929" elapsed="0.323432"/>
+</kw>
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:55.357359" level="INFO">Text: 'Portal SaaS de Cobrança'</msg>
+<arg>${LOC_SHELL_TITLE}</arg>
+<arg>contains</arg>
+<arg>Portal SaaS</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.342361" elapsed="0.014998"/>
+</kw>
+<arg>email=${PORTAL_OPERADOR_EMAIL}</arg>
+<arg>password=${PORTAL_OPERADOR_PASSWORD}</arg>
+<status status="PASS" start="2026-05-30T20:37:54.368037" elapsed="0.989322"/>
+</kw>
+<kw name="Pagina Deve Ter Titulo" owner="portal_keywords">
+<kw name="Wait For Elements State" owner="Browser">
+<msg time="2026-05-30T20:37:55.362726" level="INFO">Waited for Element with selector css=h2.shell-page__title at state visible</msg>
+<arg>css=h2.shell-page__title</arg>
+<arg>visible</arg>
+<arg>timeout=15s</arg>
+<tag>PageContent</tag>
+<tag>Wait</tag>
+<doc>Waits for the element found by ``selector`` to satisfy state option.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.358394" elapsed="0.004332"/>
+</kw>
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:55.373150" level="INFO">Text: 'Dashboard do escritório'</msg>
+<arg>css=h2.shell-page__title</arg>
+<arg>contains</arg>
+<arg>${titulo}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.362726" elapsed="0.010424"/>
+</kw>
+<arg>Dashboard do escritório</arg>
+<status status="PASS" start="2026-05-30T20:37:55.358394" elapsed="0.014756"/>
+</kw>
+<kw name="Pagina Deve Conter Texto" owner="portal_keywords">
+<kw name="Get Text" owner="Browser">
+<msg time="2026-05-30T20:37:55.383770" level="INFO">Text: 'EXEQ\nCobrança &amp; Boletos\nDashboard\nClientes\nBoletos\nGuias fiscais (DAS/DARF)\nCobrança recorrente\nTema escuro\nPortal SaaS de Cobrança\n\noperação multiempresa · acesso restrito · rastreabilidade\n\nOperador Teste\noperador\nSair\nDashboard do escritório\n\nPeríodo: 2026-05-01 — 2026-05-30\n\nCobranças no período\n\n171\n\nPagas\n\n36\n\nValor recebido\n\nR$\xa03.357,00\n\nTaxa de conversão\n\n58.1%\n\nPor status\nrascunho\t109\nemitida\t0\nenviada\t0\npendente_pagamento\t24\npaga\t36\nvencida\t0\ncancelada\t0\nerro_emissao\t2\nAtalhos\nClientes\nBoletos\nRelatórios CSV'</msg>
+<arg>body</arg>
+<arg>contains</arg>
+<arg>${texto}</arg>
+<tag>Assertion</tag>
+<tag>Getter</tag>
+<tag>PageContent</tag>
+<doc>Returns text attribute of the element found by ``selector``.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.374151" elapsed="0.009619"/>
+</kw>
+<arg>operador</arg>
+<status status="PASS" start="2026-05-30T20:37:55.374151" elapsed="0.009619"/>
+</kw>
+<tag>auth</tag>
+<tag>operador</tag>
+<status status="PASS" start="2026-05-30T20:37:51.202867" elapsed="4.180903"/>
+</test>
+<kw name="Fechar Navegador Portal" owner="portal_keywords" type="TEARDOWN">
+<kw name="Close Browser" owner="Browser">
+<msg time="2026-05-30T20:37:55.448044" level="INFO">Closed browser</msg>
+<tag>BrowserControl</tag>
+<tag>Setter</tag>
+<doc>Closes the current browser.</doc>
+<status status="PASS" start="2026-05-30T20:37:55.389171" elapsed="0.058873"/>
+</kw>
+<status status="PASS" start="2026-05-30T20:37:55.389171" elapsed="0.058873"/>
+</kw>
+<doc>Autenticação escritório: login válido, inválido, logout e campos obrigatórios.</doc>
+<status status="PASS" start="2026-05-30T20:37:36.491192" elapsed="18.956852"/>
+</suite>
+<statistics>
+<total>
+<stat pass="5" fail="0" skip="0">All Tests</stat>
+</total>
+<tag>
+<stat pass="2" fail="0" skip="0">admin</stat>
+<stat pass="5" fail="0" skip="0">auth</stat>
+<stat pass="1" fail="0" skip="0">critical</stat>
+<stat pass="1" fail="0" skip="0">negative</stat>
+<stat pass="1" fail="0" skip="0">operador</stat>
+<stat pass="1" fail="0" skip="0">validation</stat>
+</tag>
+<suite>
+<stat name="01 Login Auth" id="s1" pass="5" fail="0" skip="0">01 Login Auth</stat>
+</suite>
+</statistics>
+<errors>
+</errors>
+</robot>

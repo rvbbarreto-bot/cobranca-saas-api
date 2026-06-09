@@ -1,5 +1,6 @@
 export type ViaCepResult = {
   logradouro: string;
+  bairro: string;
   localidade: string;
   uf: string;
   erro?: boolean;

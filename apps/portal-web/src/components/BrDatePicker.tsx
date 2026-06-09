@@ -6,6 +6,7 @@ import {
   minDueDateIso,
   parseIsoDateOnly,
   toIsoDateOnly,
+  todayBrazilIso,
   type PortalChargeRules
 } from "../lib/gateway-charge-rules";
 
@@ -67,7 +68,7 @@ export function BrDatePicker({
     () => minIso?.trim() || minDueDateIso(rules),
     [minIso, rules]
   );
-  const todayIso = useMemo(() => toIsoDateOnly(new Date()), []);
+  const todayIso = useMemo(() => todayBrazilIso(), []);
 
   useEffect(() => {
     setText(isoToBrDate(valueIso));

@@ -61,6 +61,8 @@ npm run portal:dev     # Portal :5173
 
 **Não commitar** PEM, `client_secret` nem `.env` com credenciais reais.
 
+**Reset homolog (antes de novo pacote Inter):** `npm run qa:inter-reset-credentials` — ver [INTER_ADERENCIA_PORTAL_DEVELOPERS.md](./INTER_ADERENCIA_PORTAL_DEVELOPERS.md).
+
 ### 3.3 Credenciais Inter (PO fornece ao QA — canal seguro)
 
 Pacote mínimo para sandbox:
@@ -138,7 +140,26 @@ Authorization: Bearer <access_token>
 
 **Esperado:** `credentialFields` com os 4 campos obrigatórios.
 
-### 5.4 Configurar gateway (recomendado: rota dedicada)
+### 5.4 Configurar gateway (recomendado: upload LLD-CERT-001)
+
+**Portal (UI):** `/configuracoes` → aba Gateway → selecionar **Banco Inter** → upload certificado + chave → aguardar validação → **Guardar**.
+
+**API — passo 1 — validar par PEM:**
+
+```http
+POST http://localhost:3333/v1/portal/certificates/validate
+Authorization: Bearer <access_token>
+Content-Type: multipart/form-data
+
+certificate=<arquivo.crt>
+private_key=<arquivo.key>
+```
+
+**Esperado:** `200` com `certificate_id` (UUID), `subject_cn`, `not_after`. **Sem** PEM na resposta.
+
+Smoke automatizado: `npx tsx scripts/cert-upload-e2e-smoke.ts` (evidência em `docs/evidencias/cert-upload-e2e-*.json`).
+
+**API — passo 2 — gravar gateway:**
 
 ```http
 PATCH http://localhost:3333/v1/portal/escritorio/gateway
@@ -149,14 +170,15 @@ Content-Type: application/json
   "gateway_provider": "inter",
   "gateway_credentials": {
     "client_id": "<SANDBOX_CLIENT_ID>",
-    "client_secret": "<SANDBOX_CLIENT_SECRET>",
-    "certificate_pem": "-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----",
-    "private_key_pem": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-  }
+    "client_secret": "<SANDBOX_CLIENT_SECRET>"
+  },
+  "certificate_upload_id": "<uuid-do-passo-1>"
 }
 ```
 
 **Esperado:** `200`, `config.gateway_provider` = `"inter"`, `gateway_credentials_configured` = `true`.
+
+**Alternativa legada (colar PEM no JSON):** incluir `certificate_pem` e `private_key_pem` em `gateway_credentials` (sem `certificate_upload_id`). Preferir upload para homologação nova.
 
 **Alternativa legada:** `PATCH /v1/portal/escritorio/config` com o mesmo corpo + campos opcionais (`razao_social`, etc.).
 
@@ -329,6 +351,7 @@ Gravar em `docs/evidencias/` com nome `INTER_HOMOLOG_YYYYMMDD_<iniciais>.md` (ta
 |--------|---------|
 | GET | `/v1/portal/escritorio/gateway/providers` |
 | GET | `/v1/portal/escritorio/gateway/providers/inter/schema` |
+| POST | `/v1/portal/certificates/validate` |
 | PATCH | `/v1/portal/escritorio/gateway` |
 | PATCH | `/v1/portal/escritorio/config` (legado) |
 | GET | `/v1/portal/escritorio/gateway/history` |

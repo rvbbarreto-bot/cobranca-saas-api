@@ -1,0 +1,23 @@
+{
+  "sprint": 4,
+  "started_at": "2026-06-07T20:24:01.287Z",
+  "finished_at": "2026-06-07T20:24:19.317Z",
+  "tests": [
+    {
+      "file": "tests/fiscal-processamento/processamento-status.test.ts",
+      "status": 0
+    },
+    {
+      "file": "tests/serpro-integra-contador/serpro-mock-client.test.ts",
+      "status": 0
+    },
+    {
+      "file": "tests/fiscal-processamento/sprint4-processamento.integration.test.ts",
+      "status": 0
+    }
+  ],
+  "env": {
+    "FISCAL_GUIAS_ENABLED": true,
+    "FISCAL_SERPRO_MOCK": true
+  }
+}

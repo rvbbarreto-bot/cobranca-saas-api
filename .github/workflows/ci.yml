@@ -67,8 +67,24 @@ jobs:
           FORCE_PROD_ENV_CHECK: "1"
           ALLOW_INSECURE_DATABASE_URL: "1"
 
+      - name: Production env check (fiscal SERPRO live)
+        run: npm run check:prod-env -- --strict
+        env:
+          NODE_ENV: production
+          FORCE_PROD_ENV_CHECK: "1"
+          ALLOW_INSECURE_DATABASE_URL: "1"
+          FISCAL_GUIAS_ENABLED: "true"
+          FISCAL_SERPRO_ENABLED: "true"
+          FISCAL_SERPRO_MOCK: "false"
+          ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
       - name: Unit tests
         run: npm test
+
+      - name: Fiscal SERPRO unit tests (fixtures, mock client)
+        run: npm run test:fiscal-serpro
+        env:
+          FISCAL_SERPRO_MOCK: "true"
 
       - name: Portal web (install + unit tests)
         run: |

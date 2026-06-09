@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { resolveAutomacaoTenantId } from "../../tenancy/resolve-automacao-tenant-id";
+import { getPool } from "../../persistence/pool";
+import { isAutomacaoTenantActive } from "../../../modules/exeq-platform/infrastructure/automacao-tenant-status";
 
 /**
  * Resolve `x-tenant-id` contra `automacao.tenants` (id texto ou slug).
@@ -25,6 +27,16 @@ export async function portalAutomacaoTenantMiddleware(
       res.status(404).json({
         error: "unknown_tenant",
         message: "Tenant nao encontrado em automacao.tenants."
+      });
+      return;
+    }
+
+    const pool = getPool();
+    const active = await isAutomacaoTenantActive(pool, tenantId);
+    if (!active) {
+      res.status(403).json({
+        error: "tenant_inactive",
+        message: "Escritorio inativo. Contate o suporte EXEQ para reativacao."
       });
       return;
     }

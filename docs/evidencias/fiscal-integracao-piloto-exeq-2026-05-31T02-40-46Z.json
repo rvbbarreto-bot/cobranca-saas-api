@@ -1,0 +1,74 @@
+{
+  "reportType": "fiscal_integracao_piloto_exeq",
+  "executedAt": "2026-05-31T02:40:46.000Z",
+  "executedBy": "Time senior multidisciplinar (DevOps + Dev + QA)",
+  "git": {
+    "branch": "feat/sprint-o-completude-cadastro-emissao",
+    "commit": "3d24357"
+  },
+  "integrationProfile": {
+    "name": "Perfil B — Integração HTTP homolog (mock gateway Receita)",
+    "fiscalCaptureStub": false,
+    "receitaDasCaptureUrl": "http://host.docker.internal:19443",
+    "note": "Certificado A1 e procuração REAIS do portal; consulta HTTP ao mock homolog (não é Receita Federal produção)."
+  },
+  "piloto": {
+    "empresa": "EXEQ TECNOLOGIA LTDA",
+    "cnpj": "37229907000137",
+    "portalClienteId": "64219e1e-8488-4d9a-8d9f-b3a902835d1d",
+    "escritorioSlug": "ricardo",
+    "automacaoTenantId": "8",
+    "usuarioReferencia": "ricardo@exeq.com.br",
+    "certificadoValidade": "2026-09-05",
+    "procuracaoProcurador": "32800160888",
+    "procuracaoValidade": "2027-05-31"
+  },
+  "testCase": {
+    "tipoGuia": "DAS",
+    "competencia": "2026-06",
+    "inboxEventId": "e70cbb46-4676-4b4f-b01e-0da6fd1e1732",
+    "inboxHttpStatus": 202,
+    "idempotencyKey": "escritorio:64219e1e-8488-4d9a-8d9f-b3a902835d1d:2026-06:DAS"
+  },
+  "result": {
+    "guiaId": "2922eb7b-f8b1-4099-942c-5598be737e2a",
+    "status": "DISPONIVEL",
+    "valorPrincipal": "187.00",
+    "valorTotal": "187.00",
+    "dataVencimento": "2026-06-20",
+    "complianceStatus": "aprovado",
+    "pdfStorageKey": "fiscal/8/2922eb7b-f8b1-4099-942c-5598be737e2a/v1.pdf",
+    "pdfUrl": "file://local/fiscal/8/2922eb7b-f8b1-4099-942c-5598be737e2a/v1.pdf",
+    "pdfBytesInContainer": 45,
+    "processingMsApprox": 89
+  },
+  "valorReferencia": {
+    "explicacao": "Mock gateway calcula valor = 150 + (últimos 2 dígitos CNPJ mod 50). CNPJ ...37 → 150+37=187. Stub fixo seria 150,00 — confirma fluxo HTTP com certificado.",
+    "valorEsperadoMock": 187,
+    "valorStubAnterior": 150
+  },
+  "auditTrail": [
+    { "action": "capture_requested", "at": "2026-05-31T02:40:45.951Z" },
+    { "action": "guia_disponibilizada", "at": "2026-05-31T02:40:46.040Z", "pdf": true }
+  ],
+  "assertions": [
+    { "name": "api_health_ready", "ok": true },
+    { "name": "mock_gateway_listening_19443", "ok": true },
+    { "name": "stub_desligado", "ok": true },
+    { "name": "certificado_ativo_piloto", "ok": true },
+    { "name": "procuracao_ativa_piloto", "ok": true },
+    { "name": "inbox_aceito_202", "ok": true },
+    { "name": "guia_disponivel", "ok": true },
+    { "name": "valor_via_gateway_nao_stub", "ok": true, "detail": "187.00 != 150.00" },
+    { "name": "pdf_persistido", "ok": true },
+    { "name": "audit_capture_e_disponibilizada", "ok": true },
+    { "name": "receita_federal_producao", "ok": false, "detail": "Fora de escopo deste run — aguarda URL gateway real Exeq" }
+  ],
+  "overallStatus": "APROVADO_HOMOLOG_INTEGRACAO_HTTP",
+  "blockersProducao": [
+    "URL gateway Receita homolog/produção (RECEITA_DAS_CAPTURE_URL oficial)",
+    "Validação contador: valor vs e-CAC/PGDAS",
+    "WhatsApp Z-API (opcional)",
+    "Armazenamento PDF S3 em produção (opcional)"
+  ]
+}

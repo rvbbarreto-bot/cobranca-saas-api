@@ -89,13 +89,14 @@ describe.skipIf(!hasDb)("Sprint 3 — fluxo ponta a ponta (integracao)", () => {
     const seed = await runSeedPortalHappyPath(process.env.DATABASE_URL!.trim());
     automacaoTenantId = seed.automacaoTenantId;
 
+    // escritorio_config e portal.cliente usam o tenant de automacao (ex.: "1"), nao o UUID publico.
     await withTenantTransaction(DEMO_PUBLIC_TENANT_UUID, async (client) => {
-      await upsertEscritorioAsaasConfig(client, DEMO_PUBLIC_TENANT_UUID, "fake-asaas-key-for-e2e");
+      await upsertEscritorioAsaasConfig(client, automacaoTenantId, "fake-asaas-key-for-e2e");
       await client.query(
         `INSERT INTO escritorio_config (tenant_id, razao_social)
          VALUES ($1, $2)
          ON CONFLICT (tenant_id) DO UPDATE SET razao_social = EXCLUDED.razao_social`,
-        [DEMO_PUBLIC_TENANT_UUID, "Escritorio Demo E2E"]
+        [automacaoTenantId, "Escritorio Demo E2E"]
       );
     });
 

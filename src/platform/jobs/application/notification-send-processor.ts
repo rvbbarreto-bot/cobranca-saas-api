@@ -1,4 +1,5 @@
 import { UnrecoverableError } from "bullmq";
+import { formatTipoGuiaForNotification } from "../../../modules/fiscal-guias/domain/tipo-guia-label";
 import type { PoolClient } from "pg";
 import type { NotificationAdapter } from "../../../modules/notifications/domain/notification.interface";
 import { NotificationError } from "../../../modules/notifications/domain/notification-error";
@@ -229,12 +230,120 @@ async function processMagicLinkNotification(
   });
 }
 
+async function processGuiaDisponivelNotification(
+  data: NotificationSendJobPayload,
+  deps: NotificationSendProcessorDeps
+): Promise<void> {
+  const withTenant = deps.withTenant ?? withTenantTransaction;
+  const zapi = deps.zapiAdapter ?? new ZapiAdapter();
+  const meta = data.metadata ?? {};
+  const guiaId = meta.guia_id?.trim();
+  const portalClienteId = meta.portal_cliente_id?.trim();
+  if (!guiaId || !portalClienteId) {
+    throw new UnrecoverableError("guia_disponivel_metadata_invalid");
+  }
+
+  await withTenant(data.tenantId, async (client) => {
+    const ctxR = await client.query<{
+      cliente_nome: string;
+      cliente_telefone: string | null;
+      opt_in_whatsapp: boolean;
+      razao_social: string | null;
+      tipo_guia: string;
+      competencia: string;
+      valor_total: string;
+      data_vencimento: string | null;
+      linha_digitavel: string | null;
+      pdf_url: string | null;
+    }>(
+      `SELECT
+         cli.nome AS cliente_nome,
+         cli.telefone AS cliente_telefone,
+         cli.opt_in_whatsapp,
+         ec.razao_social,
+         g.tipo_guia,
+         g.competencia,
+         g.valor_total::text AS valor_total,
+         g.data_vencimento::text AS data_vencimento,
+         g.linha_digitavel,
+         g.pdf_url
+       FROM fiscal.guia_fiscal g
+       INNER JOIN portal.cliente cli
+         ON cli.id = g.portal_cliente_id AND cli.tenant_id = g.tenant_id
+       LEFT JOIN escritorio_config ec ON ec.tenant_id = g.tenant_id
+       WHERE g.id = $1::uuid AND g.tenant_id = $2 AND g.status = 'DISPONIVEL'
+       LIMIT 1`,
+      [guiaId, data.tenantId]
+    );
+    const ctx = ctxR.rows[0];
+    if (!ctx) {
+      throw new UnrecoverableError("guia_fiscal_not_found");
+    }
+
+    if (!ctx.opt_in_whatsapp || !ctx.cliente_telefone?.trim()) {
+      return;
+    }
+
+    const tpl = await loadTemplate(client, data.tenantId, "guia.disponivel", "whatsapp");
+    if (!tpl) {
+      return;
+    }
+
+    const vars: Record<string, string> = {
+      nome: ctx.cliente_nome,
+      tipo_guia: formatTipoGuiaForNotification(ctx.tipo_guia),
+      competencia: ctx.competencia,
+      valor: formatCurrency(ctx.valor_total),
+      data_vencimento: formatDate(ctx.data_vencimento),
+      linha_digitavel: ctx.linha_digitavel ?? "",
+      pdf_url: ctx.pdf_url ?? "",
+      escritorio_nome: ctx.razao_social ?? "Escritório"
+    };
+
+    const message = renderTemplate(tpl.body_template, vars);
+    const recipient = ctx.cliente_telefone.trim();
+    try {
+      const result = await zapi.sendWhatsApp({
+        phone: limparTelefone(recipient),
+        message
+      });
+      await insertCommunicationEvent(client, {
+        tenantId: data.tenantId,
+        chargeId: null,
+        channel: "whatsapp",
+        eventType: "guia.disponivel",
+        recipient,
+        status: "sent",
+        providerMessageId: result.messageId
+      });
+    } catch (error: unknown) {
+      if (error instanceof NotificationError) {
+        await insertCommunicationEvent(client, {
+          tenantId: data.tenantId,
+          chargeId: null,
+          channel: "whatsapp",
+          eventType: "guia.disponivel",
+          recipient,
+          status: "failed",
+          errorMessage: error.message
+        });
+      }
+      throw error;
+    }
+  });
+}
+
 export async function processNotificationSend(
   data: NotificationSendJobPayload,
   deps: NotificationSendProcessorDeps = {}
 ): Promise<void> {
   if (data.eventType === "magic_link") {
     await processMagicLinkNotification(data, deps);
+    return;
+  }
+
+  if (data.eventType === "guia.disponivel") {
+    await processGuiaDisponivelNotification(data, deps);
     return;
   }
 

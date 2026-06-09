@@ -11,9 +11,16 @@ Projeto_CobrancaBoleto_v2/
 .cursor/
 
 # Robot / evidências locais
+tests/robot/.venv/
+tests/robot/**/__pycache__/
+tests/robot/reports/robot-output/
 tests/robot/evidence/screenshots/*
 !tests/robot/evidence/screenshots/.gitkeep
 tests/robot/reports/*.html
+
+# Pacote PEM Inter para QA local (gerado por scripts/generate-qa-inter-pem-bundle.ts)
+data/qa-inter-credentials/*
+!data/qa-inter-credentials/.gitkeep
 
 # Secrets e overrides locais (nunca commitar)
 secrets/

@@ -6,6 +6,21 @@
 
 > **Aviso:** O portal [developers.inter.co](https://developers.inter.co/) e o Internet Banking podem alterar rótulos de menu. Se um passo não bater com a UI atual, use a busca do portal por **“Nova integração”**, **“Gestão de aplicações”** ou **“Cobrança”** e registe a divergência no bug/evidência.
 
+### 0. Reset antes de configurar novas chaves (Tech Lead / DBA)
+
+Sempre que o PO rotacionar **client_secret** ou baixar **novo certificado**, limpar credenciais antigas para evitar mistura de apps (`unknown_ca`):
+
+```powershell
+# Postgres + .env com DATABASE_URL; opcional REDIS_URL
+npm run qa:inter-reset-credentials
+```
+
+Isso zera `escritorio_config` (gateway cifrado), apaga `gateway_change_log` e remove cache Redis `gw_token:inter:*`.
+
+**Onde as chaves NÃO ficam:** `.env` da API (só `ENCRYPTION_KEY` para cifrar o banco), `localStorage` do portal (só JWT de sessão). Credenciais Inter vão **somente** em `escritorio_config` após PATCH do portal.
+
+**Aderência vs documentação Inter:** [INTER_ADERENCIA_PORTAL_DEVELOPERS.md](./INTER_ADERENCIA_PORTAL_DEVELOPERS.md)
+
 ---
 
 ## 0. Mapa mental (o que você vai fazer)
@@ -97,7 +112,16 @@ Detalhe técnico de payloads: [ESTUDO_APIS_BANCARIAS.md](../Projeto_CobrancaBole
 
 O portal SaaS espera **texto PEM colado** nos campos, não upload de ficheiro.
 
-**Windows (PowerShell) — exemplo:**
+**Conferir OU = Client ID (PowerShell — uma linha, evita REPL do Node):**
+
+```powershell
+cd "c:\Users\riica\OneDrive\Empresas Ricardo\Exeq\Projeto_CobrancaBoleto_v2\cobranca-saas-api"
+npm run qa:inter-check-cert-ou -- "C:\Users\riica\Downloads\Inter_API_4b8fb3b0\Inter API_Certificado.crt"
+```
+
+Esperado: `Resultado: OK`. Exit code `0`. Com outro `client_id`: acrescente o UUID como 2º argumento.
+
+**Windows (PowerShell) — copiar PEM para o portal:**
 
 ```powershell
 Get-Content -Raw "C:\Downloads\Inter_API_Certificado.crt"

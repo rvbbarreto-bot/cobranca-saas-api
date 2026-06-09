@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import type { PoolClient } from "pg";
+import { PortalEmissionNotReadyError } from "../../src/modules/portal-read/application/assert-portal-charge-emission-ready";
 import { reprocessPortalChargeEmissionUseCase } from "../../src/modules/portal-read/application/reprocess-portal-charge-emission";
 
 const getChargeById = vi.fn();
@@ -25,6 +26,19 @@ vi.mock("../../src/platform/jobs/enqueue-payment-emission", () => ({
   schedulePaymentEmissionJob: (...args: unknown[]) => schedulePaymentEmissionJob(...args)
 }));
 
+const assertPortalChargeEmissionReady = vi.fn();
+
+vi.mock("../../src/modules/portal-read/application/assert-portal-charge-emission-ready", () => ({
+  assertPortalChargeEmissionReady: (...args: unknown[]) => assertPortalChargeEmissionReady(...args),
+  PortalEmissionNotReadyError: class PortalEmissionNotReadyError extends Error {
+    issues: Array<{ path: string; message: string }>;
+    constructor(issues: Array<{ path: string; message: string }>) {
+      super(issues[0]?.message ?? "not ready");
+      this.issues = issues;
+    }
+  }
+}));
+
 const sampleCharge = {
   id: "c1",
   tenantId: "t1",
@@ -47,6 +61,7 @@ describe("reprocessPortalChargeEmissionUseCase", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    assertPortalChargeEmissionReady.mockResolvedValue(undefined);
   });
 
   it("volta erro_emissao para rascunho, registra evento e agenda job", async () => {
@@ -54,7 +69,7 @@ describe("reprocessPortalChargeEmissionUseCase", () => {
       .mockResolvedValueOnce(sampleCharge)
       .mockResolvedValueOnce({ ...sampleCharge, canonicalStatus: "rascunho" });
 
-    const out = await reprocessPortalChargeEmissionUseCase(client, "c1", { userId: "u1" });
+    const out = await reprocessPortalChargeEmissionUseCase(client, "auto-1", "c1", { userId: "u1" });
     expect(out.ok).toBe(true);
     if (out.ok) {
       expect(out.charge.canonicalStatus).toBe("rascunho");
@@ -78,7 +93,7 @@ describe("reprocessPortalChargeEmissionUseCase", () => {
   it("rejeita status diferente de erro_emissao/rascunho", async () => {
     getChargeById.mockResolvedValue({ ...sampleCharge, canonicalStatus: "emitida" });
 
-    const out = await reprocessPortalChargeEmissionUseCase(client, "c1");
+    const out = await reprocessPortalChargeEmissionUseCase(client, "auto-1", "c1");
     expect(out).toEqual({ ok: false, kind: "illegal_status", status: "emitida" });
     expect(client.query).not.toHaveBeenCalled();
   });
@@ -88,7 +103,7 @@ describe("reprocessPortalChargeEmissionUseCase", () => {
     getChargeById.mockResolvedValue(stale);
     getChargeWithLatestPayment.mockResolvedValue({ charge: stale, payment: null });
 
-    const out = await reprocessPortalChargeEmissionUseCase(client, "c1", { userId: "u1" });
+    const out = await reprocessPortalChargeEmissionUseCase(client, "auto-1", "c1", { userId: "u1" });
 
     expect(out.ok).toBe(true);
     if (out.ok) {
@@ -117,8 +132,36 @@ describe("reprocessPortalChargeEmissionUseCase", () => {
       payment: { type: "boleto" }
     });
 
-    const out = await reprocessPortalChargeEmissionUseCase(client, "c1");
+    const out = await reprocessPortalChargeEmissionUseCase(client, "auto-1", "c1");
     expect(out).toEqual({ ok: false, kind: "illegal_status", status: "rascunho" });
+    expect(schedulePaymentEmissionJob).not.toHaveBeenCalled();
+  });
+
+  it("rejeita reprocesso quando emissao nao esta pronta (endereco)", async () => {
+    getChargeById.mockResolvedValue({
+      ...sampleCharge,
+      metadata: { portal_cliente_id: "cli-1" }
+    });
+    assertPortalChargeEmissionReady.mockRejectedValue(
+      new PortalEmissionNotReadyError([
+        {
+          path: "portal_cliente_id",
+          message: "Banco Inter exige endereco completo do cliente (CEP, logradouro, bairro, cidade e UF)."
+        }
+      ])
+    );
+
+    const out = await reprocessPortalChargeEmissionUseCase(client, "auto-1", "c1");
+    expect(out).toEqual({
+      ok: false,
+      kind: "validation_error",
+      issues: [
+        {
+          path: "portal_cliente_id",
+          message: "Banco Inter exige endereco completo do cliente (CEP, logradouro, bairro, cidade e UF)."
+        }
+      ]
+    });
     expect(schedulePaymentEmissionJob).not.toHaveBeenCalled();
   });
 
@@ -131,7 +174,7 @@ describe("reprocessPortalChargeEmissionUseCase", () => {
     getChargeById.mockResolvedValue(fresh);
     getChargeWithLatestPayment.mockResolvedValue({ charge: fresh, payment: null });
 
-    const out = await reprocessPortalChargeEmissionUseCase(client, "c1");
+    const out = await reprocessPortalChargeEmissionUseCase(client, "auto-1", "c1");
     expect(out).toEqual({ ok: false, kind: "illegal_status", status: "rascunho" });
     expect(schedulePaymentEmissionJob).not.toHaveBeenCalled();
   });

@@ -1,0 +1,57 @@
+{
+  "ran_at": "2026-06-06T19:45:03.925Z",
+  "results": [
+    {
+      "id": "HEALTH",
+      "ok": true,
+      "detail": "ready status=ok"
+    },
+    {
+      "id": "PEM-LOCAL",
+      "ok": true,
+      "detail": "Par cert+chave OK (pacote QA)"
+    },
+    {
+      "id": "AUTH",
+      "ok": true,
+      "detail": "login_kind=portal tenant=1"
+    },
+    {
+      "id": "INT-01",
+      "ok": true,
+      "detail": "inter enabled=true"
+    },
+    {
+      "id": "INT-02",
+      "ok": true,
+      "detail": "campos=client_id,client_secret,certificate_pem,private_key_pem"
+    },
+    {
+      "id": "INT-03",
+      "ok": true,
+      "detail": "provider=inter configured=true"
+    },
+    {
+      "id": "INT-04",
+      "ok": true,
+      "detail": "resposta mascarada"
+    },
+    {
+      "id": "INT-05a",
+      "ok": true,
+      "detail": "charge=c4184af8-f2af-4d71-9dfb-c19800528c17 status=rascunho"
+    },
+    {
+      "id": "INT-05b",
+      "ok": false,
+      "detail": "getaddrinfo EAI_AGAIN cdpj-sandbox.partners.uatinter.co"
+    },
+    {
+      "id": "INT-06",
+      "ok": false,
+      "detail": "payment=false provider=null"
+    }
+  ],
+  "charge_id": "c4184af8-f2af-4d71-9dfb-c19800528c17",
+  "lastErr": "getaddrinfo EAI_AGAIN cdpj-sandbox.partners.uatinter.co"
+}
