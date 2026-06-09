@@ -595,7 +595,9 @@ async function postProcessamentosHttp(req: Request, res: Response): Promise<void
   try {
     const result = await createProcessamentosFromIngestUseCase({
       automacaoTenantId: tenantId,
-      fiscalIngestId
+      fiscalIngestId,
+      correlationId: req.correlationId,
+      userId: req.authContext?.userId
     });
     if (!result.ok) {
       if (result.kind === "ingest_not_found") {

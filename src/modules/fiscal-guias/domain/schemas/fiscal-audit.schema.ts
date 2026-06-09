@@ -12,7 +12,10 @@ export const FISCAL_AUDIT_ACTIONS = [
   "capture_requested",
   "capture_failed",
   "certificado_expirando",
-  "procuracao_validada_serpro"
+  "procuracao_validada_serpro",
+  "apuracao_iniciada",
+  "transmitida",
+  "erro_serpro"
 ] as const satisfies readonly FiscalAuditAction[];
 
 export const listFiscalAuditQuerySchema = z.object({
