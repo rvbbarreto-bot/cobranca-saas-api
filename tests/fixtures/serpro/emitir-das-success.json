@@ -1,0 +1,12 @@
+{
+  "mock": true,
+  "operacao": "Emitir",
+  "servico": "GERARDAS12",
+  "protocolo": "FIXTURE-DAS-202605-00000000000191",
+  "linhaDigitavel": "85800000000150012340201234567890123456789012345",
+  "valorPrincipal": 150,
+  "valorMulta": 0,
+  "valorJuros": 0,
+  "dataVencimento": "2026-06-20",
+  "pdfBase64": "JVBERi0xLjQgbW9jayBkYXMgZml4dHVyZQ=="
+}
