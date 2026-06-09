@@ -7,5 +7,9 @@ export function isSerproMockEnabled(): boolean {
 
 export function isFiscalSerproEnabled(): boolean {
   const raw = process.env.FISCAL_SERPRO_ENABLED?.trim().toLowerCase();
-  return raw === "true" || raw === "1";
+  if (raw === "false" || raw === "0") return false;
+  if (raw === "true" || raw === "1") return true;
+  // Omitido: herda FISCAL_GUIAS_ENABLED (dev/CI). Rollback operacional = FISCAL_SERPRO_ENABLED=false.
+  const guias = process.env.FISCAL_GUIAS_ENABLED?.trim().toLowerCase();
+  return guias === "true" || guias === "1";
 }

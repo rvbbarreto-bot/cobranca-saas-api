@@ -1,4 +1,5 @@
 import { isFiscalGuiasEnabled } from "../config/fiscal-guias-enabled";
+import { isFiscalSerproEnabled } from "../config/fiscal-serpro-enabled";
 import { isJobsEnabled } from "./redis-connection";
 import { getQueues, QUEUE_SERPRO_RECIBO } from "./queues";
 import {
@@ -14,7 +15,7 @@ const jobOpts = {
 };
 
 export async function enqueueSerproReciboJob(payload: SerproReciboJobPayload): Promise<void> {
-  if (!isFiscalGuiasEnabled()) return;
+  if (!isFiscalGuiasEnabled() || !isFiscalSerproEnabled()) return;
   if (!isJobsEnabled()) {
     await processSerproReciboJob(payload);
     return;

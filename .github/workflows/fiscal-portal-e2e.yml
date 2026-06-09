@@ -39,6 +39,7 @@ jobs:
       WEBHOOK_INBOX_SECRET: "whsec_ci_example_min_32_chars____________"
       ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
       FISCAL_GUIAS_ENABLED: "true"
+      FISCAL_SERPRO_ENABLED: "true"
       FISCAL_SERPRO_MOCK: "true"
       FISCAL_SERPRO_REQUIRE_PROCURACAO: "false"
       # Jobs inline (sem fila) — pipeline SERPRO mock completa na mesma requisição.
