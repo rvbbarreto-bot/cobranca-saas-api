@@ -12,6 +12,7 @@ import { NotasFiscaisPage } from "./pages/NotasFiscaisPage";
 import { GuiasFiscaisPage } from "./pages/GuiasFiscaisPage";
 import { GuiaFiscalDetalhePage } from "./pages/GuiaFiscalDetalhePage";
 import { ProcessamentosFiscaisPage } from "./pages/ProcessamentosFiscaisPage";
+import { FiscalDashboardPage } from "./pages/FiscalDashboardPage";
 import { ProcessamentoDetalhePage } from "./pages/ProcessamentoDetalhePage";
 import { ImportPgdasdPage } from "./pages/ImportPgdasdPage";
 import { ClientesPage } from "./pages/ClientesPage";
@@ -83,6 +84,8 @@ export function App(): JSX.Element {
                 <Route path="/notas-fiscais" element={<NotasFiscaisPage />} />
                 <Route path="/guias-fiscais" element={<GuiasFiscaisPage />} />
                 <Route path="/guias-fiscais/:guiaId" element={<GuiaFiscalDetalhePage />} />
+                <Route path="/fiscal/dashboard" element={<FiscalDashboardPage />} />
+                <Route path="/fiscal" element={<FiscalDashboardPage />} />
                 <Route path="/processamentos-fiscais" element={<ProcessamentosFiscaisPage />} />
                 <Route path="/processamentos-fiscais/importar" element={<ImportPgdasdPage />} />
                 <Route path="/processamentos-fiscais/:processamentoId" element={<ProcessamentoDetalhePage />} />

@@ -2,6 +2,8 @@
 
 **Sem secrets neste arquivo.** Credenciais em vault local / `.env` não commitado.
 
+Go-live produção: [FISC-001_SERPRO_CREDENCIAIS_LIVE.md](./FISC-001_SERPRO_CREDENCIAIS_LIVE.md)
+
 ---
 
 ## 1. Pré-requisitos comerciais

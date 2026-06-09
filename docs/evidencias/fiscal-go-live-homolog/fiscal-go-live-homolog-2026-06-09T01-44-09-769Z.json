@@ -1,0 +1,12 @@
+{
+  "issue": "EXEQ-FISC-095",
+  "gate": "homolog-pre-go-live",
+  "started_at": "2026-06-09T01:44:09.769Z",
+  "finished_at": "2026-06-09T01:44:38.678Z",
+  "steps": [
+    "npm run migrate",
+    "npm run verify:sprint10"
+  ],
+  "checklist": "docs/FISCAL_GO_LIVE_CHECKLIST.md",
+  "note": "Assinaturas PO/Tech Lead/DevOps permanecem manuais na secao 6."
+}

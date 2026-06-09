@@ -2018,6 +2018,44 @@ export type ProcessamentoEventoRow = {
   created_at: string;
 };
 
+export type FiscalDashboardResponse = {
+  competencia_atual: string;
+  kpis: {
+    processamentos_mes: number;
+    erros_abertos: number;
+    certificados_expirando: number;
+  };
+  ultimos_processamentos: ProcessamentoFiscalRow[];
+  certificados_expirando: Array<{
+    id: string;
+    portal_cliente_id: string | null;
+    label: string;
+    valid_until: string;
+    status: string;
+    days_left: number;
+  }>;
+};
+
+export async function fetchFiscalDashboard(): Promise<FiscalDashboardResponse> {
+  const res = await apiFetch("/v1/portal/fiscal/dashboard", { method: "GET" });
+  return parseJsonResponse(res, (json) => {
+    const o = json as FiscalDashboardResponse;
+    if (!o.kpis || typeof o.competencia_atual !== "string") {
+      throw new ApiError("Formato inesperado: dashboard fiscal ausente", res.status, json);
+    }
+    return {
+      competencia_atual: o.competencia_atual,
+      kpis: {
+        processamentos_mes: Number(o.kpis.processamentos_mes ?? 0),
+        erros_abertos: Number(o.kpis.erros_abertos ?? 0),
+        certificados_expirando: Number(o.kpis.certificados_expirando ?? 0)
+      },
+      ultimos_processamentos: o.ultimos_processamentos ?? [],
+      certificados_expirando: o.certificados_expirando ?? []
+    };
+  });
+}
+
 export async function fetchProcessamentosFiscais(): Promise<{ processamentos: ProcessamentoFiscalRow[] }> {
   const res = await apiFetch("/v1/portal/fiscal/processamentos", { method: "GET" });
   return parseJsonResponse(res, (json) => {

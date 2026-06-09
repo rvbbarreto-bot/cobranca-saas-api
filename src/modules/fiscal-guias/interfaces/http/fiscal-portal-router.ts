@@ -32,6 +32,7 @@ import {
   listPortalProcessamentosUseCase
 } from "../../../fiscal-processamento/application/portal-processamentos-read";
 import { getPortalProcessamentoReciboUrlUseCase } from "../../../fiscal-processamento/application/get-portal-processamento-recibo-url";
+import { getPortalFiscalDashboardUseCase } from "../../../fiscal-processamento/application/get-portal-fiscal-dashboard";
 import { listPortalExpiringCertificatesUseCase } from "../../application/list-portal-expiring-certificates";
 import { validarProcuracaoSerproUseCase } from "../../application/validar-procuracao-serpro";
 import { getPortalClienteCnpj } from "../../infrastructure/certificado-digital-repository";
@@ -860,12 +861,39 @@ async function listFiscalAuditHttp(req: Request, res: Response): Promise<void> {
   }
 }
 
+async function getFiscalDashboardHttp(req: Request, res: Response): Promise<void> {
+  if (!isEscritorioStaff(req)) {
+    res.status(403).json({
+      error: "portal_forbidden",
+      message: "Apenas admin_escritorio ou operador podem consultar o dashboard fiscal."
+    });
+    return;
+  }
+
+  const tenantId = req.tenantContext?.tenantId;
+  if (!tenantId) {
+    res.status(400).json({ error: "invalid_tenant", message: "Tenant obrigatorio." });
+    return;
+  }
+
+  try {
+    const dashboard = await getPortalFiscalDashboardUseCase(tenantId);
+    res.json(dashboard);
+  } catch (error: unknown) {
+    if (respondFiscalSchemaError(res, error)) {
+      return;
+    }
+    throw error;
+  }
+}
+
 /**
  * Rotas portal fiscal — montadas em `/v1/portal/fiscal` quando FISCAL_GUIAS_ENABLED=true.
  * Middlewares portal (tenant, JWT, membership) aplicados pelo router pai.
  */
 export function createFiscalPortalRouter(): Router {
   const router = Router();
+  router.get("/dashboard", asyncHandler(getFiscalDashboardHttp));
   router.get("/guias", asyncHandler(listGuiasFiscaisHttp));
   router.get("/guias/:guiaId", asyncHandler(getGuiaFiscalHttp));
   router.get("/guias/:guiaId/pdf-url", asyncHandler(getGuiaFiscalPdfUrlHttp));

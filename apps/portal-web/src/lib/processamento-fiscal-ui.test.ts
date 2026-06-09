@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterProcessamentoRows,
   formatProcessamentoEventoLabel,
+  formatCompetenciaLabel,
   getTransmissionStepStates,
   groupProcessamentosByErro,
   processamentoErroHelp,
@@ -105,5 +106,10 @@ describe("processamento-fiscal-ui (EXEQ-FISC-074)", () => {
 
   it("traduz DAS_FALHOU", () => {
     expect(processamentoErroHelp("DAS_FALHOU").titulo).toContain("DAS");
+  });
+
+  it("formata competência YYYY-MM", () => {
+    expect(formatCompetenciaLabel("2026-05")).toBe("Maio/2026");
+    expect(formatCompetenciaLabel("invalid")).toBe("invalid");
   });
 });
