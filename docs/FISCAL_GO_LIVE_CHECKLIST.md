@@ -48,9 +48,10 @@ Ordem de rollback (efeito imediato):
 
 ```powershell
 npm run verify:sprint10
+npm run verify:fiscal-go-live-homolog
 ```
 
-- [ ] `fiscal-go-live-hardening.integration.test.ts` verde
+- [x] `fiscal-go-live-hardening.integration.test.ts` verde (`verify:sprint10`)
 - [ ] Rollback simulado em homolog (passos 1–2) documentado em evidência
 
 **Revisão DevOps:** _________________ Data: _______
@@ -59,7 +60,7 @@ npm run verify:sprint10
 
 ## 4. Pipeline e observabilidade
 
-- [ ] Migrações aplicadas (`npm run migrate`) incl. `035_processamento_fiscal.sql`
+- [x] Migrações aplicadas (`npm run migrate`) incl. `035_processamento_fiscal.sql` — gate `verify:fiscal-go-live-homolog`
 - [ ] Workers BullMQ fiscal ativos (`ENABLE_BULLMQ_WORKERS=true` em prod)
 - [ ] `GET /v1/admin/metrics/fiscal-sli` acessível (admin)
 - [ ] Filas monitoradas: `fiscal-ingest-validate`, `fiscal-serpro-transmit`, `fiscal-serpro-recibo`, `fiscal-serpro-emit-das`
@@ -74,7 +75,9 @@ npm run verify:sprint10
 - [ ] `npm run fiscal:serpro:homolog:e2e` — pipeline mock/live
 - [ ] Playwright `fiscal-portal-e2e.yml` verde (upload → stepper → recibo/DAS)
 - [ ] Certificado A1 + procuração SERPRO validados no tenant piloto
-- [ ] Evidência JSON arquivada em `docs/evidencias/`
+- [x] Evidência JSON arquivada em `docs/evidencias/` — `verify:fiscal-go-live-homolog` + sprint10
+
+**Credenciais live (PO):** [FISC-001_SERPRO_CREDENCIAIS_LIVE.md](./FISC-001_SERPRO_CREDENCIAIS_LIVE.md) + `npm run verify:fisc-001`
 
 **Revisão QA:** _________________ Data: _______
 

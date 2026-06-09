@@ -174,6 +174,54 @@ export async function getProcessamentoById(
   }
 }
 
+export type ProcessamentoDashboardStats = {
+  competenciaAtual: string;
+  processamentosMes: number;
+  errosAbertos: number;
+  ultimosProcessamentos: ProcessamentoFiscalRow[];
+};
+
+export function currentCompetenciaRef(asOf = new Date()): string {
+  const y = asOf.getFullYear();
+  const m = String(asOf.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+export async function getProcessamentoDashboardStats(
+  db: Pool | PoolClient,
+  automacaoTenantId: string,
+  competenciaAtual = currentCompetenciaRef()
+): Promise<ProcessamentoDashboardStats> {
+  try {
+    const counts = await db.query<{ processamentos_mes: string; erros_abertos: string }>(
+      `SELECT
+         COUNT(*) FILTER (WHERE competencia = $2)::text AS processamentos_mes,
+         COUNT(*) FILTER (WHERE status = 'ERRO')::text AS erros_abertos
+       FROM fiscal.processamento_fiscal
+       WHERE automacao_tenant_id = $1`,
+      [automacaoTenantId, competenciaAtual]
+    );
+    const row = counts.rows[0];
+    const recent = await db.query(
+      `SELECT ${PROC_SELECT_COLS}
+       FROM fiscal.processamento_fiscal
+       WHERE automacao_tenant_id = $1
+       ORDER BY created_at DESC
+       LIMIT 5`,
+      [automacaoTenantId]
+    );
+    return {
+      competenciaAtual,
+      processamentosMes: Number(row?.processamentos_mes ?? 0),
+      errosAbertos: Number(row?.erros_abertos ?? 0),
+      ultimosProcessamentos: recent.rows.map(mapProc)
+    };
+  } catch (error: unknown) {
+    rethrowFiscalSchemaError(error);
+    throw error;
+  }
+}
+
 export async function listProcessamentosForTenant(
   db: Pool | PoolClient,
   automacaoTenantId: string,

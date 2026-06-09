@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { PageErrorBoundary } from "../components/PageErrorBoundary";
 import { useAuth } from "../hooks/useAuth";
@@ -16,7 +17,12 @@ export function AppShell(): JSX.Element {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const [navOpen, setNavOpen] = useState(false);
   const me = useQuery({ queryKey: ["portalMe"], queryFn: fetchPortalMe, staleTime: 60_000 });
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
 
   const displayName = me.data?.user.full_name?.trim() || me.data?.user.email || sessionEmail || "—";
   const roleLabel = me.data?.user.membership_role ?? "—";
@@ -29,8 +35,16 @@ export function AppShell(): JSX.Element {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
+    <div className={`app-shell${navOpen ? " app-shell--nav-open" : ""}`}>
+      {navOpen ? (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Fechar menu"
+          onClick={() => setNavOpen(false)}
+        />
+      ) : null}
+      <aside className={`sidebar${navOpen ? " sidebar--open" : ""}`}>
         <div className="sidebar__brand">
           <div className="sidebar__logo">EXEQ</div>
           <div className="sidebar__tag">Cobrança & Boletos</div>
@@ -65,6 +79,15 @@ export function AppShell(): JSX.Element {
       </aside>
       <div className="shell-main">
         <header className="shell-header">
+          <button
+            type="button"
+            className="shell-nav-toggle"
+            aria-expanded={navOpen}
+            aria-label={navOpen ? "Fechar menu" : "Abrir menu"}
+            onClick={() => setNavOpen((open) => !open)}
+          >
+            Menu
+          </button>
           <div className="shell-header__brand">
             <h1 className="shell-header__title">Portal SaaS de Cobrança</h1>
             <span className="shell-header__meta-inline">multiempresa · acesso restrito · rastreabilidade</span>

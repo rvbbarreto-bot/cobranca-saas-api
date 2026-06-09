@@ -73,6 +73,30 @@ export function processamentoStatusLabel(status: string): string {
   return STATUS_LABEL[status as ProcessamentoStatus] ?? status;
 }
 
+const MESES_PT = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro"
+];
+
+/** Competência YYYY-MM → "Maio/2026" (EXEQ-FISC-071). */
+export function formatCompetenciaLabel(competencia: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(competencia.trim());
+  if (!m) return competencia;
+  const monthIdx = Number(m[2]) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return competencia;
+  return `${MESES_PT[monthIdx]}/${m[1]}`;
+}
+
 export function processamentoStatusPillClass(status: string): string {
   return STATUS_PILL[status as ProcessamentoStatus] ?? "status-pill--pendente";
 }

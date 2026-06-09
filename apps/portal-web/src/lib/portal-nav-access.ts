@@ -29,6 +29,12 @@ export const PORTAL_NAV_ITEMS: PortalNavItem[] = [
   ...(isFiscalGuiasNavEnabled()
     ? [
         {
+          to: "/fiscal/dashboard",
+          label: "Dashboard fiscal",
+          roles: ["admin_escritorio", "operador"] as PortalStaffRole[],
+          module: "fiscal_guias" as PortalModuleKey
+        },
+        {
           to: "/processamentos-fiscais/importar",
           label: "Importar PGDASD",
           roles: ["admin_escritorio", "operador"] as PortalStaffRole[],
