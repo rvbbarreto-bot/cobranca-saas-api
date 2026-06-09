@@ -193,7 +193,7 @@ export async function processFiscalCaptureJob(
     await failCapture(
       guiaId,
       data.automacaoTenantId,
-      "RECEITA_DAS_CAPTURE_URL nao configurada.",
+      "Gateway Receita indisponivel (RECEITA_DAS_CAPTURE_URL ou RECEITA_GATEWAY_PROVIDER=mock).",
       "receita_url_missing"
     );
     return;

@@ -6,6 +6,7 @@ import {
 } from "../../src/modules/payment-gateway/application/get-gateway-for-tenant";
 import type { PaymentGatewayAdapter } from "../../src/modules/payment-gateway/domain/payment-gateway.interface";
 import { TEST_INTER_GATEWAY_CREDENTIALS } from "../fixtures/mtls-test-pem";
+import { sanitizePemPaste } from "../../src/platform/payment-gateway/mtls-credential-validation";
 
 function mockClient(row: Record<string, unknown> | null): PoolClient {
   return {
@@ -48,7 +49,11 @@ describe("getGatewayForTenant", () => {
 
   it("carrega Inter com JSON de credenciais", async () => {
     const loader: AdapterLoader = vi.fn(() => mockAdapter);
-    const creds = { ...TEST_INTER_GATEWAY_CREDENTIALS };
+    const creds = {
+      ...TEST_INTER_GATEWAY_CREDENTIALS,
+      certificate_pem: sanitizePemPaste(TEST_INTER_GATEWAY_CREDENTIALS.certificate_pem),
+      private_key_pem: sanitizePemPaste(TEST_INTER_GATEWAY_CREDENTIALS.private_key_pem)
+    };
     const client = mockClient({
       gateway_provider: "inter",
       gateway_credentials_encrypted: "enc",

@@ -13,8 +13,9 @@ Complementa: [`docs/AUTORIZACAO_PO_FABRICA_EXECUCAO_IMEDIATA.md`](../docs/AUTORI
 
 1. CI verde `fiscal-portal-e2e` → merge PR #41 (`EXEQ-FISC-050`) — **concluído 2026-06-09**
 2. Abrir/merge PR FISC-095 (hardening go-live) — **concluído 2026-06-09** (PR #42)
-3. P1: FISC-053 audit apuração SERPRO — **concluído 2026-06-09** (PR #43)
-4. Paralelo opcional: N.3.1 `feat/sprint-n-relatorios-filtros`
+3. P1: FISC-053 audit apuração SERPRO — **concluído 2026-06-09** (PR #43 + gate #44)
+4. Paralelo: N.3.1 relatórios CSV — **já no trunk** (`RelatoriosPage` + filtros data)
+5. P1: FISC-041 factory `RECEITA_GATEWAY_PROVIDER` — **em execução**
 
 ## MODO ACELERADO
 
