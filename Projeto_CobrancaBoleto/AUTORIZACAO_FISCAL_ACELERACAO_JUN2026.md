@@ -15,7 +15,11 @@ Complementa: [`docs/AUTORIZACAO_PO_FABRICA_EXECUCAO_IMEDIATA.md`](../docs/AUTORI
 2. Abrir/merge PR FISC-095 (hardening go-live) — **concluído 2026-06-09** (PR #42)
 3. P1: FISC-053 audit apuração SERPRO — **concluído 2026-06-09** (PR #43 + gate #44)
 4. Paralelo: N.3.1 relatórios CSV — **já no trunk** (`RelatoriosPage` + filtros data)
-5. P1: FISC-041 factory `RECEITA_GATEWAY_PROVIDER` — **em execução**
+5. P1: FISC-041 factory `RECEITA_GATEWAY_PROVIDER` — **concluído 2026-06-09** (PR #45)
+6. P1: FISC-071 dashboard fiscal + gates go-live — **concluído 2026-06-09** (PR #46)
+7. **Próximo:** FISC-090 gate `verify:sprint90` (E2E homolog mock) + FISC-094 `verify:sprint94`
+8. **Bloqueio PO:** FISC-001 credenciais SERPRO live → `verify:fisc-001`
+9. **P1 UX:** FISC-070 design system (drawer parcial no #46; tokens/refactor AppShell pendente)
 
 ## MODO ACELERADO
 
