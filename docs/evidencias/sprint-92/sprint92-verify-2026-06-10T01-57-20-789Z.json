@@ -1,0 +1,10 @@
+{
+  "sprint": 92,
+  "issue": "EXEQ-FISC-092",
+  "started_at": "2026-06-10T01:57:20.789Z",
+  "finished_at": "2026-06-10T01:57:53.906Z",
+  "mode": "playwright-live-serpro-mock",
+  "flow": "upload CSV → stepper → recibo → DAS PDF",
+  "script": "npm run e2e:fiscal-portal:live",
+  "ci_workflow": ".github/workflows/fiscal-portal-e2e.yml"
+}

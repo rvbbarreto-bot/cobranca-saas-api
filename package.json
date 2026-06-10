@@ -25,6 +25,7 @@
     "verify:sprint5": "tsx scripts/sprint5-factory-verify.ts",
     "verify:sprint53": "tsx scripts/sprint53-factory-verify.ts",
     "verify:sprint70": "tsx scripts/sprint70-factory-verify.ts",
+    "verify:sprint92": "tsx scripts/sprint92-factory-verify.ts",
     "verify:sprint90": "tsx scripts/sprint90-factory-verify.ts",
     "verify:sprint94": "tsx scripts/sprint94-factory-verify.ts",
     "verify:sprint10": "tsx scripts/sprint10-factory-verify.ts",
