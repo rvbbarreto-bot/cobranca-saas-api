@@ -52,7 +52,12 @@ export function FiscalDashboardPage(): JSX.Element {
               <p className="dash-kpi__label">Erros abertos</p>
               <p className="dash-kpi__value">{kpis.erros_abertos}</p>
               {kpis.erros_abertos > 0 ? (
-                <span className="dash-kpi__badge dash-kpi__badge--red">Atenção</span>
+                <>
+                  <span className="dash-kpi__badge dash-kpi__badge--red">Atenção</span>
+                  <Link to="/fiscal/erros" className="fiscal-dash__all-link" style={{ marginTop: "0.35rem" }}>
+                    Ver central de erros
+                  </Link>
+                </>
               ) : null}
             </div>
             <div className="dash-kpi">

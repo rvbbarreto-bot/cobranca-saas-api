@@ -17,9 +17,10 @@ Complementa: [`docs/AUTORIZACAO_PO_FABRICA_EXECUCAO_IMEDIATA.md`](../docs/AUTORI
 4. Paralelo: N.3.1 relatórios CSV — **já no trunk** (`RelatoriosPage` + filtros data)
 5. P1: FISC-041 factory `RECEITA_GATEWAY_PROVIDER` — **concluído 2026-06-09** (PR #45)
 6. P1: FISC-071 dashboard fiscal + gates go-live — **concluído 2026-06-09** (PR #46)
-7. **Próximo:** FISC-090 gate `verify:sprint90` (E2E homolog mock) + FISC-094 `verify:sprint94`
-8. **Bloqueio PO:** FISC-001 credenciais SERPRO live → `verify:fisc-001`
-9. **P1 UX:** FISC-070 design system (drawer parcial no #46; tokens/refactor AppShell pendente)
+7. FISC-090 + FISC-094 gates — **concluído 2026-06-10** (PR #47)
+8. **Próximo:** FISC-070 design system fiscal (tokens, `/fiscal/erros`, shell mobile) + gate `verify:sprint70`
+9. **Bloqueio PO:** FISC-001 credenciais SERPRO live → `verify:fisc-001`
+10. **Go-live:** `verify:fiscal-go-live-homolog` (sprint10+90+94) + assinaturas checklist §6
 
 ## MODO ACELERADO
 

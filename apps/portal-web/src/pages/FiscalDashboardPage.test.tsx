@@ -80,6 +80,7 @@ describe("FiscalDashboardPage (EXEQ-FISC-071)", () => {
       "href",
       "/processamentos-fiscais/importar"
     );
+    expect(screen.getByRole("link", { name: /Ver central de erros/i })).toHaveAttribute("href", "/fiscal/erros");
   });
 
   it("lista últimos processamentos", async () => {

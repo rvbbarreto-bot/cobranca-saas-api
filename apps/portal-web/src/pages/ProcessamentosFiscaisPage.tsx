@@ -17,7 +17,13 @@ import {
   type ProcessamentoListFilters
 } from "../lib/processamento-fiscal-ui";
 
-type ListView = "historico" | "erros";
+export type ProcessamentosListView = "historico" | "erros";
+
+type ListView = ProcessamentosListView;
+
+export type ProcessamentosFiscaisPageProps = {
+  initialView?: ListView;
+};
 
 function formatDocBR(doc: string): string {
   const d = doc.replace(/\D/g, "");
@@ -27,8 +33,8 @@ function formatDocBR(doc: string): string {
   return doc;
 }
 
-export function ProcessamentosFiscaisPage(): JSX.Element {
-  const [view, setView] = useState<ListView>("historico");
+export function ProcessamentosFiscaisPage({ initialView = "historico" }: ProcessamentosFiscaisPageProps = {}): JSX.Element {
+  const [view, setView] = useState<ListView>(initialView);
   const [competenciaFilter, setCompetenciaFilter] = useState("");
   const [clienteFilter, setClienteFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -80,7 +86,7 @@ export function ProcessamentosFiscaisPage(): JSX.Element {
   const hasActiveFilters = Boolean(competenciaApplied || clienteFilter || statusFilter || somenteComErro);
 
   return (
-    <div className="shell-page">
+    <div className="shell-page fiscal-surface">
       <ShellPageHeader
         title="Processamentos PGDASD"
         description="Histórico de transmissões e central de erros SERPRO."

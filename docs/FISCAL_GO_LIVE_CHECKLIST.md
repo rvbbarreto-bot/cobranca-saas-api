@@ -72,7 +72,7 @@ npm run verify:fiscal-go-live-homolog
 
 ## 5. Homologação funcional
 
-- [ ] `npm run fiscal:serpro:homolog:e2e` — pipeline mock/live
+- [x] `npm run fiscal:serpro:homolog:e2e` — pipeline mock (`verify:sprint90` / gate homolog)
 - [ ] Playwright `fiscal-portal-e2e.yml` verde (upload → stepper → recibo/DAS)
 - [ ] Certificado A1 + procuração SERPRO validados no tenant piloto
 - [x] Evidência JSON arquivada em `docs/evidencias/` — `verify:fiscal-go-live-homolog` + sprint10
