@@ -22,6 +22,7 @@ async function main(): Promise<void> {
 
   run("npm run migrate");
   run("npm run verify:sprint10");
+  run("npm run verify:sprint70");
   run("npm run verify:sprint94");
   run("npm run verify:sprint90");
 
@@ -39,6 +40,7 @@ async function main(): Promise<void> {
         steps: [
           "npm run migrate",
           "npm run verify:sprint10",
+          "npm run verify:sprint70",
           "npm run verify:sprint94",
           "npm run verify:sprint90"
         ],

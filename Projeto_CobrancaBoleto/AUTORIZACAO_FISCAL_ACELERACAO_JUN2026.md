@@ -18,9 +18,10 @@ Complementa: [`docs/AUTORIZACAO_PO_FABRICA_EXECUCAO_IMEDIATA.md`](../docs/AUTORI
 5. P1: FISC-041 factory `RECEITA_GATEWAY_PROVIDER` — **concluído 2026-06-09** (PR #45)
 6. P1: FISC-071 dashboard fiscal + gates go-live — **concluído 2026-06-09** (PR #46)
 7. FISC-090 + FISC-094 gates — **concluído 2026-06-10** (PR #47)
-8. **Próximo:** FISC-070 design system fiscal (tokens, `/fiscal/erros`, shell mobile) + gate `verify:sprint70`
-9. **Bloqueio PO:** FISC-001 credenciais SERPRO live → `verify:fisc-001`
-10. **Go-live:** `verify:fiscal-go-live-homolog` (sprint10+90+94) + assinaturas checklist §6
+8. FISC-070 design system fiscal — **PR #48** (`verify:sprint70`)
+9. **Próximo:** FISC-092 Playwright portal (`verify:sprint92` + CI `fiscal-portal-e2e.yml`)
+10. **Bloqueio PO:** FISC-001 credenciais SERPRO live → `verify:fisc-001`
+11. **Go-live:** `verify:fiscal-go-live-homolog` (sprint10+70+90+94) + assinaturas checklist §6
 
 ## MODO ACELERADO
 
