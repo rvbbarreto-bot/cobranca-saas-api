@@ -1,0 +1,11 @@
+{
+  "sprint": 10,
+  "issue": "EXEQ-FISC-094",
+  "started_at": "2026-06-10T01:29:32.719Z",
+  "finished_at": "2026-06-10T01:29:36.633Z",
+  "tests": [
+    "tests/platform/fiscal-sli-metrics.test.ts"
+  ],
+  "sli_doc": "docs/observability/sli-fiscal-definitions.md",
+  "admin_endpoint": "GET /v1/admin/metrics/fiscal-sli"
+}

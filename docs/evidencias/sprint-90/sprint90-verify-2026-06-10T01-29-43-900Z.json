@@ -1,0 +1,9 @@
+{
+  "sprint": 90,
+  "issue": "EXEQ-FISC-090",
+  "started_at": "2026-06-10T01:29:43.900Z",
+  "finished_at": "2026-06-10T01:29:57.883Z",
+  "mode": "mock",
+  "pipeline": "CSV → TRANSMIT → RECIBO → DAS → CONCLUIDO",
+  "script": "npm run fiscal:serpro:homolog:e2e"
+}
