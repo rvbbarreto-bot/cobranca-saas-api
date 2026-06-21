@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { GatewayError } from "../../../src/modules/payment-gateway/domain/gateway-error";
-import { PaymentGatewayError } from "../../../src/modules/payment-gateway/domain/payment-gateway-error";
+import {
+  GatewayAuthError,
+  PaymentGatewayError
+} from "../../../src/modules/payment-gateway/domain/payment-gateway-error";
+import { MtlsTransportError } from "../../../src/platform/payment-gateway/mtls-transport-error";
 import { classifyJobError } from "../../../src/platform/jobs/classify-job-error";
 
 describe("classifyJobError", () => {
@@ -56,5 +60,20 @@ describe("classifyJobError", () => {
     expect(c.retryable).toBe(true);
     expect(c.moveToDlq).toBe(false);
     expect(c.errorCode).toBe("unknown_error");
+  });
+
+  it("MtlsTransportError unknown_ca → permanente, DLQ", () => {
+    const err = new MtlsTransportError("cert rejeitado", "mtls_handshake_failed");
+    const c = classifyJobError(err);
+    expect(c.retryable).toBe(false);
+    expect(c.moveToDlq).toBe(true);
+    expect(c.errorCode).toBe("mtls_handshake_failed");
+  });
+
+  it("GatewayAuthError → permanente", () => {
+    const c = classifyJobError(new GatewayAuthError("inter", "Token HTTP 401"));
+    expect(c.retryable).toBe(false);
+    expect(c.moveToDlq).toBe(true);
+    expect(c.errorCode).toBe("gateway_auth_failed");
   });
 });

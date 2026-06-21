@@ -1,0 +1,62 @@
+{
+  "issue": "EXEQ-FISC-021",
+  "pilot": {
+    "tenant": "ricardo",
+    "cnpj": "37229907000137",
+    "modo": "titular"
+  },
+  "startedAt": "2026-06-14T03:46:58.300Z",
+  "finishedAt": "2026-06-14T03:46:58.661Z",
+  "pgdasdOptions": {
+    "indicadorTransmissao": true,
+    "indicadorComparacao": false
+  },
+  "dod": {
+    "sem_403_auth": true,
+    "transmissao_protocolo_ou_negocio": true,
+    "procuracao_gate": "false (titular)"
+  },
+  "steps": [
+    {
+      "name": "env_live_mode",
+      "ok": true,
+      "detail": "FISCAL_SERPRO_MOCK=false"
+    },
+    {
+      "name": "serpro_config_org",
+      "ok": true,
+      "detail": "ambiente=demo; enabled=true"
+    },
+    {
+      "name": "oauth_token",
+      "ok": true,
+      "detail": "token_len=1038"
+    },
+    {
+      "name": "certificado_decrypt",
+      "ok": true,
+      "detail": "Certificado A1 valido ate 2026-09-05"
+    },
+    {
+      "name": "resolve_runtime",
+      "ok": true,
+      "detail": "useMock=false; jwt=ok; autor=37229907000137"
+    },
+    {
+      "name": "consultar_CONSDECREC15",
+      "ok": true,
+      "statusCode": 400,
+      "detail": "erro_negocio status=400",
+      "bodyPreview": "{\"contratante\":{\"numero\":\"37229907000137\",\"tipo\":2},\"autorPedidoDados\":{\"numero\":\"37229907000137\",\"tipo\":2},\"contribuinte\":{\"numero\":\"37229907000137\",\"tipo\":2},\"pedidoDados\":{\"idSistema\":\"PGDASD\",\"idServico\":\"CONSDECREC15\",\"versaoSistema\":\"1.0\",\"dados\":\"{\\\"pa\\\":\\\"202605\\\"}\"},\"status\":400,\"responseId\":\"95f81d9a-8b31-4ddc-90cd-edea32eea103\",\"responseDateTime\":\"2026-06-14T00:46:59.380Z\",\"dados\":\"\",\"mensagens\":[{\"codigo\":\"[EntradaIncorreta-PGDASD-MSG_ISN_002]\",\"texto\":\"Parâmetros de entrada inválidos. Número da declaração inválido.\"}]}"
+    },
+    {
+      "name": "declarar_TRANSDECLARACAO11",
+      "ok": true,
+      "statusCode": 400,
+      "detail": "erro_negocio status=400",
+      "bodyPreview": "{\"contratante\":{\"numero\":\"37229907000137\",\"tipo\":2},\"autorPedidoDados\":{\"numero\":\"37229907000137\",\"tipo\":2},\"contribuinte\":{\"numero\":\"37229907000137\",\"tipo\":2},\"pedidoDados\":{\"idSistema\":\"PGDASD\",\"idServico\":\"TRANSDECLARACAO11\",\"versaoSistema\":\"1.0\",\"dados\":\"{\\\"cnpjCompleto\\\":\\\"37229907000137\\\",\\\"pa\\\":202401,\\\"indicadorTransmissao\\\":true,\\\"indicadorComparacao\\\":false,\\\"declaracao\\\":{\\\"tipoDeclaracao\\\":1,\\\"receitaPaCompetenciaInterno\\\":10000,\\\"receitaPaCompetenciaExterno\\\":0,\\\"estabelecimentos\\\":[{\\\"cnpjCompleto\\\":\\\"37229907000137\\\",\\\"atividades\\\":[{\\\"idAtividade\\\":10,\\\"valorAtividade\\\":10000,\\…",
+      "payloadKeys": "cnpjCompleto,declaracao,indicadorComparacao,indicadorTransmissao,pa",
+      "indicadorTransmissao": true
+    }
+  ]
+}

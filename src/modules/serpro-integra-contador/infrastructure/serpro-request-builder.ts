@@ -1,3 +1,8 @@
+import type { CanonicalApuracao } from "../../fiscal-ingestion/domain/canonical-apuracao.schema";
+import {
+  buildPgdasdTransmissaoDadosFromApuracao,
+  type PgdasdTransmissaoOptions
+} from "../domain/pgdasd-transmissao-payload";
 import type { SerproIntegraRequest, SerproPedidoDados } from "../domain/serpro-types";
 
 export function serproBaseUrl(ambiente: "demo" | "prod"): string {
@@ -13,15 +18,29 @@ export function serproBaseUrl(ambiente: "demo" | "prod"): string {
   );
 }
 
+/** OAuth Loja SERPRO — path correto é `/token` (não `/oauth/token`). */
+export function serproTokenUrl(ambiente: "demo" | "prod"): string {
+  const base = serproBaseUrl(ambiente);
+  const path = process.env.SERPRO_TOKEN_PATH?.trim() || "/token";
+  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function documentoTipo(numero: string): number {
+  const digits = numero.replace(/\D/g, "");
+  return digits.length === 11 ? 1 : 2;
+}
+
 function buildSerproRequest(input: {
   contratanteCnpj: string;
   contribuinteCnpj: string;
+  autorPedidoDocumento?: string;
   idSistema: string;
   idServico: string;
-  dados: Record<string, unknown>;
+  dados: Record<string, unknown> | object;
 }): SerproIntegraRequest {
   const cnpjContratante = input.contratanteCnpj.replace(/\D/g, "");
   const cnpjContribuinte = input.contribuinteCnpj.replace(/\D/g, "");
+  const autorNumero = (input.autorPedidoDocumento ?? input.contribuinteCnpj).replace(/\D/g, "");
   const pedidoDados: SerproPedidoDados = {
     idSistema: input.idSistema,
     idServico: input.idServico,
@@ -30,25 +49,43 @@ function buildSerproRequest(input: {
   };
   return {
     contratante: { numero: cnpjContratante, tipo: 2 },
-    autorPedidoDados: { numero: cnpjContratante, tipo: 2 },
+    autorPedidoDados: { numero: autorNumero, tipo: documentoTipo(autorNumero) },
     contribuinte: { numero: cnpjContribuinte, tipo: 2 },
     pedidoDados
   };
 }
 
-export function buildSerproPgdasdTransmitRequest(input: {
+export function buildSerproEnvioXmlAssinadoRequest(input: {
   contratanteCnpj: string;
+  autorPedidoDocumento: string;
   contribuinteCnpj: string;
-  competencia: string;
-  declaracaoPayload: Record<string, unknown>;
+  xmlBase64: string;
 }): SerproIntegraRequest {
-  const pa = input.competencia.replace("-", "");
   return buildSerproRequest({
     contratanteCnpj: input.contratanteCnpj,
     contribuinteCnpj: input.contribuinteCnpj,
+    autorPedidoDocumento: input.autorPedidoDocumento,
+    idSistema: "AUTENTICAPROCURADOR",
+    idServico: "ENVIOXMLASSINADO81",
+    dados: { xml: input.xmlBase64 }
+  });
+}
+
+export function buildSerproPgdasdTransmitRequest(input: {
+  contratanteCnpj: string;
+  contribuinteCnpj: string;
+  autorPedidoDocumento?: string;
+  apuracao: CanonicalApuracao;
+  pgdasdOptions?: PgdasdTransmissaoOptions;
+}): SerproIntegraRequest {
+  const dados = buildPgdasdTransmissaoDadosFromApuracao(input.apuracao, input.pgdasdOptions);
+  return buildSerproRequest({
+    contratanteCnpj: input.contratanteCnpj,
+    contribuinteCnpj: input.contribuinteCnpj,
+    autorPedidoDocumento: input.autorPedidoDocumento,
     idSistema: "PGDASD",
     idServico: "TRANSDECLARACAO11",
-    dados: { pa, ...input.declaracaoPayload }
+    dados
   });
 }
 
@@ -56,10 +93,12 @@ export function buildSerproObterProcuracaoRequest(input: {
   contratanteCnpj: string;
   contribuinteCnpj: string;
   procuradorDocumento: string;
+  autorPedidoDocumento?: string;
 }): SerproIntegraRequest {
   return buildSerproRequest({
     contratanteCnpj: input.contratanteCnpj,
     contribuinteCnpj: input.contribuinteCnpj,
+    autorPedidoDocumento: input.autorPedidoDocumento ?? input.procuradorDocumento,
     idSistema: "PROCURACOES",
     idServico: "OBTERPROCURACAO41",
     dados: {
@@ -71,6 +110,7 @@ export function buildSerproObterProcuracaoRequest(input: {
 export function buildSerproConsultReciboRequest(input: {
   contratanteCnpj: string;
   contribuinteCnpj: string;
+  autorPedidoDocumento?: string;
   competencia: string;
   protocolo?: string;
 }): SerproIntegraRequest {
@@ -78,6 +118,7 @@ export function buildSerproConsultReciboRequest(input: {
   return buildSerproRequest({
     contratanteCnpj: input.contratanteCnpj,
     contribuinteCnpj: input.contribuinteCnpj,
+    autorPedidoDocumento: input.autorPedidoDocumento,
     idSistema: "PGDASD",
     idServico: "CONSDECREC15",
     dados: { pa, protocolo: input.protocolo }
@@ -87,6 +128,7 @@ export function buildSerproConsultReciboRequest(input: {
 export function buildSerproEmitDasRequest(input: {
   contratanteCnpj: string;
   contribuinteCnpj: string;
+  autorPedidoDocumento?: string;
   competencia: string;
   valorDas: number;
 }): SerproIntegraRequest {
@@ -94,6 +136,7 @@ export function buildSerproEmitDasRequest(input: {
   return buildSerproRequest({
     contratanteCnpj: input.contratanteCnpj,
     contribuinteCnpj: input.contribuinteCnpj,
+    autorPedidoDocumento: input.autorPedidoDocumento,
     idSistema: "PGDASD",
     idServico: "GERARDAS12",
     dados: { pa, valorDas: input.valorDas }
@@ -103,6 +146,7 @@ export function buildSerproEmitDasRequest(input: {
 export function buildSerproEmitDarfRequest(input: {
   contratanteCnpj: string;
   contribuinteCnpj: string;
+  autorPedidoDocumento?: string;
   competencia: string;
   codigoReceita: string;
   periodoApuracao: string;
@@ -111,6 +155,7 @@ export function buildSerproEmitDarfRequest(input: {
   return buildSerproRequest({
     contratanteCnpj: input.contratanteCnpj,
     contribuinteCnpj: input.contribuinteCnpj,
+    autorPedidoDocumento: input.autorPedidoDocumento,
     idSistema: "DCTFWEB",
     idServico: "CONSOLIDARGERARDARF51",
     dados: {

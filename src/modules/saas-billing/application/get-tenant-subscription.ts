@@ -8,6 +8,7 @@ import {
   countPortalClientesForPublicTenant,
   currentYearMonthUtc
 } from "../infrastructure/usage-repository";
+import { isPlatformBillingConfigured } from "../infrastructure/asaas-platform/platform-asaas-config";
 
 export type TenantSubscriptionView = {
   id: string;
@@ -16,6 +17,9 @@ export type TenantSubscriptionView = {
   trial_ends_at: string | null;
   current_period_start: string | null;
   current_period_end: string | null;
+  platform_billing: {
+    available: boolean;
+  };
   plano: {
     id: string;
     slug: string;
@@ -57,6 +61,9 @@ export async function getTenantSubscriptionUseCase(
     trial_ends_at: toIso(sub.trial_ends_at),
     current_period_start: toIso(sub.current_period_start),
     current_period_end: toIso(sub.current_period_end),
+    platform_billing: {
+      available: isPlatformBillingConfigured()
+    },
     plano: {
       id: sub.plano_id,
       slug: sub.plano_slug,

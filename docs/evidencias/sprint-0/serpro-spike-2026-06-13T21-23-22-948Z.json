@@ -1,0 +1,19 @@
+{
+  "sprint": "S0",
+  "issue": "EXEQ-FISC-001",
+  "mode": "live",
+  "timestamp": "2026-06-13T21:23:22.825Z",
+  "steps": [
+    {
+      "step": "oauth",
+      "status": 200,
+      "bodyPreview": "{\"access_token\":\"***\",\"scope\":\"default\",\"token_type\":\"Bearer\",\"expires_in\":1561}"
+    },
+    {
+      "step": "CONSULTIMADECREC14",
+      "url": "https://gateway.apiserpro.serpro.gov.br/integra-contador/v1/Consultar",
+      "status": 403,
+      "bodyPreview": "{\"contratante\":{\"numero\":\"37229907000137\",\"tipo\":2},\"autorPedidoDados\":{\"numero\":\"37229907000137\",\"tipo\":2},\"contribuinte\":{\"numero\":\"37229907000137\",\"tipo\":2},\"pedidoDados\":{\"idSistema\":\"PGDASD\",\"idServico\":\"CONSULTIMADECREC14\",\"versaoSistema\":\"1.0\",\"dados\":\"{\\\"pa\\\":\\\"202605\\\"}\"},\"status\":403,\"responseId\":\"4ff99aa4-c7aa-4e80-9776-7c9ce19c1773\",\"responseDateTime\":\"2026-06-13T18:23:22.618Z\",\"dados\":null,\"mensagens\":[{\"codigo\":\"[AcessoNegado-ICGERENCIADOR-041]\",\"texto\":\"Acesso negado. HEADER jwt_token inválido.\"}]}"
+    }
+  ]
+}

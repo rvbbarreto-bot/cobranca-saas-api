@@ -7,6 +7,7 @@ import type {
 } from "../../domain/receita-gateway.interface";
 import { extractSerproDasPayload } from "../../../serpro-integra-contador/domain/serpro-mock-payload";
 import type { SerproIntegraContadorClient } from "../../../serpro-integra-contador/domain/serpro-types";
+import type { SerproAuthContext } from "../../../serpro-integra-contador/domain/serpro-auth-context";
 import {
   buildSerproEmitDasRequest,
   buildSerproEmitDarfRequest
@@ -14,8 +15,9 @@ import {
 
 export type SerproReceitaFiscalGatewayConfig = {
   client: SerproIntegraContadorClient;
-  accessToken: string;
+  auth: SerproAuthContext;
   contratanteCnpj: string;
+  autorPedidoDocumento?: string;
 };
 
 function mapSerproDasToCapture(rawBody: unknown, fallbackValor: number): ReceitaCaptureResult {
@@ -43,11 +45,12 @@ export class SerproReceitaFiscalGateway implements ReceitaFiscalGateway {
     const req = buildSerproEmitDasRequest({
       contratanteCnpj: this.config.contratanteCnpj,
       contribuinteCnpj: input.cnpj.replace(/\D/g, ""),
+      autorPedidoDocumento: this.config.autorPedidoDocumento ?? input.cnpj.replace(/\D/g, ""),
       competencia: input.competencia,
       valorDas: 150
     });
 
-    const res = await this.config.client.emitir(req, this.config.accessToken);
+    const res = await this.config.client.emitir(req, this.config.auth);
     if (!res.ok) {
       throw new ReceitaGatewayError("Falha ao emitir DAS via SERPRO.", {
         code: res.erroCodigo ?? "serpro_das_erro",
@@ -62,12 +65,13 @@ export class SerproReceitaFiscalGateway implements ReceitaFiscalGateway {
     const req = buildSerproEmitDarfRequest({
       contratanteCnpj: this.config.contratanteCnpj,
       contribuinteCnpj: input.cnpj.replace(/\D/g, ""),
+      autorPedidoDocumento: this.config.autorPedidoDocumento ?? input.cnpj.replace(/\D/g, ""),
       competencia: input.competencia,
       codigoReceita: input.codigoReceita.replace(/\D/g, ""),
       periodoApuracao: input.periodoApuracao
     });
 
-    const res = await this.config.client.emitir(req, this.config.accessToken);
+    const res = await this.config.client.emitir(req, this.config.auth);
     if (!res.ok) {
       throw new ReceitaGatewayError("Falha ao emitir DARF via SERPRO.", {
         code: res.erroCodigo ?? "serpro_darf_erro",

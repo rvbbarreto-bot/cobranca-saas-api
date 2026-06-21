@@ -1,0 +1,26 @@
+{
+  "issue": "EXEQ-FISC-021",
+  "startedAt": "2026-06-14T02:20:14.593Z",
+  "steps": [
+    {
+      "name": "env_live_mode",
+      "ok": true,
+      "detail": "FISCAL_SERPRO_MOCK=false"
+    },
+    {
+      "name": "serpro_config_org",
+      "ok": true,
+      "detail": "ambiente=demo; enabled=true"
+    },
+    {
+      "name": "oauth_token",
+      "ok": true,
+      "detail": "token_len=1038"
+    },
+    {
+      "name": "resolve_runtime",
+      "ok": false,
+      "detail": "Unsupported state or unable to authenticate data"
+    }
+  ]
+}

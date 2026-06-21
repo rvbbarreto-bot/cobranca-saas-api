@@ -15,6 +15,7 @@ services:
       DATABASE_URL: postgres://app:${DB_PASSWORD:-dev_only}@postgres:5432/cobranca_saas
       REDIS_URL: redis://redis:6379
       ALLOW_INSECURE_DATABASE_URL: "1"
+      GATEWAY_INTER_SANDBOX: ${GATEWAY_INTER_SANDBOX:-true}
     depends_on:
       postgres:
         condition: service_healthy

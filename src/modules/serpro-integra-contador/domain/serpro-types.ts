@@ -1,3 +1,5 @@
+import type { SerproAuthContext } from "./serpro-auth-context";
+
 export type SerproAmbiente = "demo" | "prod";
 
 export type SerproPedidoDados = {
@@ -25,9 +27,9 @@ export type SerproIntegraResponse = {
 };
 
 export interface SerproIntegraContadorClient {
-  consultar(request: SerproIntegraRequest, accessToken: string): Promise<SerproIntegraResponse>;
-  declarar(request: SerproIntegraRequest, accessToken: string): Promise<SerproIntegraResponse>;
-  emitir(request: SerproIntegraRequest, accessToken: string): Promise<SerproIntegraResponse>;
+  consultar(request: SerproIntegraRequest, auth: SerproAuthContext): Promise<SerproIntegraResponse>;
+  declarar(request: SerproIntegraRequest, auth: SerproAuthContext): Promise<SerproIntegraResponse>;
+  emitir(request: SerproIntegraRequest, auth: SerproAuthContext): Promise<SerproIntegraResponse>;
 }
 
 export class SerproIntegraError extends Error {

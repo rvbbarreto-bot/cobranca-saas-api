@@ -1,0 +1,57 @@
+{
+  "ran_at": "2026-06-10T21:57:35.966Z",
+  "results": [
+    {
+      "id": "HEALTH",
+      "ok": true,
+      "detail": "ready status=ok"
+    },
+    {
+      "id": "PEM-LOCAL",
+      "ok": true,
+      "detail": "Par cert+chave OK (pacote QA)"
+    },
+    {
+      "id": "AUTH",
+      "ok": true,
+      "detail": "login_kind=portal tenant=1"
+    },
+    {
+      "id": "INT-01",
+      "ok": true,
+      "detail": "inter enabled=true"
+    },
+    {
+      "id": "INT-02",
+      "ok": true,
+      "detail": "campos=client_id,client_secret,certificate_pem,private_key_pem"
+    },
+    {
+      "id": "INT-03",
+      "ok": true,
+      "detail": "provider=inter configured=true"
+    },
+    {
+      "id": "INT-04",
+      "ok": true,
+      "detail": "resposta mascarada"
+    },
+    {
+      "id": "INT-05a",
+      "ok": true,
+      "detail": "charge=69c6c7ce-5cc1-4660-ab38-1b9b17c35434 status=rascunho"
+    },
+    {
+      "id": "INT-05b",
+      "ok": false,
+      "detail": "Certificado mTLS rejeitado pelo servidor (unknown_ca). Use client_id, client_secret, certificado PEM e chave privada da mesma aplicacao no Portal Developers Inter."
+    },
+    {
+      "id": "INT-06",
+      "ok": false,
+      "detail": "payment=false provider=null"
+    }
+  ],
+  "charge_id": "69c6c7ce-5cc1-4660-ab38-1b9b17c35434",
+  "lastErr": "Certificado mTLS rejeitado pelo servidor (unknown_ca). Use client_id, client_secret, certificado PEM e chave privada da mesma aplicacao no Portal Developers Inter."
+}

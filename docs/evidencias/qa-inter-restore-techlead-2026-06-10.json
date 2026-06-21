@@ -1,0 +1,44 @@
+{
+  "delivered_at": "2026-06-10T21:50:00.000Z",
+  "authorization": "PO/gestao — restauracao integracao Inter pos-auditoria forense",
+  "code_changes": [
+    "mtls-transport-error.ts — classificacao TLS/rede (unknown_ca, DNS)",
+    "mtls-fetch.ts — erros TLS tipados",
+    "inter-oauth.ts / inter-http-client.ts — propagacao GatewayAuthError",
+    "gateway-sandbox.ts — GATEWAY_INTER_SANDBOX explicito",
+    "classify-job-error.ts — falhas mTLS permanentes (sem retry inutil)",
+    "GatewayAuthError — code gateway_auth_failed + retryable false",
+    "qa-inter-restore-env.ts + npm run qa:inter-restore",
+    "qa-inter-push-gateway — gate OU antes do PATCH",
+    "portal — exibe OU do cert + valida Client ID no save"
+  ],
+  "environment": {
+    "api": "http://localhost:3333 — rebuilt docker",
+    "gateway_inter_sandbox": "true",
+    "tenant_demo": "00000000-0000-4000-8000-000000000001"
+  },
+  "credentials_state": {
+    "client_id_gravado": "9320d067-c258-44c4-935e-db73973fb78e",
+    "cert_ou": "9320d067-c258-44c4-935e-db73973fb78e",
+    "ou_aligned": true,
+    "cert_fingerprint": "9e69fd9a2df956f8",
+    "patch_gateway": "200 OK",
+    "client_id_po_arquivo": "72853ecb-ba07-4222-ad49-018f150b45f6",
+    "po_mismatch_note": "Chaves do certificado.txt aponta app diferente do zip mTLS"
+  },
+  "integration_tests": [
+    { "step": "qa:inter-pem", "ok": true },
+    { "step": "qa:inter-reset-credentials", "ok": true },
+    { "step": "qa:inter-push-gateway (OU alinhado)", "ok": true },
+    { "step": "qa:inter-oauth-probe", "ok": false, "detail": "unknown_ca — Inter rejeitou certificado no sandbox" },
+    { "step": "gateway:smoke:inter", "ok": false, "detail": "unknown_ca" },
+    { "step": "unit tests mtls-transport + classify-job", "ok": true, "count": 14 }
+  ],
+  "conclusao": "Ambiente local restaurado (credenciais alinhadas OU=client_id gravadas). OAuth bloqueado pelo Inter (unknown_ca) — PO deve baixar novo pacote mTLS sandbox da app correta e/ou confirmar ativacao no Portal Developers.",
+  "po_proximos_passos": [
+    "Portal Inter sandbox → app desejada → Ativar integracao → baixar cert+key novamente",
+    "Confirmar: npm run qa:inter-check-cert-ou -- \"<pasta>\" \"<client_id>\" → OK",
+    "npm run qa:inter-restore com QA_INTER_CLIENT_ID/SECRET alinhados",
+    "Rotacionar client_secret apos homolog"
+  ]
+}

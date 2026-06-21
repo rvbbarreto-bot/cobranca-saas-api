@@ -34,6 +34,18 @@ function activateErrorMessage(err: unknown): string {
     if (body && typeof body === "object" && body.error === "PLATFORM_BILLING_NOT_CONFIGURED") {
       return "Cobrança recorrente indisponível: configure ASAAS_PLATFORM_API_KEY no servidor.";
     }
+    if (body && typeof body === "object" && body.error === "PLATFORM_BILLING_AUTH_FAILED") {
+      return (
+        body.message ??
+        "Chave de API Asaas da plataforma inválida. Configure ASAAS_PLATFORM_API_KEY (sandbox) no servidor."
+      );
+    }
+    if (body && typeof body === "object" && body.error === "PLATFORM_BILLING_GATEWAY_ERROR") {
+      return body.message ?? "Falha ao comunicar com o Asaas. Tente novamente ou contacte o suporte.";
+    }
+    if (body && typeof body === "object" && typeof body.message === "string") {
+      return body.message;
+    }
     return err.message;
   }
   if (err instanceof Error) {
@@ -69,7 +81,11 @@ export function EscritorioPage(): JSX.Element {
 
   const sub = assinatura.data?.assinatura;
   const isAdmin = me.data?.user.membership_role === "admin_escritorio";
-  const canActivate = isAdmin && sub && (sub.status === "trial" || sub.status === "past_due");
+  const platformBillingAvailable = sub?.platform_billing?.available ?? false;
+  const canActivate =
+    isAdmin && sub && (sub.status === "trial" || sub.status === "past_due") && platformBillingAvailable;
+  const showBillingUnavailableHint =
+    isAdmin && sub && (sub.status === "trial" || sub.status === "past_due") && !platformBillingAvailable;
 
   return (
     <div className="shell-page">
@@ -138,6 +154,14 @@ export function EscritorioPage(): JSX.Element {
                 Cria a assinatura mensal no Asaas (cartão/boleto conforme configuração da plataforma).
               </span>
             </p>
+          ) : null}
+          {showBillingUnavailableHint ? (
+            <div className="banner-warn" style={{ marginTop: "0.75rem" }}>
+              Cobrança recorrente via Asaas não está configurada neste ambiente (
+              <code>ASAAS_PLATFORM_API_KEY</code> ou <code>ASAAS_API_KEY</code> válida no servidor). Em desenvolvimento,
+              você pode continuar usando o trial — renove <code>trial_ends_at</code> na tabela{" "}
+              <code>assinaturas</code> ou cadastre uma chave sandbox do Asaas.
+            </div>
           ) : null}
           {!isAdmin && sub.status === "trial" ? (
             <p className="muted small">Apenas <strong>admin_escritorio</strong> pode ativar a cobrança recorrente.</p>

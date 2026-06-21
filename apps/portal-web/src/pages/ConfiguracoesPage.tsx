@@ -26,7 +26,9 @@ import {
   credentialFieldDisplayValue,
   isGatewayIntegrationConfigured,
   maskedSecretDisplay,
-  shouldStartGatewayViewMode
+  requiresMtlsPemUploadOnEdit,
+  shouldStartGatewayViewMode,
+  validateMtlsFullBundleBeforeSave
 } from "../lib/gateway-config-form";
 import { sanitizeGatewayCredentials } from "../lib/pem-sanitize";
 import {
@@ -66,6 +68,7 @@ export function ConfiguracoesPage(): JSX.Element {
   const [pemUploadState, setPemUploadState] = useState<PemPairValidationState>({
     ready: false,
     certificateUploadId: null,
+    integrationIdOu: null,
     warnings: [],
     info: []
   });
@@ -124,8 +127,13 @@ export function ConfiguracoesPage(): JSX.Element {
   const usesMtlsPem =
     selectedMeta?.authType === "mtls_oauth" &&
     (selectedMeta.credentialFields.some((f) => f.key === "certificate_pem") ?? false);
-  const pemUploadRequired =
-    usesMtlsPem && isGatewayEditing && !configQ.data?.config?.gateway_credentials_configured;
+  const pemUploadRequired = requiresMtlsPemUploadOnEdit(
+    usesMtlsPem,
+    isGatewayEditing,
+    Boolean(configQ.data?.config?.gateway_credentials_configured)
+  );
+  const mtlsFullBundleEdit =
+    pemUploadRequired && Boolean(configQ.data?.config?.gateway_credentials_configured);
   const gatewaySubmitBlocked = pemUploadRequired && !pemUploadState.ready;
 
   const saveConfig = useMutation({
@@ -186,6 +194,15 @@ export function ConfiguracoesPage(): JSX.Element {
       if (hasPemUpload && pemUploadRequired && !pemUploadState.ready) {
         throw new Error("Aguarde a validação do certificado ou corrija os erros.");
       }
+      validateMtlsFullBundleBeforeSave({
+        credentialsConfigured: Boolean(configQ.data?.config?.gateway_credentials_configured),
+        usesMtlsPem: usesMtlsPem ?? false,
+        pemReady: pemUploadState.ready,
+        clientId: creds.client_id ?? gatewayCredentials.client_id ?? "",
+        clientSecret: creds.client_secret ?? gatewayCredentials.client_secret ?? "",
+        integrationIdOu: pemUploadState.integrationIdOu,
+        gatewayProvider: providerId
+      });
       return patchGatewayProvider({
         gateway_provider: providerId,
         ...(hasPemUpload ? { certificate_upload_id: pemUploadState.certificateUploadId! } : {}),
@@ -476,6 +493,13 @@ export function ConfiguracoesPage(): JSX.Element {
                 <p className="muted small" style={{ gridColumn: "1 / -1" }}>
                   Envie o <strong>certificado digital</strong> e a <strong>chave privada</strong> como arquivos
                   (.crt, .pem, .cer, .key). A validação ocorre automaticamente após a seleção dos dois arquivos.
+                  {mtlsFullBundleEdit ? (
+                    <>
+                      {" "}
+                      <strong>Na alteração, reenvie sempre o pacote completo</strong> (certificado, chave, Client ID e
+                      Client Secret da mesma integração Inter).
+                    </>
+                  ) : null}
                 </p>
               ) : (
                 <p className="muted small" style={{ gridColumn: "1 / -1" }}>
@@ -513,11 +537,13 @@ export function ConfiguracoesPage(): JSX.Element {
                       placeholder={
                         integrationFieldsDisabled
                           ? undefined
-                          : configQ.data?.config?.gateway_credentials_configured
-                            ? "Deixe em branco para manter"
-                            : field.required
-                              ? "Obrigatório"
-                              : ""
+                          : mtlsFullBundleEdit
+                            ? "Obrigatório — mesma integração do certificado"
+                            : configQ.data?.config?.gateway_credentials_configured
+                              ? "Deixe em branco para manter"
+                              : field.required
+                                ? "Obrigatório"
+                                : ""
                       }
                       onChange={(e) =>
                         setGatewayCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))
@@ -539,9 +565,11 @@ export function ConfiguracoesPage(): JSX.Element {
                       placeholder={
                         integrationFieldsDisabled
                           ? undefined
-                          : configQ.data?.config?.gateway_credentials_configured
-                            ? "Deixe em branco para manter"
-                            : ""
+                          : mtlsFullBundleEdit
+                            ? "Obrigatório — mesma integração do certificado"
+                            : configQ.data?.config?.gateway_credentials_configured
+                              ? "Deixe em branco para manter"
+                              : ""
                       }
                       onChange={(e) =>
                         setGatewayCredentials((prev) => ({ ...prev, [field.key]: e.target.value }))

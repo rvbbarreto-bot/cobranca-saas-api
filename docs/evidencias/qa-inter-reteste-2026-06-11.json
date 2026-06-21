@@ -1,0 +1,20 @@
+{
+  "ran_at": "2026-06-11T11:56:44.217Z",
+  "pacote": "Certificado/Sandbox/Inter_API-Chave_e_Certificado (1)/Sandbox_InterAPI_*",
+  "client_id": "a0573e70-f7bd-4e64-b5de-7fcaeaa58041",
+  "cert_cn": "EmissaoBoletoDev",
+  "cert_ou": "6a29e50148af502f787a7093",
+  "cert_fingerprint": "3bea1207c9fe671d",
+  "results": [
+    { "id": "gateway-smoke-inter", "ok": true, "detail": "OAuth sandbox access_token obtido" },
+    { "id": "qa-inter-reset-credentials", "ok": true, "detail": "tenant demo limpo" },
+    { "id": "qa-inter-push-gateway", "ok": true, "detail": "provider=inter credentials_configured=true" },
+    { "id": "qa-inter-oauth-probe", "ok": true, "detail": "OAuth OK token 36 chars" },
+    { "id": "qa-inter-direct-emission", "ok": false, "detail": "POST /cobrancas/v2 → 404 page not found" },
+    { "id": "qa-inter-api INT-01..05a", "ok": true, "detail": "8 gates PASS" },
+    { "id": "qa-inter-api INT-05b", "ok": false, "detail": "Inter HTTP 404 após worker" },
+    { "id": "qa-inter-api INT-06", "ok": false, "detail": "payment=false" }
+  ],
+  "charge_id": "633ead73-3873-4a4e-8d44-07e961fa4eb3",
+  "conclusao": "mTLS+OAuth estáveis com mesmo pacote; emissão /cobrancas/v2 retorna 404 no sandbox Inter (configuração conta/API cobrança no portal)."
+}

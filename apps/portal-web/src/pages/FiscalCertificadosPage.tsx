@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FiscalAdminGate } from "../components/FiscalAdminGate";
@@ -46,6 +46,7 @@ function CertificadoFormSection(props: {
   const queryClient = useQueryClient();
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [pemResetKey, setPemResetKey] = useState(0);
   const [certLabel, setCertLabel] = useState("Certificado A1");
   const [certValidFrom, setCertValidFrom] = useState(todayIsoDate());
   const [certValidUntil, setCertValidUntil] = useState(oneYearFromToday());
@@ -57,6 +58,9 @@ function CertificadoFormSection(props: {
 
   const onPemChange = useCallback((state: FiscalA1PemState) => {
     setPemState(state);
+    if (state.ready) {
+      setSaveErr(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -72,6 +76,15 @@ function CertificadoFormSection(props: {
     }
   }, [props.savedCert, props.cliente.id]);
 
+  const metadataChanged = Boolean(
+    props.savedCert &&
+      (certLabel.trim() !== props.savedCert.label ||
+        certValidFrom !== props.savedCert.valid_from ||
+        certValidUntil !== props.savedCert.valid_until)
+  );
+
+  const isDirty = props.savedCert ? pemState.ready || metadataChanged : pemState.ready;
+
   const saveCert = useMutation({
     mutationFn: () =>
       postCertificadoDigital({
@@ -84,7 +97,12 @@ function CertificadoFormSection(props: {
       }),
     onSuccess: async (data) => {
       setSaveErr(null);
-      setSaveMsg(`Certificado cadastrado (${data.certificado.label}).`);
+      const actionLabel = props.savedCert ? "substituído" : "cadastrado";
+      setSaveMsg(
+        `Certificado ${actionLabel} com sucesso (${data.certificado.label}, vigência ${certificadoVigenciaLabel(data.certificado)}).`
+      );
+      setPemResetKey((k) => k + 1);
+      queryClient.setQueryData(["fiscalCertificado", props.cliente.id], { certificado: data.certificado });
       await queryClient.invalidateQueries({ queryKey: ["fiscalCertificado", props.cliente.id] });
       await queryClient.invalidateQueries({ queryKey: ["fiscalExpiringCerts"] });
       await queryClient.invalidateQueries({ queryKey: ["fiscalCertList"] });
@@ -95,6 +113,8 @@ function CertificadoFormSection(props: {
     }
   });
 
+  const canSubmit = pemState.ready && isDirty && !saveCert.isPending;
+
   function onSubmit(e: FormEvent): void {
     e.preventDefault();
     setSaveMsg(null);
@@ -103,7 +123,16 @@ function CertificadoFormSection(props: {
       setSaveErr("Envie certificado e chave privada válidos (PEM).");
       return;
     }
+    if (props.savedCert && !isDirty) {
+      setSaveErr("Altere os dados ou envie novos arquivos PEM antes de substituir.");
+      return;
+    }
     saveCert.mutate();
+  }
+
+  function onFieldChange(): void {
+    setSaveMsg(null);
+    setSaveErr(null);
   }
 
   return (
@@ -132,8 +161,16 @@ function CertificadoFormSection(props: {
         </p>
       ) : null}
 
-      {saveMsg ? <p className="form-success" style={{ marginTop: "0.75rem" }}>{saveMsg}</p> : null}
-      {saveErr ? <p className="form-error" style={{ marginTop: "0.75rem" }}>{saveErr}</p> : null}
+      {saveMsg ? (
+        <div className="banner-ok" role="status" style={{ marginTop: "0.75rem" }} data-testid="fiscal-cert-save-msg">
+          {saveMsg}
+        </div>
+      ) : null}
+      {saveErr ? (
+        <div className="banner-err" role="alert" style={{ marginTop: "0.75rem" }} data-testid="fiscal-cert-save-err">
+          {saveErr}
+        </div>
+      ) : null}
 
       <form className="form-card" style={{ marginTop: "1rem" }} onSubmit={onSubmit}>
         <h3 style={{ marginTop: 0 }}>{props.savedCert ? "Substituir certificado A1" : "Cadastrar certificado A1"}</h3>
@@ -142,16 +179,40 @@ function CertificadoFormSection(props: {
         </p>
         <label className="field-label">
           Rótulo
-          <input value={certLabel} onChange={(e) => setCertLabel(e.target.value)} required maxLength={80} />
+          <input
+            value={certLabel}
+            onChange={(e) => {
+              onFieldChange();
+              setCertLabel(e.target.value);
+            }}
+            required
+            maxLength={80}
+          />
         </label>
         <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
           <label className="field-label">
             Válido de
-            <input type="date" value={certValidFrom} onChange={(e) => setCertValidFrom(e.target.value)} required />
+            <input
+              type="date"
+              value={certValidFrom}
+              onChange={(e) => {
+                onFieldChange();
+                setCertValidFrom(e.target.value);
+              }}
+              required
+            />
           </label>
           <label className="field-label">
             Válido até
-            <input type="date" value={certValidUntil} onChange={(e) => setCertValidUntil(e.target.value)} required />
+            <input
+              type="date"
+              value={certValidUntil}
+              onChange={(e) => {
+                onFieldChange();
+                setCertValidUntil(e.target.value);
+              }}
+              required
+            />
           </label>
         </div>
         <div
@@ -162,16 +223,28 @@ function CertificadoFormSection(props: {
             marginTop: "0.75rem"
           }}
         >
-          <FiscalA1PemPair disabled={saveCert.isPending} onStateChange={onPemChange} />
+          <FiscalA1PemPair
+            disabled={saveCert.isPending}
+            resetKey={pemResetKey}
+            onStateChange={onPemChange}
+          />
         </div>
         <button
           type="submit"
           className="btn-primary"
           style={{ marginTop: "1rem" }}
-          disabled={saveCert.isPending || !pemState.ready}
+          disabled={!canSubmit}
+          data-testid="fiscal-cert-submit-btn"
         >
           {saveCert.isPending ? "A guardar…" : props.savedCert ? "Substituir certificado" : "Cadastrar certificado"}
         </button>
+        {props.savedCert && !canSubmit && !saveCert.isPending ? (
+          <p className="muted small" style={{ marginTop: "0.5rem", marginBottom: 0 }}>
+            {saveMsg
+              ? "Certificado salvo. Envie novos arquivos PEM para substituir."
+              : "Envie certificado e chave privada para habilitar a substituição."}
+          </p>
+        ) : null}
       </form>
     </div>
   );
@@ -180,6 +253,7 @@ function CertificadoFormSection(props: {
 export function FiscalCertificadosPage(): JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedClienteId = searchParams.get("cliente") ?? "";
+  const formAnchorRef = useRef<HTMLDivElement>(null);
 
   const clientesQ = useQuery({
     queryKey: ["fiscalCertList", "clientes"],
@@ -228,6 +302,11 @@ export function FiscalCertificadosPage(): JSX.Element {
     queryFn: () => fetchCertificadoDigital(selectedClienteId),
     enabled: Boolean(selectedClienteId)
   });
+
+  useEffect(() => {
+    if (!selectedClienteId) return;
+    formAnchorRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [selectedClienteId]);
 
   return (
     <FiscalAdminGate
@@ -303,6 +382,8 @@ export function FiscalCertificadosPage(): JSX.Element {
         <p className="muted">Cadastre clientes com CNPJ antes de configurar certificados.</p>
       ) : null}
 
+      <div ref={formAnchorRef} />
+
       {selectedCliente ? (
         <>
           <button
@@ -320,9 +401,25 @@ export function FiscalCertificadosPage(): JSX.Element {
           />
         </>
       ) : (
-        <p className="muted" style={{ marginTop: "1rem" }}>
-          Selecione <strong>Cadastrar</strong> ou <strong>Gerir</strong> na tabela para enviar o par PEM.
-        </p>
+        <div
+          className="form-card"
+          style={{ marginTop: "1rem", borderStyle: "dashed" }}
+          data-testid="fiscal-cert-select-hint"
+        >
+          <strong>Como cadastrar o certificado A1</strong>
+          <ol className="muted" style={{ marginBottom: 0, lineHeight: 1.7, paddingLeft: "1.25rem" }}>
+            <li>
+              Na tabela acima, clique em <strong>Cadastrar</strong> (última coluna) na empresa desejada.
+            </li>
+            <li>O formulário PEM abrirá <strong>abaixo</strong> desta caixa.</li>
+            <li>Arraste os arquivos <code>.crt</code> / <code>.key</code> ou cole o conteúdo PEM.</li>
+            <li>Clique em <strong>Cadastrar certificado</strong> (só habilita após PEM válido).</li>
+          </ol>
+          <p className="muted" style={{ marginTop: "0.75rem", marginBottom: 0, fontSize: "0.9rem" }}>
+            Várias linhas &quot;Cliente Sprint3 E2E&quot; são dados de teste — escolha uma ou cadastre um cliente
+            real em <Link to="/clientes">Clientes</Link>.
+          </p>
+        </div>
       )}
     </FiscalAdminGate>
   );

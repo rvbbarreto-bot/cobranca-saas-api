@@ -37,7 +37,7 @@
     "db:portal-app-user": "tsx scripts/db-portal-app-user.ts",
     "job:webhook-inbox": "tsx scripts/process-webhook-pending.ts",
     "test": "vitest run --exclude **/*.integration.test.ts",
-    "test:fiscal-serpro": "vitest run tests/serpro-integra-contador/ tests/platform/fiscal-serpro-prod-env.test.ts tests/platform/fiscal-serpro-enabled.test.ts tests/platform/fiscal-ingest-rate-limit.test.ts tests/platform/encryption-key-policy.test.ts tests/platform/fiscal-sli-metrics.test.ts tests/fiscal-guias/create-receita-fiscal-gateway.test.ts tests/fiscal-processamento/fisc-071-fiscal-dashboard.test.ts",
+    "test:fiscal-serpro": "vitest run tests/serpro-integra-contador/ tests/platform/fiscal-serpro-prod-env.test.ts tests/platform/fiscal-serpro-enabled.test.ts tests/platform/fiscal-serpro-pgdasd.test.ts tests/platform/fiscal-ingest-rate-limit.test.ts tests/platform/encryption-key-policy.test.ts tests/platform/fiscal-sli-metrics.test.ts tests/fiscal-guias/create-receita-fiscal-gateway.test.ts tests/fiscal-processamento/fisc-071-fiscal-dashboard.test.ts",
     "test:coverage": "vitest run --exclude **/*.integration.test.ts --coverage",
     "test:integration": "vitest run tests/cross-tenant.integration.test.ts tests/fiscal-guias/cross-tenant-fiscal.integration.test.ts tests/fiscal-guias/fiscal-inbox-capture.integration.test.ts tests/fiscal-guias/fiscal-certificados.integration.test.ts tests/fiscal-guias/fiscal-audit-portal.integration.test.ts tests/fiscal-guias/sprint1-organization-serpro.integration.test.ts tests/fiscal-processamento/sprint4-processamento.integration.test.ts tests/fiscal-serpro/cross-tenant-processamento.integration.test.ts tests/webhook-charge-status.integration.test.ts tests/inbox/webhook-inbox-idempotency.integration.test.ts tests/functional/api-battery.integration.test.ts tests/functional/production-mock-auth-gate.integration.test.ts tests/health/health-ready.integration.test.ts tests/portal-read/sprint-a-portal-login.integration.test.ts tests/tenant-provisioning/sprint-a-provision.integration.test.ts tests/portal-read/portal-clientes-post.integration.test.ts tests/portal-read/sprint3-e2e-flow.integration.test.ts",
     "test:integration:sprint3": "vitest run tests/portal-read/sprint3-e2e-flow.integration.test.ts",
@@ -51,6 +51,7 @@
     "qa:inter-push-gateway": "tsx scripts/qa-inter-push-gateway-config.ts",
     "qa:inter-reset-credentials": "tsx scripts/qa-inter-reset-stored-credentials.ts",
     "qa:inter-check-cert-ou": "tsx scripts/qa-inter-check-cert-ou.ts",
+    "qa:inter-restore": "tsx scripts/qa-inter-restore-env.ts",
     "test:stress:portal-clientes": "node scripts/run-stress-portal-clientes-vitest.cjs",
     "test:load:portal-clientes": "tsx scripts/load-test-portal-clientes.ts",
     "quality:gate": "npm run build && npm run test:coverage && npm run portal:test && npm run test:integration",
@@ -87,11 +88,15 @@
     "jira:bootstrap:project": "node scripts/jira-bootstrap-factory.mjs --create-project",
     "jira:bootstrap:full": "node scripts/jira-bootstrap-factory.mjs --full",
     "serpro:spike": "node scripts/serpro-demo-spike.mjs --dry-run",
-    "serpro:spike:live": "node scripts/serpro-demo-spike.mjs"
+    "serpro:spike:live": "node scripts/serpro-demo-spike.mjs",
+    "fisc-021:live": "tsx scripts/fisc-021-serpro-live-homolog.ts",
+    "fisc-021:sync-cert": "tsx scripts/fisc-021-sync-cert-ricardo.ts",
+    "factory:serpro:ricardo": "tsx scripts/factory-serpro-ricardo-verify.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",
     "@aws-sdk/s3-request-presigner": "^3.1057.0",
+    "@xmldom/xmldom": "^0.9.10",
     "axios": "^1.17.0",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.76.10",
@@ -104,6 +109,7 @@
     "pg": "^8.13.1",
     "rate-limit-redis": "^5.0.0",
     "redis": "^5.12.1",
+    "xml-crypto": "^6.1.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {

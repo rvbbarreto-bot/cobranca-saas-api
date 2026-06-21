@@ -1,0 +1,11 @@
+{
+  "ran_at": "2026-06-10T22:53:42.388Z",
+  "api_base": "http://localhost:3333",
+  "charge_id": "7fee2f8a-686a-4217-a5fd-d3bbf8a0d3d9",
+  "idempotency_key": "qa-inter-20260610225141",
+  "cliente_id": "f3fa9165-50fd-4fe4-a155-27faafa04068",
+  "final_status": "rascunho",
+  "has_payment": false,
+  "last_emission_error": null,
+  "detail_url": "http://localhost:5173/cobrancas/7fee2f8a-686a-4217-a5fd-d3bbf8a0d3d9"
+}

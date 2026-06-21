@@ -37,7 +37,7 @@ function createSerproGateway(contratanteCnpj: string): ReceitaFiscalGateway {
   const client = new MockSerproIntegraContadorClient();
   return new SerproReceitaFiscalGateway({
     client,
-    accessToken: "mock-token",
+    auth: { accessToken: "mock-token" },
     contratanteCnpj
   });
 }

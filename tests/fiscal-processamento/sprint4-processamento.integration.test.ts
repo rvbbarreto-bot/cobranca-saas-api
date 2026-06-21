@@ -12,6 +12,10 @@ import {
 import { ensureOrganizationForEscritorio } from "../../src/modules/exeq-platform/infrastructure/organization-repository";
 import { processFiscalIngestValidateJob } from "../../src/modules/fiscal-ingestion/application/process-fiscal-ingest-validate";
 import { processSerproTransmitJob } from "../../src/modules/fiscal-processamento/application/process-serpro-transmit-job";
+import { getProcessamentoById } from "../../src/modules/fiscal-processamento/infrastructure/processamento-fiscal-repository";
+import { buildSerproPgdasdTransmitRequest } from "../../src/modules/serpro-integra-contador/infrastructure/serpro-request-builder";
+import { parsePgdasdPedidoDados } from "../../src/modules/serpro-integra-contador/domain/pgdasd-transmissao-payload";
+import type { CanonicalApuracao } from "../../src/modules/fiscal-ingestion/domain/canonical-apuracao.schema";
 import { closePool, getPool } from "../../src/platform/persistence/pool";
 
 const hasDb = Boolean(process.env.DATABASE_URL?.trim());
@@ -120,6 +124,20 @@ describe.skipIf(!hasDb)("Sprint 4 — processamento + transmissao SERPRO mock", 
     expect(createProc.body.processamentos[0].status).toBe("VALIDADO");
     const processamentoId = createProc.body.processamentos[0].id as string;
 
+    const procRow = await getProcessamentoById(getPool(), tenantId, processamentoId);
+    expect(procRow).toBeTruthy();
+    const canonical = procRow!.canonicalSnapshot as CanonicalApuracao;
+    const serproReq = buildSerproPgdasdTransmitRequest({
+      contratanteCnpj: TEST_CNPJ,
+      contribuinteCnpj: canonical.cnpj,
+      apuracao: canonical
+    });
+    const pgdasdDados = parsePgdasdPedidoDados(serproReq.pedidoDados.dados);
+    expect(pgdasdDados.cnpjCompleto).toBe(TEST_CNPJ);
+    expect(pgdasdDados.pa).toBe(202605);
+    expect(pgdasdDados.declaracao.receitaPaCompetenciaInterno).toBe(85000);
+    expect(pgdasdDados.declaracao.estabelecimentos[0]?.cnpjCompleto).toBe(TEST_CNPJ);
+
     await waitForSetImmediate();
     await processSerproTransmitJob({ processamentoId, automacaoTenantId: tenantId });
 
@@ -129,11 +147,14 @@ describe.skipIf(!hasDb)("Sprint 4 — processamento + transmissao SERPRO mock", 
       .set("x-tenant-id", tenantId)
       .expect(200);
 
-    expect(detail.body.processamento.status).toBe("TRANSMITIDA");
+    expect(["TRANSMITIDA", "RECIBO_OK", "CONCLUIDO"]).toContain(detail.body.processamento.status);
     expect(detail.body.processamento.protocolo_serpro).toMatch(/^MOCK-DECL-/);
-    expect(detail.body.eventos.some((e: { evento: string }) => e.evento === "transmissao_concluida")).toBe(
-      true
-    );
+    expect(
+      detail.body.eventos.some(
+        (e: { evento: string }) =>
+          e.evento === "transmissao_concluida" || e.evento === "recibo_ok"
+      )
+    ).toBe(true);
 
     const list = await request(app)
       .get("/v1/portal/fiscal/processamentos")

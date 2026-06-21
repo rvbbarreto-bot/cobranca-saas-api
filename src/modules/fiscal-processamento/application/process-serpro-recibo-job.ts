@@ -38,17 +38,21 @@ export async function processSerproReciboJob(payload: SerproReciboJobPayload): P
     const canonical = proc.canonicalSnapshot as CanonicalApuracao;
     const runtime = await resolveSerproRuntimeForOrganization({
       organizationId: proc.organizationId,
-      fallbackContratanteCnpj: canonical.cnpj
+      fallbackContratanteCnpj: canonical.cnpj,
+      automacaoTenantId: payload.automacaoTenantId,
+      portalClienteId: proc.portalClienteId,
+      contribuinteCnpj: canonical.cnpj
     });
 
     const req = buildSerproConsultReciboRequest({
       contratanteCnpj: runtime.contratanteCnpj,
       contribuinteCnpj: canonical.cnpj,
+      autorPedidoDocumento: runtime.autorPedidoDocumento ?? canonical.cnpj,
       competencia: canonical.competencia,
       protocolo: proc.protocoloSerpro ?? undefined
     });
 
-    const res = await runtime.client.consultar(req, runtime.accessToken);
+    const res = await runtime.client.consultar(req, runtime.auth);
     if (!res.ok) {
       await updateProcessamentoStatus(client, proc.id, {
         status: "ERRO",

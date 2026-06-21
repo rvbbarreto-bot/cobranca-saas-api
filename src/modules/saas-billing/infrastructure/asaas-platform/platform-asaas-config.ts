@@ -1,13 +1,19 @@
+import { isUsableAsaasPlatformApiKey } from "./platform-asaas-api-key";
+
 export type PlatformAsaasConfig = {
   apiKey: string;
   baseUrl?: string;
   billingType: "BOLETO" | "PIX" | "CREDIT_CARD";
 };
 
+export function isPlatformBillingConfigured(): boolean {
+  return getPlatformAsaasConfig() !== null;
+}
+
 export function getPlatformAsaasConfig(): PlatformAsaasConfig | null {
   const apiKey =
     process.env.ASAAS_PLATFORM_API_KEY?.trim() || process.env.ASAAS_API_KEY?.trim();
-  if (!apiKey) {
+  if (!isUsableAsaasPlatformApiKey(apiKey)) {
     return null;
   }
 

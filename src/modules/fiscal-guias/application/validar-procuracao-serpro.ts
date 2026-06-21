@@ -56,16 +56,20 @@ export async function validarProcuracaoSerproUseCase(input: {
 
   const runtime = await resolveSerproRuntimeForOrganization({
     organizationId: org.id,
-    fallbackContratanteCnpj: input.contribuinteCnpj
+    fallbackContratanteCnpj: input.contribuinteCnpj,
+    automacaoTenantId: input.tenantId,
+    portalClienteId: parsed.value.portal_cliente_id,
+    contribuinteCnpj: input.contribuinteCnpj
   });
 
   const req = buildSerproObterProcuracaoRequest({
     contratanteCnpj: runtime.contratanteCnpj,
     contribuinteCnpj: input.contribuinteCnpj,
-    procuradorDocumento: procuracao.procurador_documento
+    procuradorDocumento: procuracao.procurador_documento,
+    autorPedidoDocumento: runtime.autorPedidoDocumento ?? procuracao.procurador_documento
   });
 
-  const res = await runtime.client.consultar(req, runtime.accessToken);
+  const res = await runtime.client.consultar(req, runtime.auth);
   const situacao = res.ok ? parseSerproProcuracaoSituacao(res.rawBody) : "erro_serpro";
   const mensagem = serproProcuracaoUserMessage(situacao);
   const validatedAt = new Date().toISOString();

@@ -6,6 +6,7 @@ import type { PemValidationFailure } from "../lib/pem-local-validation";
 export type PemPairValidationState = {
   ready: boolean;
   certificateUploadId: string | null;
+  integrationIdOu: string | null;
   warnings: string[];
   info: string[];
 };
@@ -35,7 +36,13 @@ export function PemCertificatePairUploader({
   const [retryToken, setRetryToken] = useState(0);
 
   const emitNotReady = useCallback(() => {
-    onStateChange({ ready: false, certificateUploadId: null, warnings: [], info: [] });
+    onStateChange({
+      ready: false,
+      certificateUploadId: null,
+      integrationIdOu: null,
+      warnings: [],
+      info: []
+    });
   }, [onStateChange]);
 
   const handleCertSelect = useCallback(
@@ -101,6 +108,7 @@ export function PemCertificatePairUploader({
         onStateChange({
           ready: true,
           certificateUploadId: response.certificate_id,
+          integrationIdOu: response.integration_id_ou ?? null,
           warnings: response.warnings ?? [],
           info: response.info ?? []
         });
@@ -161,6 +169,15 @@ export function PemCertificatePairUploader({
           >
             Tentar novamente
           </button>
+        </div>
+      ) : null}
+      {result?.integration_id_ou ? (
+        <div className="banner-ok" style={{ gridColumn: "1 / -1" }}>
+          <strong>Client ID esperado (OU do certificado Inter):</strong>{" "}
+          <code>{result.integration_id_ou}</code>
+          <p className="muted small" style={{ margin: "0.35rem 0 0" }}>
+            O Client ID no formulário deve ser exatamente este UUID (Portal Developers Inter).
+          </p>
         </div>
       ) : null}
       {result?.info?.length ? (

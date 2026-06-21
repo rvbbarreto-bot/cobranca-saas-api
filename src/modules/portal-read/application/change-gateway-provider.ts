@@ -10,6 +10,10 @@ import {
   mergeGatewayCredentialsPatch,
   validateGatewayCredentials
 } from "../../../platform/payment-gateway/credential-schema";
+import {
+  assertMtlsFullBundleOnUpdate,
+  shouldReplaceMtlsCredentialsOnUpload
+} from "../../../platform/payment-gateway/mtls-full-bundle-policy";
 import { getProviderMeta } from "../../../platform/payment-gateway/provider-registry";
 import {
   getEscritorioConfig,
@@ -78,8 +82,27 @@ export async function patchGatewayProviderUseCase(
   );
 
   if (credentialsFromUpload) {
+    const credentialsAlreadyConfigured = Boolean(before?.gateway_credentials_encrypted?.trim());
+    assertMtlsFullBundleOnUpdate({
+      provider,
+      credentialsAlreadyConfigured,
+      certificateUploadId: data.certificate_upload_id,
+      gatewayCredentials: credentialsFromUpload
+    });
+
     let credentialsToSave: GatewayCredentials = credentialsFromUpload;
-    if (before?.gateway_credentials_encrypted?.trim() && before.encryption_iv?.trim()) {
+    const replaceBundle = shouldReplaceMtlsCredentialsOnUpload({
+      provider,
+      credentialsAlreadyConfigured,
+      certificateUploadId: data.certificate_upload_id,
+      gatewayCredentials: credentialsFromUpload
+    });
+
+    if (
+      !replaceBundle &&
+      before?.gateway_credentials_encrypted?.trim() &&
+      before.encryption_iv?.trim()
+    ) {
       try {
         const existing = JSON.parse(
           decrypt(before.gateway_credentials_encrypted, before.encryption_iv)

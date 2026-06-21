@@ -10,6 +10,8 @@ export type FiscalA1PemState = {
 
 type FiscalA1PemPairProps = {
   disabled?: boolean;
+  /** Incrementar após gravação bem-sucedida para limpar os arquivos PEM. */
+  resetKey?: number;
   onStateChange: (state: FiscalA1PemState) => void;
 };
 
@@ -22,7 +24,11 @@ type SideState = {
 const INITIAL: SideState = { selection: null, status: "idle", error: null };
 
 /** Upload PEM fiscal A1 — reutiliza zonas drag-drop (sem validação gateway Inter). */
-export function FiscalA1PemPair({ disabled = false, onStateChange }: FiscalA1PemPairProps): JSX.Element {
+export function FiscalA1PemPair({
+  disabled = false,
+  resetKey = 0,
+  onStateChange
+}: FiscalA1PemPairProps): JSX.Element {
   const [cert, setCert] = useState<SideState>(INITIAL);
   const [key, setKey] = useState<SideState>(INITIAL);
 
@@ -67,6 +73,12 @@ export function FiscalA1PemPair({ disabled = false, onStateChange }: FiscalA1Pem
   useEffect(() => {
     emit(cert, key);
   }, [cert, key, emit]);
+
+  useEffect(() => {
+    setCert(INITIAL);
+    setKey(INITIAL);
+    onStateChange({ ready: false, certificadoPem: "", chavePrivadaPem: "" });
+  }, [resetKey, onStateChange]);
 
   return (
     <div className="pem-pair-uploader" data-testid="fiscal-a1-pem-pair" style={{ display: "contents" }}>

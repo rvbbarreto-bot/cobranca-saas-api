@@ -77,7 +77,8 @@ Fluxo na aba **Gateway e integrações** (`/configuracoes`) quando o provider ex
 
 1. Selecionar gateway (ex.: **Banco Inter**).
 2. Preencher **Client ID** e **Client Secret**.
-3. Enviar **certificado digital** (`.crt`, `.pem`, `.cer`) e **chave privada** (`.key`, `.pem`) nos dois componentes de upload (drag-and-drop ou clique).
+3. Enviar **certificado digital** (`.crt`, `.pem`, `.cer`) e **chave privada** (`.key`, `.pem`) nos dois componentes de upload (drag-and-drop ou clique). A resposta inclui **`integration_id_ou`** (Inter) — use como Client ID.
+4. **Alteração:** reenvio obrigatório do pacote completo (cert + chave + Client ID + Secret da mesma integração). Ver [ADR_GATEWAY_MTLS_FULL_BUNDLE.md](./ADR_GATEWAY_MTLS_FULL_BUNDLE.md).
 4. Validação local imediata (formato PEM, extensão, tamanho ≤ 64 KB); em seguida `POST /v1/portal/certificates/validate` com ambos os arquivos.
 5. Em sucesso: mensagens INFO-001/002 e botão **Guardar** liberado. Em erro: catálogo ERR-* (ex.: par inválido ERR-007).
 6. Ao guardar: `PATCH /v1/portal/escritorio/gateway` com `certificate_upload_id` + credenciais OAuth — o PEM **não** trafega no PATCH.

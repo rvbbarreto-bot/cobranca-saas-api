@@ -108,7 +108,9 @@ async function main(): Promise<void> {
     tenantId: PUBLIC_TENANT,
     provider: "inter",
     credentials: stored,
-    sandbox: true
+    sandbox: process.env.GATEWAY_INTER_SANDBOX?.trim()
+      ? ["true", "1"].includes(process.env.GATEWAY_INTER_SANDBOX.trim().toLowerCase())
+      : true
   };
 
   console.log("\nTestando OAuth sandbox Inter…");
