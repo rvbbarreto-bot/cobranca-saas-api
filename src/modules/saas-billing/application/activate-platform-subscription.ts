@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { writeAuditLog } from "../../../platform/audit/audit.service";
 import { SaasBillingError } from "../domain/saas-billing-error";
+import { mapPlatformBillingGatewayError } from "./map-platform-billing-gateway-error";
 import { AsaasPlatformBillingAdapter } from "../infrastructure/asaas-platform/asaas-platform-billing.adapter";
 import { getPlatformAsaasConfig } from "../infrastructure/asaas-platform/platform-asaas-config";
 import {
@@ -71,23 +72,28 @@ export async function activatePlatformSubscription(
   const value = Number(sub.preco_mensal);
 
   let gatewayCustomerId = sub.gateway_customer_id;
-  if (!gatewayCustomerId) {
-    gatewayCustomerId = await adapter.createCustomer({
-      name: tenant.name,
-      email,
-      cpfCnpj: PLATFORM_BILLING_CNPJ,
-      externalReference: publicTenantId
-    });
-  }
+  let gatewaySubscriptionId: string;
+  try {
+    if (!gatewayCustomerId) {
+      gatewayCustomerId = await adapter.createCustomer({
+        name: tenant.name,
+        email,
+        cpfCnpj: PLATFORM_BILLING_CNPJ,
+        externalReference: publicTenantId
+      });
+    }
 
-  const gatewaySubscriptionId = await adapter.createSubscription({
-    customerId: gatewayCustomerId,
-    value,
-    nextDueDate,
-    description: `Plano ${sub.plano_nome}`,
-    externalReference: publicTenantId,
-    billingType: config.billingType
-  });
+    gatewaySubscriptionId = await adapter.createSubscription({
+      customerId: gatewayCustomerId,
+      value,
+      nextDueDate,
+      description: `Plano ${sub.plano_nome}`,
+      externalReference: publicTenantId,
+      billingType: config.billingType
+    });
+  } catch (error: unknown) {
+    mapPlatformBillingGatewayError(error);
+  }
 
   const periodEnd = new Date(nextDue);
   periodEnd.setMonth(periodEnd.getMonth() + 1);

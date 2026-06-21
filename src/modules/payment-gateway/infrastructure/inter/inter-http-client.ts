@@ -2,6 +2,7 @@ import type https from "node:https";
 import { GatewayProviderError } from "../../domain/payment-gateway-error";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
 import { mtlsFetch, mtlsFetchBuffer } from "../../../../platform/payment-gateway/mtls-fetch";
+import { isMtlsTransportError } from "../../../../platform/payment-gateway/mtls-transport-error";
 import { getInterAccessToken, interBaseUrl } from "./inter-oauth";
 
 export class InterHttpClient {
@@ -23,12 +24,20 @@ export class InterHttpClient {
     const base = interBaseUrl(this.ctx.sandbox);
     const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
     const headers = await this.authHeaders();
-    const res = await mtlsFetch(url, {
-      method,
-      agent: this.agent,
-      headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined
-    });
+    let res: Awaited<ReturnType<typeof mtlsFetch>>;
+    try {
+      res = await mtlsFetch(url, {
+        method,
+        agent: this.agent,
+        headers,
+        body: body !== undefined ? JSON.stringify(body) : undefined
+      });
+    } catch (err) {
+      if (isMtlsTransportError(err)) {
+        throw new GatewayProviderError("inter", err.message, { cause: err });
+      }
+      throw err;
+    }
 
     let parsed: unknown = null;
     if (res.text) {
@@ -53,14 +62,22 @@ export class InterHttpClient {
     const base = interBaseUrl(this.ctx.sandbox);
     const url = `${base}${path.startsWith("/") ? path : `/${path}`}`;
     const headers = await this.authHeaders();
-    const res = await mtlsFetchBuffer(url, {
-      method: "GET",
-      agent: this.agent,
-      headers: {
-        ...headers,
-        Accept: "application/pdf"
+    let res: Awaited<ReturnType<typeof mtlsFetchBuffer>>;
+    try {
+      res = await mtlsFetchBuffer(url, {
+        method: "GET",
+        agent: this.agent,
+        headers: {
+          ...headers,
+          Accept: "application/pdf"
+        }
+      });
+    } catch (err) {
+      if (isMtlsTransportError(err)) {
+        throw new GatewayProviderError("inter", err.message, { cause: err });
       }
-    });
+      throw err;
+    }
 
     if (res.status < 200 || res.status >= 300) {
       let providerBody: unknown = null;

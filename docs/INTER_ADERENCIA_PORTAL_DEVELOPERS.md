@@ -39,6 +39,7 @@ O SaaS **não substitui** esse fluxo: persiste o resultado (`client_id`, `client
 | Pagador obrigatório | `pagador.*` | `buildPagador` + `requirePayerAddress` | OK |
 | Cache token TTL 3600s, margem 60s | boas práticas | `oauth-token-cache.ts` + margin 60 | OK |
 | OU do cert = client_id | regra operacional Inter | `inter-credential-alignment.ts` na validação PATCH | OK (Maio/2026) |
+| Pacote completo na alteração mTLS | ADR GATEWAY-MTLS-FULL-BUNDLE | `mtls-full-bundle-policy.ts` + portal | OK (Jun/2026) |
 | PIX API dedicada | desabilitada para novas apps | `createPix` → `not_supported` | OK (alinhado ao estudo) |
 | Webhook pagamento | registrar URL no portal | inbox genérico; normalização Inter | Parcial |
 | Header `X-Inter-Conta-Corrente` | alguns exemplos legados | não exposto na UI | Gap consciente |

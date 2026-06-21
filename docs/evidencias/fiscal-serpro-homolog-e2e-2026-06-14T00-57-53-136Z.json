@@ -1,0 +1,272 @@
+{
+  "executedAt": "2026-06-14T00:57:53.136Z",
+  "git": {
+    "branch": "feature/EXEQ-FISC-092-playwright-gate",
+    "commit": "dec1b2c67c80af45a79b4cdc3ed4d11b659de0a3"
+  },
+  "issue": "EXEQ-FISC-090",
+  "environment": {
+    "nodeEnv": "development",
+    "databaseUrl": "postgres://app:***@localhost:5434/cobranca_saas",
+    "fiscalSerproMock": true,
+    "fiscalPdfStorage": "local",
+    "hasEncryptionKey": true
+  },
+  "automacaoTenantId": "1",
+  "organizationId": "e3658a5a-0f73-4371-9d69-6a5a98290aa7",
+  "correlationId": "serpro-e2e-1781398673134",
+  "competencia": "2024-07",
+  "steps": {
+    "adminLogin": {
+      "ok": true
+    },
+    "ingest": {
+      "id": "4e8dc730-1dd9-4022-a845-36062ef2b331",
+      "status": "VALIDANDO"
+    },
+    "ingestValidated": {
+      "id": "4e8dc730-1dd9-4022-a845-36062ef2b331",
+      "status": "VALIDADO",
+      "source_type": "csv",
+      "original_filename": "pgdasd-2024-07.csv",
+      "row_count": 1,
+      "valid_count": 1,
+      "error_count": 0,
+      "validation_errors": [],
+      "canonical_rows": [
+        {
+          "cnpj": "00000000000191",
+          "competencia": "2024-07",
+          "receita_bruta_mes": 85000,
+          "valor_total_das": 2050,
+          "portal_cliente_id": "2a35fd38-ddad-4166-89cc-7f9e810c0b64"
+        }
+      ],
+      "created_at": "2026-06-14T00:57:54.795Z",
+      "updated_at": "2026-06-14T00:57:54.822Z"
+    },
+    "processamento": {
+      "id": "8dc80891-ca6e-445f-ab9c-96f5160e9a66",
+      "portal_cliente_id": "2a35fd38-ddad-4166-89cc-7f9e810c0b64",
+      "fiscal_ingest_id": "4e8dc730-1dd9-4022-a845-36062ef2b331",
+      "competencia": "2024-07",
+      "tipo": "PGDASD_APURACAO",
+      "status": "VALIDADO",
+      "valor_apurado": "2050.00",
+      "protocolo_serpro": null,
+      "recibo_disponivel": false,
+      "guia_fiscal_id": null,
+      "erro_codigo": null,
+      "created_at": "2026-06-14T00:57:54.897Z",
+      "updated_at": "2026-06-14T00:57:54.897Z"
+    },
+    "processamentoFinal": {
+      "id": "8dc80891-ca6e-445f-ab9c-96f5160e9a66",
+      "portal_cliente_id": "2a35fd38-ddad-4166-89cc-7f9e810c0b64",
+      "fiscal_ingest_id": "4e8dc730-1dd9-4022-a845-36062ef2b331",
+      "competencia": "2024-07",
+      "tipo": "PGDASD_APURACAO",
+      "status": "CONCLUIDO",
+      "valor_apurado": "2050.00",
+      "protocolo_serpro": "MOCK-DECL-00000000000191-1781398674954",
+      "recibo_disponivel": true,
+      "guia_fiscal_id": "3404e353-e3a7-42c2-8437-b6d9ce024e37",
+      "erro_codigo": null,
+      "created_at": "2026-06-14T00:57:54.897Z",
+      "updated_at": "2026-06-14T00:57:55.052Z"
+    },
+    "eventos": [
+      {
+        "id": "391a60ea-79b5-4a0a-88f2-cb3e26cceec9",
+        "evento": "processamento_criado",
+        "payload": {
+          "competencia": "2024-07",
+          "fiscal_ingest_id": "4e8dc730-1dd9-4022-a845-36062ef2b331"
+        },
+        "created_at": "2026-06-14T00:57:54.905Z"
+      },
+      {
+        "id": "0dfbffc0-1386-4f3f-90f6-d1cfa7b2237d",
+        "evento": "transmissao_iniciada",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:54.925Z"
+      },
+      {
+        "id": "e5cb5fea-1976-4cb2-82f4-276099d981f2",
+        "evento": "transmissao_iniciada",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:54.928Z"
+      },
+      {
+        "id": "f6668e43-6127-4c71-8fb8-cc36c42b9f52",
+        "evento": "transmissao_concluida",
+        "payload": {
+          "protocolo": "MOCK-DECL-00000000000191-1781398674954"
+        },
+        "created_at": "2026-06-14T00:57:54.961Z"
+      },
+      {
+        "id": "0837bd90-5ca9-4789-b54e-b806ee098e7d",
+        "evento": "transmissao_concluida",
+        "payload": {
+          "protocolo": "MOCK-DECL-00000000000191-1781398674954"
+        },
+        "created_at": "2026-06-14T00:57:54.963Z"
+      },
+      {
+        "id": "4a7484b3-acd4-4a28-9d0d-8e15f68af72c",
+        "evento": "recibo_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:54.973Z"
+      },
+      {
+        "id": "f986fd4c-af9a-416a-8696-e17dc7549263",
+        "evento": "recibo_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:54.976Z"
+      },
+      {
+        "id": "b1c655fb-4fac-4d4a-803c-f3c6277f5671",
+        "evento": "recibo_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:54.977Z"
+      },
+      {
+        "id": "6b55cd22-975b-4d02-a66a-9c242a29fe84",
+        "evento": "recibo_concluido",
+        "payload": {
+          "recibo_storage_key": "fiscal/1/recibo/8dc80891-ca6e-445f-ab9c-96f5160e9a66.pdf"
+        },
+        "created_at": "2026-06-14T00:57:54.990Z"
+      },
+      {
+        "id": "7248562e-a363-42ca-92b6-768734d2b9f5",
+        "evento": "recibo_concluido",
+        "payload": {
+          "recibo_storage_key": "fiscal/1/recibo/8dc80891-ca6e-445f-ab9c-96f5160e9a66.pdf"
+        },
+        "created_at": "2026-06-14T00:57:54.992Z"
+      },
+      {
+        "id": "4d3e5bcc-0fa5-419a-a85c-1210f7a37616",
+        "evento": "das_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:55.001Z"
+      },
+      {
+        "id": "a7d2d8c2-8456-4cfa-b4c2-c90db66499b3",
+        "evento": "das_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:55.005Z"
+      },
+      {
+        "id": "2a8ccaba-5639-478a-89e4-d861706b52d8",
+        "evento": "das_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:55.009Z"
+      },
+      {
+        "id": "9e0b7e28-4062-4e3a-a264-58de26523cc2",
+        "evento": "recibo_concluido",
+        "payload": {
+          "recibo_storage_key": "fiscal/1/recibo/8dc80891-ca6e-445f-ab9c-96f5160e9a66.pdf"
+        },
+        "created_at": "2026-06-14T00:57:55.017Z"
+      },
+      {
+        "id": "c7db3c89-faac-41c0-b7ff-3936f221f088",
+        "evento": "das_iniciado",
+        "payload": {},
+        "created_at": "2026-06-14T00:57:55.031Z"
+      },
+      {
+        "id": "a81bb4bd-3184-44a6-bdd5-1ddcb0a0d716",
+        "evento": "das_concluido",
+        "payload": {
+          "guia_fiscal_id": "3404e353-e3a7-42c2-8437-b6d9ce024e37"
+        },
+        "created_at": "2026-06-14T00:57:55.044Z"
+      },
+      {
+        "id": "bee9eaf0-b965-4903-81cd-a52621d423fa",
+        "evento": "das_concluido",
+        "payload": {
+          "guia_fiscal_id": "3404e353-e3a7-42c2-8437-b6d9ce024e37"
+        },
+        "created_at": "2026-06-14T00:57:55.049Z"
+      },
+      {
+        "id": "1b7ca99a-24db-4dbe-a7f1-6c9ab4934574",
+        "evento": "das_concluido",
+        "payload": {
+          "guia_fiscal_id": "3404e353-e3a7-42c2-8437-b6d9ce024e37"
+        },
+        "created_at": "2026-06-14T00:57:55.052Z"
+      },
+      {
+        "id": "c5e5dc65-7ed6-4db8-9711-e5ea2148431e",
+        "evento": "das_concluido",
+        "payload": {
+          "guia_fiscal_id": "3404e353-e3a7-42c2-8437-b6d9ce024e37"
+        },
+        "created_at": "2026-06-14T00:57:55.060Z"
+      }
+    ],
+    "reciboUrl": {
+      "expires_in_seconds": 3600,
+      "pdf_url_prefix": "file://local/fiscal/1/recibo/8dc80891-ca6e-445f-"
+    },
+    "guiaPdfUrl": {
+      "guia_id": "3404e353-e3a7-42c2-8437-b6d9ce024e37",
+      "expires_in_seconds": 3600,
+      "pdf_url_prefix": "file://local/fiscal/1/3404e353-e3a7-42c2-8437-b6"
+    }
+  },
+  "assertions": [
+    {
+      "name": "schema_processamento_ready",
+      "ok": true
+    },
+    {
+      "name": "cliente_pgdasd_cadastrado",
+      "ok": true,
+      "detail": "00000000000191"
+    },
+    {
+      "name": "csv_ingest_validado",
+      "ok": true,
+      "detail": "status=VALIDADO"
+    },
+    {
+      "name": "processamento_criado",
+      "ok": true,
+      "detail": "8dc80891-ca6e-445f-ab9c-96f5160e9a66"
+    },
+    {
+      "name": "transmissao_serpro_concluida",
+      "ok": true,
+      "detail": "status=CONCLUIDO; protocolo=MOCK-DECL-00000000000191-1781398674954"
+    },
+    {
+      "name": "recibo_pdf_persistido",
+      "ok": true,
+      "detail": "recibo_disponivel=true"
+    },
+    {
+      "name": "das_guia_concluido",
+      "ok": true,
+      "detail": "3404e353-e3a7-42c2-8437-b6d9ce024e37"
+    },
+    {
+      "name": "recibo_url_acessivel",
+      "ok": true,
+      "detail": "expires=3600"
+    },
+    {
+      "name": "guia_pdf_acessivel",
+      "ok": true,
+      "detail": "3404e353-e3a7-42c2-8437-b6d9ce024e37"
+    }
+  ],
+  "automatedTestsNote": "Reproducao homolog SERPRO demo (CSV → transmit → recibo → DAS):\n  npm run migrate && npm run seed:dev\n  RUN_FISCAL_SERPRO_HOMOLOG_E2E=1 npm run fiscal:serpro:homolog:e2e\n  Demo mock (default): FISCAL_SERPRO_MOCK=true\n  Demo live SERPRO: FISCAL_SERPRO_MOCK=false + credenciais em fiscal.serpro_config\nDocs: docs/SERPRO_HOMOLOG_CHECKLIST.md"
+}

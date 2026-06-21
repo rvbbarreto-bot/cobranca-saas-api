@@ -1,4 +1,6 @@
 import type { SerproIntegraContadorClient, SerproIntegraRequest, SerproIntegraResponse } from "../domain/serpro-types";
+import type { SerproAuthContext } from "../domain/serpro-auth-context";
+import { postSerproIntegra } from "./serpro-jwt-token-service";
 import { mapSerproIntegraResponse } from "../domain/serpro-error-mapper";
 import {
   buildMockSerproPdfBytes,
@@ -11,7 +13,7 @@ function withPdf(res: SerproIntegraResponse): SerproIntegraResponse {
 }
 
 export class MockSerproIntegraContadorClient implements SerproIntegraContadorClient {
-  async consultar(request: SerproIntegraRequest, _accessToken: string): Promise<SerproIntegraResponse> {
+  async consultar(request: SerproIntegraRequest, _auth: SerproAuthContext): Promise<SerproIntegraResponse> {
     const servico = request.pedidoDados.idServico;
     if (servico === "OBTERPROCURACAO41") {
       return mapSerproIntegraResponse(200, {
@@ -40,7 +42,7 @@ export class MockSerproIntegraContadorClient implements SerproIntegraContadorCli
     });
   }
 
-  async declarar(request: SerproIntegraRequest, _accessToken: string): Promise<SerproIntegraResponse> {
+  async declarar(request: SerproIntegraRequest, _auth: SerproAuthContext): Promise<SerproIntegraResponse> {
     return mapSerproIntegraResponse(200, {
       mock: true,
       operacao: "Declarar",
@@ -49,7 +51,7 @@ export class MockSerproIntegraContadorClient implements SerproIntegraContadorCli
     });
   }
 
-  async emitir(request: SerproIntegraRequest, _accessToken: string): Promise<SerproIntegraResponse> {
+  async emitir(request: SerproIntegraRequest, _auth: SerproAuthContext): Promise<SerproIntegraResponse> {
     const pa = JSON.parse(request.pedidoDados.dados || "{}") as { pa?: string; valorDas?: number };
     const valor = typeof pa.valorDas === "number" ? pa.valorDas : 150;
     return withPdf(
@@ -72,39 +74,24 @@ export class MockSerproIntegraContadorClient implements SerproIntegraContadorCli
 export class HttpSerproIntegraContadorClient implements SerproIntegraContadorClient {
   constructor(private readonly baseUrl: string) {}
 
-  async consultar(request: SerproIntegraRequest, accessToken: string): Promise<SerproIntegraResponse> {
-    return withPdf(await this.post("/integra-contador/v1/Consultar", request, accessToken));
+  async consultar(request: SerproIntegraRequest, auth: SerproAuthContext): Promise<SerproIntegraResponse> {
+    return withPdf(await this.post("/integra-contador/v1/Consultar", request, auth));
   }
 
-  async declarar(request: SerproIntegraRequest, accessToken: string): Promise<SerproIntegraResponse> {
-    return this.post("/integra-contador/v1/Declarar", request, accessToken);
+  async declarar(request: SerproIntegraRequest, auth: SerproAuthContext): Promise<SerproIntegraResponse> {
+    return this.post("/integra-contador/v1/Declarar", request, auth);
   }
 
-  async emitir(request: SerproIntegraRequest, accessToken: string): Promise<SerproIntegraResponse> {
-    return withPdf(await this.post("/integra-contador/v1/Emitir", request, accessToken));
+  async emitir(request: SerproIntegraRequest, auth: SerproAuthContext): Promise<SerproIntegraResponse> {
+    return withPdf(await this.post("/integra-contador/v1/Emitir", request, auth));
   }
 
   private async post(
     path: string,
     body: SerproIntegraRequest,
-    accessToken: string
+    auth: SerproAuthContext
   ): Promise<SerproIntegraResponse> {
-    const res = await fetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-    let raw: unknown;
-    try {
-      raw = await res.json();
-    } catch {
-      raw = { raw: await res.text() };
-    }
-    return mapSerproIntegraResponse(res.status, raw);
+    return postSerproIntegra(this.baseUrl, path, body, auth);
   }
 }
 

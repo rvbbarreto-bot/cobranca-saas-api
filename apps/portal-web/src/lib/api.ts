@@ -920,6 +920,9 @@ export type EscritorioAssinaturaResponse = {
     trial_ends_at: string | null;
     current_period_start: string | null;
     current_period_end: string | null;
+    platform_billing: {
+      available: boolean;
+    };
     plano: {
       id: string;
       slug: string;
@@ -990,6 +993,7 @@ export type PatchGatewayProviderBody = {
 export type CertificateValidateResponse = {
   certificate_id: string;
   subject_cn: string;
+  integration_id_ou?: string | null;
   not_after: string;
   days_remaining: number;
   warnings: string[];

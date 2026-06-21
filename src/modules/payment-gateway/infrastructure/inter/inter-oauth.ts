@@ -3,6 +3,7 @@ import { GatewayAuthError } from "../../domain/payment-gateway-error";
 import type { GatewayAdapterContext } from "../../domain/gateway-types";
 import { getCachedOAuthToken, setCachedOAuthToken } from "../../../../platform/payment-gateway/oauth-token-cache";
 import { mtlsFetch } from "../../../../platform/payment-gateway/mtls-fetch";
+import { isMtlsTransportError } from "../../../../platform/payment-gateway/mtls-transport-error";
 import type { InterTokenResponse } from "./inter-types";
 
 const INTER_SANDBOX_BASE = "https://cdpj-sandbox.partners.uatinter.co";
@@ -33,12 +34,20 @@ export async function getInterAccessToken(
   }).toString();
 
   const base = interBaseUrl(ctx.sandbox);
-  const res = await mtlsFetch(`${base}/oauth/v2/token`, {
-    method: "POST",
-    agent,
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
-  });
+  let res: Awaited<ReturnType<typeof mtlsFetch>>;
+  try {
+    res = await mtlsFetch(`${base}/oauth/v2/token`, {
+      method: "POST",
+      agent,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+  } catch (err) {
+    if (isMtlsTransportError(err)) {
+      throw new GatewayAuthError("inter", err.message);
+    }
+    throw err;
+  }
 
   if (res.status < 200 || res.status >= 300) {
     throw new GatewayAuthError("inter", `Token HTTP ${res.status}`, {

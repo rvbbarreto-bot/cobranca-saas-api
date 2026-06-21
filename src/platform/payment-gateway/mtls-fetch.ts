@@ -1,5 +1,6 @@
 import https from "node:https";
 import { URL } from "node:url";
+import { classifyMtlsTransportError } from "./mtls-transport-error.js";
 
 export type MtlsFetchOptions = {
   method: string;
@@ -60,7 +61,7 @@ function mtlsRequest(
         });
       }
     );
-    req.on("error", reject);
+    req.on("error", (err) => reject(classifyMtlsTransportError(err)));
     if (options.body) {
       req.write(options.body);
     }

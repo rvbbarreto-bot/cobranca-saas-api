@@ -1,3 +1,5 @@
+import { serproHttpsRequest } from "./serpro-http-fetch";
+
 type CachedToken = { accessToken: string; expiresAtMs: number };
 
 const cache = new Map<string, CachedToken>();
@@ -14,7 +16,7 @@ export async function getSerproAccessToken(input: {
   }
 
   const basic = Buffer.from(`${input.consumerKey}:${input.consumerSecret}`).toString("base64");
-  const res = await fetch(input.tokenUrl, {
+  const res = await serproHttpsRequest(input.tokenUrl, {
     method: "POST",
     headers: {
       Authorization: `Basic ${basic}`,

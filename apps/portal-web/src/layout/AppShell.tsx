@@ -24,6 +24,20 @@ export function AppShell(): JSX.Element {
     setNavOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!navOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === "Escape") setNavOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [navOpen]);
+
   const displayName = me.data?.user.full_name?.trim() || me.data?.user.email || sessionEmail || "—";
   const roleLabel = me.data?.user.membership_role ?? "—";
   const navEntries = buildNavRenderList(navItemsForRole(me.data?.user.membership_role, me.data?.modules));

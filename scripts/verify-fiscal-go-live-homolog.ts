@@ -22,6 +22,9 @@ async function main(): Promise<void> {
 
   run("npm run migrate");
   run("npm run verify:sprint10");
+  run("npm run verify:sprint70");
+  run("npm run verify:sprint94");
+  run("npm run verify:sprint90");
 
   const evidenceDir = join(ROOT, "docs/evidencias/fiscal-go-live-homolog");
   mkdirSync(evidenceDir, { recursive: true });
@@ -34,7 +37,13 @@ async function main(): Promise<void> {
         gate: "homolog-pre-go-live",
         started_at: startedAt,
         finished_at: new Date().toISOString(),
-        steps: ["npm run migrate", "npm run verify:sprint10"],
+        steps: [
+          "npm run migrate",
+          "npm run verify:sprint10",
+          "npm run verify:sprint70",
+          "npm run verify:sprint94",
+          "npm run verify:sprint90"
+        ],
         checklist: "docs/FISCAL_GO_LIVE_CHECKLIST.md",
         note: "Assinaturas PO/Tech Lead/DevOps permanecem manuais na secao 6."
       },

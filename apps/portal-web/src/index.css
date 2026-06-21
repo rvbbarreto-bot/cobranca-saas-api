@@ -21,6 +21,15 @@
   --exeq-radius-sm: 8px;
   --exeq-shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 28px rgba(15, 23, 42, 0.06);
   --exeq-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Fiscal module (EXEQ-FISC-070) */
+  --fiscal-accent: var(--exeq-cyan);
+  --fiscal-accent-soft: rgba(34, 211, 238, 0.12);
+  --fiscal-card-border: var(--exeq-border);
+  --fiscal-card-shadow: var(--exeq-shadow-card);
+  --fiscal-kpi-radius: var(--exeq-radius-md);
+  --fiscal-danger-soft: rgba(220, 38, 38, 0.08);
+  --fiscal-warning-soft: rgba(234, 88, 12, 0.1);
 }
 
 * {
@@ -498,6 +507,41 @@ body {
   .shell-header {
     flex-wrap: wrap;
   }
+}
+
+/* ----- Fiscal design system (EXEQ-FISC-070) ----- */
+
+.fiscal-surface {
+  --fiscal-local-accent: var(--fiscal-accent);
+}
+
+.fiscal-dash .dash-kpi,
+.fiscal-surface .dash-kpi {
+  border: 1px solid var(--fiscal-card-border);
+  border-radius: var(--fiscal-kpi-radius);
+  box-shadow: var(--fiscal-card-shadow);
+  background: var(--exeq-card);
+}
+
+.fiscal-dash .dash-kpi__badge--red,
+.fiscal-surface .dash-kpi__badge--red {
+  background: var(--fiscal-danger-soft);
+}
+
+.fiscal-dash .dash-kpi__badge--orange,
+.fiscal-surface .dash-kpi__badge--orange {
+  background: var(--fiscal-warning-soft);
+}
+
+.fiscal-panel {
+  background: var(--exeq-card);
+  border: 1px solid var(--fiscal-card-border);
+  border-radius: var(--fiscal-kpi-radius);
+  box-shadow: var(--fiscal-card-shadow);
+}
+
+.app-shell--nav-open {
+  overflow: hidden;
 }
 
 /* ----- Fiscal dashboard (EXEQ-FISC-071) ----- */

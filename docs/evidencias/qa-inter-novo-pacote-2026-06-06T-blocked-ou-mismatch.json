@@ -1,0 +1,42 @@
+{
+  "ran_at": "2026-06-06T00:00:00.000Z",
+  "pacote_origem": "Certificado/Inter_API-Chave_e_Certificado/Inter_API-Chave_e_Certificado",
+  "cert_cn": "EXEQ TECNOLOGIA LTDA",
+  "cert_ou_integracao": "9320d067-c258-44c4-935e-db73973fb78e",
+  "client_id_informado_po": "72853ecb-ba07-4222-ad49-018f150b45f6",
+  "cert_validade": "Jun 10 2026 GMT -> Jun 10 2027 GMT",
+  "results": [
+    {
+      "id": "PEM-PAIR",
+      "ok": true,
+      "detail": "Par certificado + chave privada validado (generate-qa-inter-pem-bundle)"
+    },
+    {
+      "id": "CERT-OU-CHECK",
+      "ok": false,
+      "detail": "OU 9320d067… ≠ client_id 72853ecb… — apps diferentes no Portal Inter"
+    },
+    {
+      "id": "PATCH-GATEWAY",
+      "ok": false,
+      "detail": "HTTP 422 gateway_credentials_invalid — alinhamento OU/client_id bloqueado pela API (comportamento esperado)"
+    },
+    {
+      "id": "OAUTH-PROBE",
+      "ok": false,
+      "detail": "nao executado — credenciais inconsistentes; requer pacote completo da mesma app"
+    },
+    {
+      "id": "INT-05b-EMISSAO",
+      "ok": false,
+      "detail": "nao executado — depende de OAuth mTLS OK"
+    }
+  ],
+  "conclusao": "BLOQUEADO — PO deve baixar novamente certificado+chave da aplicacao 72853ecb… OU usar client_id/secret da aplicacao 9320d067… (OU do certificado).",
+  "acao_po": [
+    "Portal Developers Inter → aplicacao cujo Client ID = 72853ecb-ba07-4222-ad49-018f150b45f6",
+    "Baixar pacote mTLS (Inter API_Certificado.crt + Inter API_Chave.key) dessa mesma aplicacao",
+    "Confirmar: npm run qa:inter-check-cert-ou -- \"<pasta>\" \"72853ecb-ba07-4222-ad49-018f150b45f6\" → OK",
+    "Rotacionar client_secret apos teste (valor exposto em canal de chat)"
+  ]
+}

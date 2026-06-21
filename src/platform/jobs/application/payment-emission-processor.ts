@@ -13,7 +13,7 @@ import {
 } from "../../../modules/portal-read/application/portal-cliente-address";
 import { getGatewayForTenant } from "../../../modules/payment-gateway/application/get-gateway-for-tenant";
 import type { CanonicalChargeStatus } from "../../../modules/billing-core/domain/charge";
-import { isProductionNodeEnv } from "../../config/runtime-flags";
+import { isGatewaySandboxMode } from "../../payment-gateway/gateway-sandbox";
 import { decrypt } from "../../crypto/decrypt";
 import { insertChargeEvent } from "../../../modules/billing-core/infrastructure/charge-events-repository";
 import { writeAuditLog } from "../../audit/audit.service";
@@ -216,7 +216,8 @@ async function insertPaymentTransaction(
 async function resolveGatewayAdapter(
   client: PoolClient,
   tenantId: string,
-  deps: PaymentEmissionProcessorDeps
+  deps: PaymentEmissionProcessorDeps,
+  gatewayProvider?: string
 ): Promise<PaymentGatewayAdapter> {
   if (deps.getGateway) {
     return deps.getGateway(client, tenantId);
@@ -240,7 +241,7 @@ async function resolveGatewayAdapter(
   }
   return getGatewayForTenant(client, tenantId, {
     decrypt: deps.decryptApiKey ?? decrypt,
-    sandbox: !isProductionNodeEnv()
+    sandbox: isGatewaySandboxMode(gatewayProvider)
   });
 }
 
@@ -266,7 +267,7 @@ async function runEmission(
   // portal.cliente continua no schema automacao (automacaoTenantId).
   const configTenantId = data.tenantId;
   const gatewayProvider = await loadGatewayProvider(client, configTenantId);
-  const adapter = await resolveGatewayAdapter(client, configTenantId, deps);
+  const adapter = await resolveGatewayAdapter(client, configTenantId, deps, gatewayProvider);
 
   const portalClienteId = charge.metadata.portal_cliente_id;
   if (typeof portalClienteId !== "string" || !portalClienteId.trim()) {

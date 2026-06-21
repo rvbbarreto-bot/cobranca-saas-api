@@ -101,6 +101,19 @@ describe("ProcessamentosFiscaisPage (EXEQ-FISC-074)", () => {
     expect(bodyRows[0]?.textContent).toContain("2026-04");
   });
 
+  it("initialView=erros abre central de erros direto (FISC-070 /fiscal/erros)", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <ProcessamentosFiscaisPage initialView="erros" />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    expect(await screen.findByTestId("fiscal-erro-central")).toBeInTheDocument();
+    expect(screen.getByTestId("proc-tab-erros")).toHaveClass("tab--active");
+  });
+
   it("central de erros agrupa por código traduzido", async () => {
     const user = userEvent.setup();
     renderPage();

@@ -86,6 +86,7 @@ export function App(): JSX.Element {
                 <Route path="/guias-fiscais/:guiaId" element={<GuiaFiscalDetalhePage />} />
                 <Route path="/fiscal/dashboard" element={<FiscalDashboardPage />} />
                 <Route path="/fiscal" element={<FiscalDashboardPage />} />
+                <Route path="/fiscal/erros" element={<ProcessamentosFiscaisPage initialView="erros" />} />
                 <Route path="/processamentos-fiscais" element={<ProcessamentosFiscaisPage />} />
                 <Route path="/processamentos-fiscais/importar" element={<ImportPgdasdPage />} />
                 <Route path="/processamentos-fiscais/:processamentoId" element={<ProcessamentoDetalhePage />} />

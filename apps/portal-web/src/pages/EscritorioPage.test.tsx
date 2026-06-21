@@ -24,6 +24,7 @@ vi.mock("../lib/api", async (importOriginal) => {
         trial_ends_at: "2026-06-01T00:00:00.000Z",
         current_period_start: null,
         current_period_end: null,
+        platform_billing: { available: true },
         plano: {
           id: "p1",
           slug: "profissional",
@@ -78,5 +79,33 @@ describe("EscritorioPage", () => {
     await user.click(btn);
     await waitFor(() => expect(activateMock).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/sub_test/)).toBeTruthy();
+  });
+
+  it("oculta botão quando billing da plataforma não está configurado", async () => {
+    const { fetchEscritorioAssinatura } = await import("../lib/api");
+    vi.mocked(fetchEscritorioAssinatura).mockResolvedValueOnce({
+      assinatura: {
+        id: "sub-1",
+        status: "trial",
+        read_only: false,
+        trial_ends_at: "2026-06-01T00:00:00.000Z",
+        current_period_start: null,
+        current_period_end: null,
+        platform_billing: { available: false },
+        plano: {
+          id: "p1",
+          slug: "profissional",
+          nome: "Profissional",
+          max_clientes: 250,
+          max_cobrancas_mes: 2000,
+          preco_mensal: 299
+        },
+        uso: { year_month: "2026-05", clientes: 2, cobrancas_criadas_mes: 5 }
+      }
+    });
+    renderPage();
+    expect(await screen.findByText(/Plano e assinatura/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Ativar cobrança recorrente/i })).toBeNull();
+    expect(await screen.findByText(/Cobrança recorrente via Asaas não está configurada/i)).toBeTruthy();
   });
 });

@@ -69,7 +69,8 @@ export class GatewayAuthError extends PaymentGatewayError {
 
   constructor(provider: string, message: string, options?: { httpStatus?: number; providerBody?: unknown }) {
     super(message, {
-      code: "gateway_auth_error",
+      code: "gateway_auth_failed",
+      retryable: false,
       httpStatus: options?.httpStatus,
       providerBody: options?.providerBody
     });

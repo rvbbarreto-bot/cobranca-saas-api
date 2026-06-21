@@ -1,0 +1,53 @@
+{
+  "issue": "EXEQ-FISC-021b",
+  "autorizacaoPo": "docs/AUTORIZACAO_PO_FISC-021B_PROTOCOLO_DEMO_JUN2026.md",
+  "po": "Ricardo Barreto",
+  "executedAt": "2026-06-14T03:47:00.000Z",
+  "fases": [
+    {
+      "nome": "fase1_simulacao",
+      "env": {
+        "FISCAL_SERPRO_MOCK": "false",
+        "FISCAL_SERPRO_REQUIRE_PROCURACAO": "false",
+        "FISCAL_SERPRO_PGDASD_SIMULAR": "true"
+      },
+      "resultado": "7/7 OK",
+      "evidencia": "docs/evidencias/fisc-021/fisc-021-serpro-live-ricardo-2026-06-14T03-46-49-127Z.json",
+      "indicadorTransmissao": false,
+      "declararStatus": 400,
+      "nota": "Auth OK; SERPRO retorna erro de negocio (nao schema, nao 403)"
+    },
+    {
+      "nome": "fase2_transmissao",
+      "env": {
+        "FISCAL_SERPRO_PGDASD_SIMULAR": "false"
+      },
+      "resultado": "7/7 OK (spike)",
+      "evidencia": "docs/evidencias/fisc-021/fisc-021-serpro-live-ricardo-2026-06-14T03-46-58-661Z.json",
+      "indicadorTransmissao": true,
+      "declararStatus": 400,
+      "protocoloSerpro": null,
+      "nota": "Sem protocolo real — aguarda calibracao PA/atividade com contabilidade"
+    },
+    {
+      "nome": "factory_ricardo",
+      "resultado": "8/9 OK",
+      "falha": "live_serpro_erro — SERPRO_REJEITOU; processamento ERRO",
+      "nota": "Pipeline parcial; protocolo MOCK-DECL sugere revisar se jobs live usam mock em alguma etapa"
+    }
+  ],
+  "dodFisc021b": {
+    "status": "ENCERRADO_ACEITE_PO_LIMITE_DEMO",
+    "dataAceitePo": "2026-06-06",
+    "protocolo_ou_erro_negocio_documentado": "aceito — HTTP 400 negocio documentado (limite demo)",
+    "factory_9_9": "nao_exigido — 8/9 falha justificada SERPRO_REJEITOU",
+    "sem_403_sem_schema": true,
+    "evidencia_checklist": true,
+    "followUp": "EXEQ-FISC-021c — protocolo demo com PA/contabilidade"
+  },
+  "proximoPassoPo": [
+    "Contabilidade definir PA de teste valida no demo SERPRO para CNPJ 37229907000137",
+    "Validar idAtividade/anexo vs cadastro PGDASD demo",
+    "PO aceitar erro 400 como limite sandbox OU autorizar nova PA apos calibracao"
+  ]
+}

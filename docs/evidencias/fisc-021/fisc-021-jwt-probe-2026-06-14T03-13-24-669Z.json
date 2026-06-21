@@ -1,0 +1,24 @@
+{
+  "subject": "C=BR\nO=ICP-Brasil\nOU=Certificado Digital PJ A1\nOU=Videoconferencia\nOU=40330832000190\nOU=AC SyngularID Multipla\nCN=RICARDO VITORIANO BARRETO:37229907000137",
+  "identity": {
+    "documento": "37229907000137",
+    "documentoTipo": "PJ",
+    "nome": "RICARDO VITORIANO BARRETO"
+  },
+  "contratante": "37229907000137",
+  "sapi": {
+    "ok": true,
+    "accessTokenLen": 1038,
+    "jwtTokenLen": 3004
+  },
+  "procuradorToken": {
+    "skipped": true
+  },
+  "resolveRuntime": {
+    "ok": true,
+    "useMock": false,
+    "hasJwt": true,
+    "hasProcurador": false,
+    "autorPedido": "37229907000137"
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "issue": "EXEQ-FISC-001",
+  "started_at": "2026-06-13T21:00:05.393Z",
+  "finished_at": "2026-06-13T21:00:05.469Z",
+  "env_issues": [
+    "FISCAL_SERPRO_MOCK=true — desligue para live SERPRO"
+  ],
+  "organizations_checked": 8,
+  "organizations_ready": 0,
+  "organizations": [
+    {
+      "organization_id": "e3658a5a-0f73-4371-9d69-6a5a98290aa7",
+      "slug": "escritorio-demo",
+      "serpro_config": {
+        "organization_id": "e3658a5a-0f73-4371-9d69-6a5a98290aa7",
+        "ambiente": "demo",
+        "contratante_cnpj": "37.***.***/****-37",
+        "serpro_enabled": true,
+        "consumer_key_configured": true,
+        "consumer_secret_configured": true,
+        "updated_at": "2026-06-13T20:59:23.531Z"
+      },
+      "ready": false,
+      "blockers": [
+        "ambiente=demo — live exige ambiente prod"
+      ]
+    },
+    {
+      "organization_id": "787a77de-35db-4640-b060-ba012d9fcdfd",
+      "slug": "escritorio-fiscal-cross-test",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    },
+    {
+      "organization_id": "4e34d9cc-c1d6-4ff8-9173-4ff4ca5d5b20",
+      "slug": "escritorio-fiscal-cert-test",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    },
+    {
+      "organization_id": "90796db8-0e2e-45bf-8144-90fc5309c206",
+      "slug": "escritorio-fiscal-pagamento-test",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    },
+    {
+      "organization_id": "cd7dfdbd-45e6-4de0-84cb-812627906bf9",
+      "slug": "escritorio-atibaia",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    },
+    {
+      "organization_id": "989e4935-d629-4501-adb7-3735bd816a09",
+      "slug": "escritorio-nazare",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    },
+    {
+      "organization_id": "f0a48403-42b5-46f0-b99c-ec8e8364dc5d",
+      "slug": "ricardo",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    },
+    {
+      "organization_id": "8227493b-6957-436c-ad0b-09c4a0048535",
+      "slug": "escritorio-proc-cross-test",
+      "serpro_config": null,
+      "ready": false,
+      "blockers": [
+        "serpro_config ausente — configure via portal Config Fiscal"
+      ]
+    }
+  ],
+  "po_doc": "docs/FISC-001_SERPRO_CREDENCIAIS_LIVE.md"
+}

@@ -1,0 +1,33 @@
+ACEITE FORMAL PO — EXEQ-FISC-021b
+Data: 2026-06-06
+PO: Ricardo Barreto
+Repo: cobranca-saas-api
+Piloto: tenant ricardo · CNPJ 37229907000137 · titular (sem procuração)
+
+DECISÃO
+Aceito FISC-021b como LIMITE DEMO (Opção 1). Encerramento da demanda de
+INTEGRAÇÃO SERPRO titular + payload PGDASD no ambiente demo, sem exigência
+de protocolo real neste ciclo.
+
+ESCOPO ENTREGUE
+1. Auth SAPI mTLS + jwt_token válido (sem 403 ICGERENCIADOR-041).
+2. Payload TRANSDECLARACAO11 conforme doc SERPRO (cnpjCompleto, pa, declaracao).
+3. Homolog live fases simulação e transmissão — evidências docs/evidencias/fisc-021/.
+4. test:fiscal-serpro 51/51; integração sprint4 OK.
+
+LIMITE DEMO ACEITO
+- SERPRO demo retorna HTTP 400 (erro de negócio), não 403 nem erro de schema.
+- Protocolo SERPRO real NÃO faz parte do DoD deste aceite.
+- factory:serpro:ricardo 8/9 live NÃO bloqueia encerramento (SERPRO_REJEITOU
+  registrado como limite de negócio no sandbox).
+
+FORA DO ESCOPO ENCERRADO (follow-up)
+- EXEQ-FISC-021c: protocolo demo + factory 9/9 live quando contabilidade
+  definir PA, anexo e idAtividade válidos.
+- Recibo/DAS live, portal e produção: seguir roadmap sem reabrir 021b salvo
+  regressão de auth ou schema.
+
+INSTRUÇÃO À ENGENHARIA
+Fábrica encerra WIP em FISC-021b e segue próximas prioridades do roadmap.
+
+Assinatura: Ricardo Barreto · PO Exeq · 2026-06-06

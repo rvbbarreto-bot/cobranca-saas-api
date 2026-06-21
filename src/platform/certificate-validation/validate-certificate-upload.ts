@@ -11,12 +11,15 @@ import {
 import { pemFailure, type PemErrorCode } from "./pem-error-catalog.js";
 import type { PemValidationFailure } from "./pem-error-catalog.js";
 import { saveCertificateUpload } from "./certificate-upload-store.js";
+import { extractIntegrationIdFromInterCert } from "../payment-gateway/inter-credential-alignment.js";
 
 const VALIDATION_TIMEOUT_MS = 10_000;
 
 export type CertificateValidateSuccess = {
   certificate_id: string;
   subject_cn: string;
+  /** UUID da integracao Inter (campo OU do certificado), quando aplicavel. */
+  integration_id_ou: string | null;
   not_after: string;
   days_remaining: number;
   warnings: PemErrorCode[];
@@ -141,13 +144,21 @@ export async function validateAndStoreCertificateUpload(input: {
     validated.warnings.filter((w) => w === "WARN-001") as ("WARN-001")[],
     now
   );
+  const integrationIdOu = extractIntegrationIdFromInterCert(validated.payload.certificate_pem);
+  const info = [...messages.info, ...messages.warnings];
+  if (integrationIdOu) {
+    info.unshift(
+      `Integracao Inter (OU do certificado): ${integrationIdOu} — use este valor como Client ID no portal.`
+    );
+  }
 
   return {
     certificate_id: certificateId,
     subject_cn: stored.subject_cn,
+    integration_id_ou: integrationIdOu,
     not_after: stored.not_after,
     days_remaining: daysRemaining(stored.not_after, now),
     warnings: validated.warnings.filter((w) => w === "WARN-001"),
-    info: [...messages.info, ...messages.warnings]
+    info
   };
 }

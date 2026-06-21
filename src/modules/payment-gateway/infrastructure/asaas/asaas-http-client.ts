@@ -1,4 +1,4 @@
-import { PaymentGatewayError } from "../../domain/payment-gateway-error";
+import { GatewayAuthError, PaymentGatewayError } from "../../domain/payment-gateway-error";
 
 export type AsaasHttpClientConfig = {
   apiKey: string;
@@ -48,6 +48,12 @@ export class AsaasHttpClient {
         Array.isArray((parsed as { errors: unknown }).errors)
           ? JSON.stringify((parsed as { errors: unknown[] }).errors)
           : text || response.statusText;
+      if (response.status === 401 || response.status === 403) {
+        throw new GatewayAuthError("asaas", `Asaas HTTP ${response.status}: ${msg}`, {
+          httpStatus: response.status,
+          providerBody: parsed
+        });
+      }
       throw new PaymentGatewayError(`Asaas HTTP ${response.status}: ${msg}`, {
         code: "asaas_api_error",
         httpStatus: response.status,

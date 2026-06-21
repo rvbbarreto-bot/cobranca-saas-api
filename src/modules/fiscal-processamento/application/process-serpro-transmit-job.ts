@@ -7,6 +7,7 @@ import { isProcuracaoSerproValid } from "../../fiscal-guias/application/validar-
 import { serproProcuracaoUserMessage } from "../../serpro-integra-contador/domain/serpro-procuracao-situacao";
 import { resolveSerproRuntimeForOrganization } from "../../fiscal-guias/application/resolve-serpro-runtime";
 import { buildSerproPgdasdTransmitRequest } from "../../serpro-integra-contador/infrastructure/serpro-request-builder";
+import { serproPgdasdTransmissaoOptionsFromEnv } from "../../../platform/config/fiscal-serpro-pgdasd";
 import {
   getProcessamentoById,
   insertProcessamentoEvento,
@@ -111,17 +112,21 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
     const canonical = proc.canonicalSnapshot as CanonicalApuracao;
     const runtime = await resolveSerproRuntimeForOrganization({
       organizationId: proc.organizationId,
-      fallbackContratanteCnpj: canonical.cnpj
+      fallbackContratanteCnpj: canonical.cnpj,
+      automacaoTenantId: payload.automacaoTenantId,
+      portalClienteId: proc.portalClienteId,
+      contribuinteCnpj: canonical.cnpj
     });
 
     const req = buildSerproPgdasdTransmitRequest({
       contratanteCnpj: runtime.contratanteCnpj,
       contribuinteCnpj: canonical.cnpj,
-      competencia: canonical.competencia,
-      declaracaoPayload: { receitaBruta: canonical.receitaBrutaMes, valorDas: canonical.valorTotalDas }
+      autorPedidoDocumento: runtime.autorPedidoDocumento ?? canonical.cnpj,
+      apuracao: canonical,
+      pgdasdOptions: serproPgdasdTransmissaoOptionsFromEnv()
     });
 
-    const res = await runtime.client.declarar(req, runtime.accessToken);
+    const res = await runtime.client.declarar(req, runtime.auth);
     if (!res.ok) {
       await updateProcessamentoStatus(client, proc.id, {
         status: "ERRO",
@@ -149,9 +154,14 @@ export async function processSerproTransmitJob(payload: SerproTransmitJobPayload
     scheduleSerproReciboJob(payload);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
+    const erroCodigo = message.includes("SERPRO_CERTIFICADO_DECRYPT_FAILED")
+      ? "SERPRO_CERTIFICADO_DECRYPT_FAILED"
+      : message.startsWith("SERPRO_")
+        ? message.split(" ")[0]!
+        : "TRANSMISSAO_FALHOU";
     await updateProcessamentoStatus(client, proc.id, {
       status: "ERRO",
-      erroCodigo: "TRANSMISSAO_FALHOU",
+      erroCodigo,
       erroDetalhe: { message }
     });
     await insertProcessamentoEvento(client, proc.id, "transmissao_erro", { message });

@@ -412,9 +412,11 @@ export function createEscritorioRouter(): Router {
           const status =
             error.code === "PLATFORM_BILLING_NOT_CONFIGURED"
               ? 503
-              : error.code === "SUBSCRIPTION_ALREADY_ACTIVATED"
-                ? 409
-                : 422;
+              : error.code === "PLATFORM_BILLING_AUTH_FAILED" || error.code === "PLATFORM_BILLING_GATEWAY_ERROR"
+                ? 502
+                : error.code === "SUBSCRIPTION_ALREADY_ACTIVATED"
+                  ? 409
+                  : 422;
           res.status(status).json({ error: error.code, message: error.message });
           return;
         }

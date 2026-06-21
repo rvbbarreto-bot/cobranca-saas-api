@@ -1,4 +1,5 @@
 import { isGatewayError } from "../../modules/payment-gateway/domain/gateway-error";
+import { isMtlsTransportError } from "../payment-gateway/mtls-transport-error";
 
 export type JobErrorClassification = {
   retryable: boolean;
@@ -28,8 +29,25 @@ export function classifyJobError(err: unknown): JobErrorClassification {
     };
   }
 
+  if (isMtlsTransportError(err)) {
+    return {
+      retryable: false,
+      moveToDlq: true,
+      errorCode: err.code,
+      errorMessage: err.message
+    };
+  }
+
   if (err instanceof Error) {
     const lower = err.message.toLowerCase();
+    if (/unknown ca|alert number 48|mtls_handshake_failed/.test(lower)) {
+      return {
+        retryable: false,
+        moveToDlq: true,
+        errorCode: "mtls_handshake_failed",
+        errorMessage: err.message
+      };
+    }
     if (
       lower.includes("exige") ||
       lower.includes("invalid") ||

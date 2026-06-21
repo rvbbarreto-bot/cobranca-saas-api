@@ -10,6 +10,7 @@ import {
   mergeGatewayCredentialsPatch,
   validateGatewayCredentials
 } from "../../../platform/payment-gateway/credential-schema";
+import { assertMtlsFullBundleOnUpdate } from "../../../platform/payment-gateway/mtls-full-bundle-policy";
 import { getProviderMeta } from "../../../platform/payment-gateway/provider-registry";
 import {
   getEscritorioConfig,
@@ -95,6 +96,13 @@ export async function patchEscritorioConfigUseCase(
   }
   if (data.gateway_credentials) {
     const provider = (data.gateway_provider ?? before?.gateway_provider ?? "asaas").trim().toLowerCase();
+    const credentialsAlreadyConfigured = Boolean(before?.gateway_credentials_encrypted?.trim());
+    assertMtlsFullBundleOnUpdate({
+      provider,
+      credentialsAlreadyConfigured,
+      gatewayCredentials: data.gateway_credentials
+    });
+
     let credentialsToSave: GatewayCredentials = data.gateway_credentials;
     if (before?.gateway_credentials_encrypted?.trim() && before.encryption_iv?.trim()) {
       try {

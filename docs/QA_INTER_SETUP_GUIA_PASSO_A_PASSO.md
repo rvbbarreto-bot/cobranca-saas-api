@@ -15,6 +15,8 @@ Sempre que o PO rotacionar **client_secret** ou baixar **novo certificado**, lim
 npm run qa:inter-reset-credentials
 ```
 
+**Regra de produto (ADR):** na **alteração** de credenciais Inter, o portal exige **pacote completo** — novo upload de certificado + chave + Client ID + Client Secret da **mesma** integração. Não é permitido alterar só o Client ID mantendo PEM antigo. Ver [ADR_GATEWAY_MTLS_FULL_BUNDLE.md](./ADR_GATEWAY_MTLS_FULL_BUNDLE.md).
+
 Isso zera `escritorio_config` (gateway cifrado), apaga `gateway_change_log` e remove cache Redis `gw_token:inter:*`.
 
 **Onde as chaves NÃO ficam:** `.env` da API (só `ENCRYPTION_KEY` para cifrar o banco), `localStorage` do portal (só JWT de sessão). Credenciais Inter vão **somente** em `escritorio_config` após PATCH do portal.

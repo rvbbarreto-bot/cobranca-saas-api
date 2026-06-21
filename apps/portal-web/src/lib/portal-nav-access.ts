@@ -47,6 +47,12 @@ export const PORTAL_NAV_ITEMS: PortalNavItem[] = [
           module: "fiscal_guias" as PortalModuleKey
         },
         {
+          to: "/fiscal/erros",
+          label: "Erros fiscais",
+          roles: ["admin_escritorio", "operador"] as PortalStaffRole[],
+          module: "fiscal_guias" as PortalModuleKey
+        },
+        {
           to: "/guias-fiscais",
           label: "Guias fiscais (DAS/DARF)",
           roles: ["admin_escritorio", "operador"] as PortalStaffRole[],

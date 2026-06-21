@@ -1,0 +1,15 @@
+{
+  "sprint": 70,
+  "issue": "EXEQ-FISC-070",
+  "started_at": "2026-06-10T01:48:39.456Z",
+  "finished_at": "2026-06-10T01:48:55.471Z",
+  "portal_tests": [
+    "src/pages/ProcessamentosFiscaisPage.test.tsx",
+    "src/pages/FiscalDashboardPage.test.tsx"
+  ],
+  "deliverables": [
+    "fiscal CSS tokens (--fiscal-*)",
+    "AppShell drawer Escape + body scroll lock",
+    "rota /fiscal/erros"
+  ]
+}

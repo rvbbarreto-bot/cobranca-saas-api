@@ -1,0 +1,12 @@
+{
+  "sprint": "S0",
+  "issue": "EXEQ-FISC-001",
+  "mode": "live",
+  "timestamp": "2026-06-13T20:56:31.122Z",
+  "steps": [
+    {
+      "step": "error",
+      "message": "fetch failed"
+    }
+  ]
+}

@@ -38,6 +38,7 @@ vi.mock("../../src/platform/audit/audit.service", () => ({
   writeAuditLog: vi.fn()
 }));
 
+import { GatewayAuthError } from "../../src/modules/payment-gateway/domain/payment-gateway-error";
 import { activatePlatformSubscription } from "../../src/modules/saas-billing/application/activate-platform-subscription";
 
 describe("activatePlatformSubscription", () => {
@@ -85,5 +86,29 @@ describe("activatePlatformSubscription", () => {
     await expect(activatePlatformSubscription({ query: vi.fn() } as never, "t1")).rejects.toBeInstanceOf(
       SaasBillingError
     );
+  });
+
+  it("propaga erro de autenticacao Asaas como SaasBillingError", async () => {
+    getSub.mockResolvedValue({
+      id: "a1",
+      tenant_id: "t1",
+      plano_nome: "Profissional",
+      preco_mensal: "299.00",
+      status: "trial",
+      gateway_subscription_id: null,
+      gateway_customer_id: null,
+      trial_ends_at: new Date("2026-06-01")
+    });
+    createCustomer.mockRejectedValueOnce(new GatewayAuthError("asaas", "401", { httpStatus: 401 }));
+
+    const client = {
+      query: vi.fn().mockResolvedValue({
+        rows: [{ slug: "escritorio-x", name: "Escritorio X", billing_email: "cobranca@x.com" }]
+      })
+    };
+
+    await expect(activatePlatformSubscription(client as never, "t1")).rejects.toMatchObject({
+      code: "PLATFORM_BILLING_AUTH_FAILED"
+    });
   });
 });

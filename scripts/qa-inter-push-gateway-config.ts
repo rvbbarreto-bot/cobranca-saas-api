@@ -11,6 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { sanitizePemPaste } from "../src/platform/payment-gateway/mtls-credential-validation.js";
+import { validateInterCredentialAppAlignment } from "../src/platform/payment-gateway/inter-credential-alignment.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const apiBase = (process.env.QA_API_BASE_URL ?? "http://localhost:3333").replace(/\/$/, "");
@@ -26,6 +27,14 @@ async function main(): Promise<void> {
   const keyPath = path.join(repoRoot, "data", "qa-inter-credentials", "private_key.pem");
   const certificatePem = sanitizePemPaste(fs.readFileSync(certPath, "utf8"));
   const privateKeyPem = sanitizePemPaste(fs.readFileSync(keyPath, "utf8"));
+
+  const alignment = validateInterCredentialAppAlignment(clientId, certificatePem);
+  if (!alignment.ok) {
+    throw new Error(
+      `[qa-inter-push-gateway] ${alignment.message}\n` +
+        "Corrija QA_INTER_CLIENT_ID para o OU do certificado ou baixe novo pacote mTLS no Portal Inter."
+    );
+  }
 
   const email = process.env.QA_PORTAL_EMAIL ?? "admin@teste.local";
   const tenantSlug = process.env.QA_PORTAL_TENANT ?? "escritorio-demo";

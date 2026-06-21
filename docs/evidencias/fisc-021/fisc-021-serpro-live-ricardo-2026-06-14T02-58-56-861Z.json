@@ -1,0 +1,31 @@
+{
+  "issue": "EXEQ-FISC-021",
+  "startedAt": "2026-06-14T02:58:56.552Z",
+  "steps": [
+    {
+      "name": "env_live_mode",
+      "ok": true,
+      "detail": "FISCAL_SERPRO_MOCK=false"
+    },
+    {
+      "name": "serpro_config_org",
+      "ok": true,
+      "detail": "ambiente=demo; enabled=true"
+    },
+    {
+      "name": "oauth_token",
+      "ok": true,
+      "detail": "token_len=1038"
+    },
+    {
+      "name": "certificado_decrypt",
+      "ok": true,
+      "detail": "Certificado A1 valido ate 2026-09-05"
+    },
+    {
+      "name": "resolve_runtime",
+      "ok": false,
+      "detail": "SERPRO HTTP 403: {\"contratante\":{\"numero\":\"37229907000137\",\"tipo\":2},\"autorPedidoDados\":{\"numero\":\"37229907000137\",\"tipo\":2},\"contribuinte\":{\"numero\":\"37229907000137\",\"tipo\":2},\"pedidoDados\":{\"idSistema\":\"AUTENTICAPROCURADOR\",\"idServico\":\"ENVIOXMLASSINADO81\",\"versaoSistema\":\"1.0\",\"dados\":\"{\\\"xml\\\":\\\"PD94bWwgdmVyc2lv"
+    }
+  ]
+}

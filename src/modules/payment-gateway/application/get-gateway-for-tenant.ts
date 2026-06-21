@@ -7,6 +7,7 @@ import {
 } from "../domain/payment-gateway-error";
 import { decrypt } from "../../../platform/crypto/decrypt";
 import { validateGatewayCredentials } from "../../../platform/payment-gateway/credential-schema";
+import { isGatewaySandboxMode } from "../../../platform/payment-gateway/gateway-sandbox";
 import { getProviderMeta } from "../../../platform/payment-gateway/provider-registry";
 import { AsaasAdapter } from "../infrastructure/asaas/asaas-adapter";
 import { InterAdapter } from "../infrastructure/inter/inter-adapter";
@@ -76,7 +77,6 @@ export async function getGatewayForTenant(
   deps: GetGatewayForTenantDeps = {}
 ): Promise<PaymentGatewayAdapter> {
   const decryptFn = deps.decrypt ?? decrypt;
-  const sandbox = deps.sandbox ?? process.env.NODE_ENV !== "production";
 
   const r = await client.query<EscritorioGatewayRow>(
     `SELECT gateway_provider, gateway_credentials_encrypted,
@@ -101,6 +101,8 @@ export async function getGatewayForTenant(
   if (!meta.enabled) {
     throw new UnsupportedGatewayProviderError(provider);
   }
+
+  const sandbox = deps.sandbox ?? isGatewaySandboxMode(provider);
 
   const credentials = resolveCredentials(row, tenantId, decryptFn);
   validateGatewayCredentials(provider, credentials);

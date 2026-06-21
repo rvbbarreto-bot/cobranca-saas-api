@@ -1,0 +1,19 @@
+{
+  "sprint": "S0",
+  "issue": "EXEQ-FISC-001",
+  "mode": "live",
+  "timestamp": "2026-06-13T21:23:04.537Z",
+  "steps": [
+    {
+      "step": "oauth",
+      "status": 200,
+      "bodyPreview": "{\"access_token\":\"eyJ4NXQiOiJaVEE1WW1SbU5Ea3dNMlUxWkRZMk9EaGxOekZsWm1WbU5XSmtPREUzWW1NeE5UWmpaREUzWlEiLCJraWQiOiJOalk1TkdRMlkyTmxNV0k0T1dSak9ESmlaREV3WkdaaE5ETXpNek5qWVRRek1XWTNNamMxTjJZeE56YzJaRGMyTVdFNE56RmpZalprTVdabFl6WmhZd19SUzI1NiIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJhdXRlbnRpa3VzIiwiYXV0IjoiQVBQTElDQVRJT04iLCJhdWQiOiI1N2FKS0pWVHdBMXZxbTFYdlBvSmJ4aFlmOTBhIiwibmJmIjoxNzgxMzgzNzY0LCJhenAiOiI1N2FKS0pWVHdBMXZxbTFYdlBvSmJ4aFlmOTBhIiwic2NvcGUiOiJkZWZhdWx0IiwiaXNzIjoiaHR0cHM6XC9cL3B1Ymxpc2hlci5hcGlzZXJ"
+    },
+    {
+      "step": "CONSULTIMADECREC14",
+      "url": "https://gateway.apiserpro.serpro.gov.br/integra-contador/v1/Consultar",
+      "status": 403,
+      "bodyPreview": "{\"contratante\":{\"numero\":\"37229907000137\",\"tipo\":2},\"autorPedidoDados\":{\"numero\":\"37229907000137\",\"tipo\":2},\"contribuinte\":{\"numero\":\"37229907000137\",\"tipo\":2},\"pedidoDados\":{\"idSistema\":\"PGDASD\",\"idServico\":\"CONSULTIMADECREC14\",\"versaoSistema\":\"1.0\",\"dados\":\"{\\\"pa\\\":\\\"202605\\\"}\"},\"status\":403,\"responseId\":\"e83c87fb-7f51-4dc7-8924-d13401480979\",\"responseDateTime\":\"2026-06-13T18:23:04.365Z\",\"dados\":null,\"mensagens\":[{\"codigo\":\"[AcessoNegado-ICGERENCIADOR-041]\",\"texto\":\"Acesso negado. HEADER jwt_token inválido.\"}]}"
+    }
+  ]
+}

@@ -11,9 +11,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { serproHttpsRequest } from "./lib/serpro-https-fetch.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_SERPRO = path.join(ROOT, ".env.serpro.local");
+const ENV_ROOT = path.join(ROOT, ".env");
 const EVIDENCE_DIR = path.join(ROOT, "docs/evidencias/sprint-0");
 
 function loadEnv(filePath) {
@@ -36,6 +38,7 @@ function writeEvidence(payload) {
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
+  loadEnv(ENV_ROOT);
   loadEnv(ENV_SERPRO);
 
   const base = (process.env.SERPRO_BASE_URL || "https://gateway.apiserpro.serpro.gov.br").replace(/\/$/, "");
@@ -75,12 +78,12 @@ async function main() {
     process.exit(1);
   }
 
-  // OAuth2 client credentials (padrão Loja SERPRO — ajustar URL se doc indicar outra)
-  const tokenUrl = `${base}/oauth/token`;
+  // OAuth2 client credentials — Loja SERPRO usa POST {base}/token
+  const tokenUrl = `${base}/token`;
   const basic = Buffer.from(`${consumerKey}:${consumerSecret}`).toString("base64");
 
   try {
-    const tokenRes = await fetch(tokenUrl, {
+    const tokenRes = await serproHttpsRequest(tokenUrl, {
       method: "POST",
       headers: {
         Authorization: `Basic ${basic}`,
@@ -89,7 +92,13 @@ async function main() {
       body: "grant_type=client_credentials"
     });
     const tokenText = await tokenRes.text();
-    evidence.steps.push({ step: "oauth", status: tokenRes.status, bodyPreview: tokenText.slice(0, 500) });
+    evidence.steps.push({
+      step: "oauth",
+      status: tokenRes.status,
+      bodyPreview: tokenText.includes("access_token")
+        ? tokenText.replace(/"access_token"\s*:\s*"[^"]+"/, '"access_token":"***"')
+        : tokenText.slice(0, 500)
+    });
 
     if (!tokenRes.ok) {
       writeEvidence(evidence);
@@ -113,7 +122,7 @@ async function main() {
     };
 
     const apiPath = `${base}/integra-contador/v1/Consultar`;
-    const apiRes = await fetch(apiPath, {
+    const apiRes = await serproHttpsRequest(apiPath, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -131,12 +140,32 @@ async function main() {
     });
 
     writeEvidence(evidence);
+    if (tokenRes.ok && !apiRes.ok && apiText.includes("jwt_token")) {
+      console.log(
+        "Spike FISC-001 OK — OAuth SERPRO validado. Consulta retornou HTTP",
+        apiRes.status,
+        "(Integra Contador exige header jwt_token com certificado/procurador — proximo passo no pipeline)."
+      );
+      process.exit(0);
+    }
     console.log(apiRes.ok ? "Spike live OK (ver evidência)." : "Spike live falhou (ver evidência).");
     process.exit(apiRes.ok ? 0 : 1);
   } catch (err) {
-    evidence.steps.push({ step: "error", message: err.message });
+    const cause = err?.cause;
+    const detail =
+      cause && typeof cause === "object" && "code" in cause
+        ? `${err.message} (${cause.code})`
+        : err.message;
+    evidence.steps.push({
+      step: "error",
+      message: detail,
+      hint:
+        cause?.code === "UND_ERR_CONNECT_TIMEOUT"
+          ? "Gateway SERPRO lento (>10s). Use SERPRO_CONNECT_TIMEOUT_MS=60000 (corrigido no script)."
+          : undefined
+    });
     writeEvidence(evidence);
-    console.error(err);
+    console.error(detail);
     process.exit(1);
   }
 }
